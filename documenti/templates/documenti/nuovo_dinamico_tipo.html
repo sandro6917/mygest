@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Nuovo documento — {{ tipo }}{% endblock %}
+{% block content %}
+<div class="container">
+  <section class="card card-full">
+    <h2>Nuovo documento — {{ tipo }}</h2>
+    <div class="body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label><strong>{{ form.tipo.label }}</strong></label>
+            {{ form.tipo }}
+          </div>
+          <div>
+            <label><strong>{{ form.cliente.label }}</strong></label>
+            {{ form.cliente }}
+          </div>
+          <div>
+            <label><strong>{{ form.fascicolo.label }}</strong></label>
+            {{ form.fascicolo }}
+          </div>
+          <div>
+            <label><strong>{{ form.titolario_voce.label }}</strong></label>
+            {{ form.titolario_voce }}
+          </div>
+          <div>
+            <label><strong>{{ form.data_documento.label }}</strong></label>
+            {{ form.data_documento }}
+          </div>
+          <div style="grid-column:1 / -1">
+            <label><strong>{{ form.descrizione.label }}</strong></label>
+            {{ form.descrizione }}
+          </div>
+          <div style="grid-column:1 / -1">
+            <label><strong>{{ form.file.label }}</strong></label>
+            {{ form.file }}
+          </div>
+          <div>
+            <label><strong>{{ form.tracciabile.label }}</strong></label>
+            {{ form.tracciabile }}
+          </div>
+          <div style="grid-column:1 / -1">
+            <label><strong>{{ form.tags.label }}</strong></label>
+            {{ form.tags }}
+          </div>
+          <div style="grid-column:1 / -1">
+            <label><strong>{{ form.note.label }}</strong></label>
+            {{ form.note }}
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px">
+          <button type="submit" class="btn btn-primary">Salva</button>
+          <a class="btn btn-secondary" href="javascript:history.back()">Annulla</a>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

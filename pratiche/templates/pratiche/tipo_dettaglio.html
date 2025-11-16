@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ tipo.nome }}{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="card" style="margin-bottom:16px">
+    <h1>{{ tipo.nome }}</h1>
+    <div class="body">
+      <p><strong>Codice:</strong> {{ tipo.codice }}</p>
+      {% if tipo.prefisso_codice %}
+        <p><strong>Prefisso codice:</strong> {{ tipo.prefisso_codice }}</p>
+      {% endif %}
+      <p><strong>Pattern codice:</strong> <code>{{ tipo.pattern_codice }}</code></p>
+      <p><a class="btn btn-secondary" href="{% url 'pratiche:home' %}">Torna alla dashboard pratiche</a></p>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Pratiche di questo tipo</h2>
+    <div class="body">
+      <form method="get" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap">
+        <input type="search" name="q" value="{{ q }}" placeholder="Codice, oggetto o cliente" style="flex:1; min-width:220px">
+        <button class="btn" type="submit">Cerca</button>
+        {% if q %}
+          <a class="btn btn-secondary" href="{% url 'pratiche:tipo_dettaglio' tipo.pk %}">Pulisci</a>
+        {% endif %}
+      </form>
+
+      {% if pratiche_filtrate %}
+        <div class="muted" style="margin-bottom:6px">
+          {{ pratiche_total }} pratiche trovate{% if pratiche_total > pratiche_filtrate|length %} (mostrate {{ pratiche_filtrate|length }}){% endif %}
+        </div>
+        <ul class="list">
+          {% for p in pratiche_filtrate %}
+            <li>
+              <strong>{{ p.codice }}</strong> — {{ p.oggetto }}
+              <small class="muted">· {{ p.cliente }}</small>
+              <small class="muted">· {{ p.get_stato_display }}</small>
+              <a class="btn btn-xs" href="{% url 'pratiche:dettaglio' p.pk %}">Apri pratica</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="muted">Nessuna pratica trovata per questo tipo.</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

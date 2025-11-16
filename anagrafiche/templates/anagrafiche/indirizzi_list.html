@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Indirizzi - {{ anagrafica }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Indirizzi per {{ anagrafica }}</h2>
+  <div class="actions" style="margin-bottom: .75rem;">
+    <a class="btn" href="{% url 'anagrafiche:indirizzo_add_for_anagrafica' anagrafica.pk %}">+ Aggiungi indirizzo</a>
+    <a class="btn ghost" href="{{ anagrafica.get_absolute_url }}">Torna al dettaglio</a>
+  </div>
+  {% if indirizzi %}
+  <table class="table">
+    <thead><tr><th>Tipo</th><th>Indirizzo</th><th>Principale</th><th></th></tr></thead>
+    <tbody>
+      {% for i in indirizzi %}
+      <tr>
+        <td>{{ i.tipo_indirizzo }}</td>
+        <td>{{ i }}</td>
+        <td>{% if i.principale %}Sì{% else %}No{% endif %}</td>
+        <td><a class="btn small" href="{% url 'anagrafiche:indirizzo_edit' i.pk %}">Modifica</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>Nessun indirizzo presente.</p>
+  {% endif %}
+</section>
+{% endblock %}

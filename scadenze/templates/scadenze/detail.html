@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ scadenza.titolo }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>{{ scadenza.titolo }}</h1>
+    <div class="actions">
+      <a class="btn btn-secondary" href="{% url 'scadenze:update' scadenza.pk %}">{% trans "Modifica" %}</a>
+      <a class="btn" href="{% url 'scadenze:bulk_generate' scadenza.pk %}">{% trans "Generazione massiva" %}</a>
+    </div>
+  </div>
+
+  <div class="grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+    <section class="card">
+      <h2>{% trans "Informazioni" %}</h2>
+      <div class="body">
+        <dl class="kv">
+          <dt>{% trans "Stato" %}</dt><dd>{{ scadenza.get_stato_display }}</dd>
+          <dt>{% trans "Priorità" %}</dt><dd>{{ scadenza.get_priorita_display }}</dd>
+          <dt>{% trans "Categoria" %}</dt><dd>{{ scadenza.categoria|default:"—" }}</dd>
+          <dt>{% trans "Periodicitá" %}</dt><dd>{{ scadenza.get_periodicita_display }}</dd>
+          <dt>{% trans "Assegnatari" %}</dt>
+          <dd>
+            {% if scadenza.assegnatari.all %}
+              {% for user in scadenza.assegnatari.all %}
+                <span class="tag">{{ user.get_full_name|default:user.username }}</span>
+              {% empty %}
+                —
+              {% endfor %}
+            {% else %}
+              —
+            {% endif %}
+          </dd>
+          <dt>{% trans "Descrizione" %}</dt><dd>{{ scadenza.descrizione|linebreaksbr|default:"—" }}</dd>
+          <dt>{% trans "Note interne" %}</dt><dd>{{ scadenza.note_interne|linebreaksbr|default:"—" }}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>{% trans "Collegamenti" %}</h2>
+      <div class="body">
+        <div class="muted">{% trans "Pratiche" %}</div>
+        {% with pratiche=scadenza.pratiche.all %}
+          {% if pratiche %}
+            <ul class="list">
+              {% for pr in pratiche %}
+                <li><a class="link" href="{% url 'pratiche:dettaglio' pr.pk %}">{{ pr.codice }}</a></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">—</div>
+          {% endif %}
+        {% endwith %}
+        <div class="muted" style="margin-top:8px;">{% trans "Fascicoli" %}</div>
+        {% with fascicoli=scadenza.fascicoli.all %}
+          {% if fascicoli %}
+            <ul class="list">
+              {% for fa in fascicoli %}
+                <li><a class="link" href="{% url 'fascicoli:detail' fa.pk %}">{{ fa.codice|default:fa.titolo }}</a></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">—</div>
+          {% endif %}
+        {% endwith %}
+        <div class="muted" style="margin-top:8px;">{% trans "Documenti" %}</div>
+        {% with documenti=scadenza.documenti.all %}
+          {% if documenti %}
+            <ul class="list">
+              {% for doc in documenti %}
+                <li><a class="link" href="{% url 'documenti:dettaglio' doc.pk %}">{{ doc.descrizione|default:doc }}</a></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">—</div>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>{% trans "Occorrenze" %}</h2>
+    <div class="body">
+      {% if occorrenze %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{% trans "Titolo" %}</th>
+              <th>{% trans "Data/Ora" %}</th>
+              <th>{% trans "Metodo" %}</th>
+              <th>{% trans "Stato" %}</th>
+              <th>{% trans "Azioni" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for occ in occorrenze %}
+              <tr>
+                <td>{{ occ.titolo|default:scadenza.titolo }}</td>
+                <td>{{ occ.inizio|date:"d/m/Y H:i" }}</td>
+                <td>{{ occ.get_metodo_alert_display }}</td>
+                <td>{{ occ.get_stato_display }}</td>
+                <td>
+                  <form method="post" action="{% url 'scadenze:trigger_alert' occ.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button class="btn btn-secondary btn-sm" type="submit">{% trans "Invia alert" %}</button>
+                  </form>
+                </td>
+              </tr>
+              {% if occ.log_eventi.all %}
+                <tr>
+                  <td colspan="5">
+                    <div class="muted">
+                      {% trans "Log" %}:
+                      {% for log in occ.log_eventi.all %}
+                        <span class="tag">{{ log.get_evento_display }} ({{ log.registrato_il|date:"d/m/Y H:i" }})</span>
+                      {% endfor %}
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="muted">{% trans "Nessuna occorrenza" %}</div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

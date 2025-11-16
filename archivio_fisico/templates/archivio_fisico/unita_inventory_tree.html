@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>
+  Lista di stampa archivio fisico
+  <span class="ms-3 small">
+    <a href="{% url 'archivio_fisico:unita_list' %}">Torna all'anagrafica</a>
+  </span>
+</h2>
+{% if generated_at %}
+<p class="text-muted small">Generata il {{ generated_at|date:"d/m/Y H:i" }}.</p>
+{% endif %}
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <button type="button" class="btn btn-outline-secondary btn-sm treeview-toggle" data-tree-target="#unit-tree" data-tree-action="expand">Espandi tutto</button>
+  <button type="button" class="btn btn-outline-secondary btn-sm treeview-toggle" data-tree-target="#unit-tree" data-tree-action="collapse">Comprimi tutto</button>
+  <button type="button" class="btn btn-secondary btn-sm" data-print-trigger>Stampa</button>
+</div>
+<style>
+  .treeview__list,
+  .treeview__list ul { list-style: none; margin: 0; padding-left: 1rem; }
+  .treeview__summary { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+  .treeview__summary::-webkit-details-marker { display: none; }
+  .treeview__summary::before {
+    content: ">";
+    display: inline-block;
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+  }
+  details:not([open]) > .treeview__summary::before { transform: rotate(0deg); }
+  .treeview__link { font-size: 0.9rem; text-decoration: none; color: var(--bs-link-color, #0d6efd); }
+  .treeview__link:hover { text-decoration: underline; }
+  .treeview__leaf { margin-left: 1.5rem; }
+  .treeview__label { font-weight: 600; }
+  @media print {
+    .treeview-toggle,
+    [data-print-trigger] { display: none !important; }
+    .treeview__summary::before { display: none; }
+  }
+</style>
+{% if unita_tree %}
+<div class="treeview">
+  <ul class="treeview__list" id="unit-tree">
+    {% include "archivio_fisico/_unit_inventory_tree.html" with nodes=unita_tree %}
+  </ul>
+</div>
+{% else %}
+<p class="text-muted">Non sono presenti collocazioni fisiche attive.</p>
+{% endif %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".treeview__summary .treeview__link").forEach(function (link) {
+      link.addEventListener("click", function (event) {
+        event.stopPropagation();
+      });
+    });
+
+    var toggleAll = function (selector, shouldOpen) {
+      var container = document.querySelector(selector);
+      if (!container) { return; }
+      var nodes = container.querySelectorAll("details");
+      nodes.forEach(function (node) {
+        node.open = shouldOpen;
+      });
+    };
+
+    document.querySelectorAll(".treeview-toggle").forEach(function (button) {
+      var targetSelector = button.getAttribute("data-tree-target");
+      var action = button.getAttribute("data-tree-action");
+      button.addEventListener("click", function () {
+        if (!targetSelector || !action) { return; }
+        toggleAll(targetSelector, action === "expand");
+      });
+    });
+
+    var printButton = document.querySelector("[data-print-trigger]");
+    if (printButton) {
+      printButton.addEventListener("click", function () {
+        toggleAll("#unit-tree", true);
+        window.print();
+      });
+    }
+
+    if (window.matchMedia) {
+      var mediaQuery = window.matchMedia("print");
+      if (mediaQuery.addListener) {
+        mediaQuery.addListener(function (mql) {
+          if (mql.matches) {
+            toggleAll("#unit-tree", true);
+          }
+        });
+      } else if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener("change", function (event) {
+          if (event.matches) {
+            toggleAll("#unit-tree", true);
+          }
+        });
+      }
+    }
+  });
+</script>
+{% endblock %}

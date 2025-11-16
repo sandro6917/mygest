@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% if obj %}{% trans "Modifica scadenza" %}{% else %}{% trans "Nuova scadenza" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>{% if obj %}{% trans "Modifica scadenza" %}{% else %}{% trans "Nuova scadenza" %}{% endif %}</h1>
+  </div>
+
+  <style>
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+      align-items: start;
+    }
+    .related-summary {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .related-summary .chip {
+      background: #f1f3f5;
+      border-radius: 14px;
+      padding: 2px 10px;
+      font-size: 0.85rem;
+      color: #495057;
+    }
+  </style>
+
+  <form method="post" class="card" id="scadenza-form">
+    {% csrf_token %}
+    <div class="body">
+      {{ form.non_field_errors }}
+      <div class="form-grid">
+        {% for field in form %}
+          {% if field.name != "pratiche" and field.name != "fascicoli" and field.name != "documenti" %}
+            <div class="field">
+              <label for="id_{{ field.name }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+              {% for error in field.errors %}<div class="error">{{ error }}</div>{% endfor %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="body">
+      <h2 class="h5 mb-2">{% trans "Collega elementi" %}</h2>
+      <p class="text-muted" style="margin-bottom:12px;">
+        {% trans "Abbina rapidamente le pratiche, i fascicoli e i documenti correlati: digita per cercare e rimuovi con backspace." %}
+      </p>
+      <div class="related-grid">
+        {% if form.pratiche %}
+          <div class="field">
+            <label for="id_pratiche">{{ form.pratiche.label }}</label>
+            {{ form.pratiche }}
+            {% if form.pratiche.help_text %}<small class="muted">{{ form.pratiche.help_text }}</small>{% endif %}
+            <div class="related-summary" data-summary-for="id_pratiche" data-empty-label="{% trans "Nessuna pratica selezionata" %}"></div>
+            {% for error in form.pratiche.errors %}<div class="error">{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+        {% if form.fascicoli %}
+          <div class="field">
+            <label for="id_fascicoli">{{ form.fascicoli.label }}</label>
+            {{ form.fascicoli }}
+            {% if form.fascicoli.help_text %}<small class="muted">{{ form.fascicoli.help_text }}</small>{% endif %}
+            <div class="related-summary" data-summary-for="id_fascicoli" data-empty-label="{% trans "Nessun fascicolo selezionato" %}"></div>
+            {% for error in form.fascicoli.errors %}<div class="error">{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+        {% if form.documenti %}
+          <div class="field">
+            <label for="id_documenti">{{ form.documenti.label }}</label>
+            {{ form.documenti }}
+            {% if form.documenti.help_text %}<small class="muted">{{ form.documenti.help_text }}</small>{% endif %}
+            <div class="related-summary" data-summary-for="id_documenti" data-empty-label="{% trans "Nessun documento selezionato" %}"></div>
+            {% for error in form.documenti.errors %}<div class="error">{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="body">
+      <h2>{% trans "Occorrenze" %}</h2>
+      {{ formset.management_form }}
+      {% for form_occ in formset %}
+        <div class="card" style="padding:12px; margin-bottom:12px;">
+          {% for field in form_occ %}
+            {% if field.name != 'id' %}
+              <div class="field">
+                <label for="id_{{ field.html_name }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+                {% for error in field.errors %}<div class="error">{{ error }}</div>{% endfor %}
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if form_occ.can_delete %}
+            <label>{{ form_occ.DELETE }} {% trans "Elimina" %}</label>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+    <div class="actions" style="padding:12px; display:flex; gap:8px;">
+      <button class="btn btn-primary" type="submit">{% trans "Salva" %}</button>
+      <a class="btn" href="{% if obj %}{% url 'scadenze:detail' obj.pk %}{% else %}{% url 'scadenze:home' %}{% endif %}">{% trans "Annulla" %}</a>
+    </div>
+  </form>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var $ = window.jQuery || window.$;
+    if ($ && $.fn && $.fn.select2) {
+      $("#scadenza-form .select2").each(function () {
+        var $el = $(this);
+        var allowClear = $el.data("allow-clear") !== undefined;
+        var placeholder = $el.data("placeholder") || "";
+        $el.select2({
+          width: "100%",
+          allowClear: allowClear,
+          placeholder: placeholder,
+          dropdownParent: $("#scadenza-form")
+        });
+      });
+    }
+
+    document.querySelectorAll("#scadenza-form .related-m2m").forEach(function (selectEl) {
+      var summary = document.querySelector('[data-summary-for="' + selectEl.id + '"]');
+      if (!summary) {
+        return;
+      }
+      var emptyLabel = summary.dataset.emptyLabel || "";
+
+      var renderSummary = function () {
+        var selected = Array.from(selectEl.options).filter(function (opt) {
+          return opt.selected;
+        });
+        summary.innerHTML = "";
+        if (!selected.length) {
+          if (emptyLabel) {
+            var emptySpan = document.createElement("span");
+            emptySpan.className = "text-muted";
+            emptySpan.textContent = emptyLabel;
+            summary.appendChild(emptySpan);
+          }
+          return;
+        }
+        selected.forEach(function (opt) {
+          var chip = document.createElement("span");
+          chip.className = "chip";
+          chip.textContent = opt.text;
+          summary.appendChild(chip);
+        });
+      };
+
+      selectEl.addEventListener("change", renderSummary);
+      renderSummary();
+    });
+  });
+</script>
+{% endblock %}

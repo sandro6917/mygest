@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-layout">
+  <section class="form-layout__main">
+    {% block form_main %}{% endblock %}
+  </section>
+
+  <aside class="form-layout__side">
+    {% block form_side %}{% endblock %}
+  </aside>
+
+  {% block form_columns %}
+  <div class="form-layout__col">{% block form_col_1 %}{% endblock %}</div>
+  <div class="form-layout__col">{% block form_col_2 %}{% endblock %}</div>
+  <div class="form-layout__col">{% block form_col_3 %}{% endblock %}</div>
+  {% endblock %}
+</div>
+{% endblock %}

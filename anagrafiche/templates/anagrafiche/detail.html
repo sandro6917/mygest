@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Dettaglio anagrafica{% endblock %}
+{% block content %}
+<div class="container">
+  <p><a class="link" href="{% url 'anagrafiche:home' %}">← Torna alla homepage anagrafiche</a></p>
+  <div class="dashboard-grid">
+    <section class="card card-full">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <h2>Dettaglio</h2>
+        {% with cliente=obj.cliente %}
+          {% if cliente %}
+            <a class="btn btn-secondary" href="{% url 'stampe:etichetta' 'anagrafiche' 'cliente' cliente.pk %}?modulo=FAS_CLI" target="_blank" rel="noopener">Stampa copertina</a>
+          {% endif %}
+        {% endwith %}
+      </div>
+      <div class="body">
+        <dl class="kv">
+          {% if obj.codice %}
+            <dt>Codice cliente</dt>
+            <dd>
+              {{ obj.codice }}
+              <a class="btn btn-link btn-sm" href="{% url 'anagrafiche:anagrafica_ricalcola_codice' obj.pk %}" style="margin-left:8px">Ricalcola codice</a>
+            </dd>
+          {% endif %}
+          <dt>Codice fiscale</dt><dd>{{ obj.codice_fiscale|default:"—" }}</dd>
+          <dt>Tipo</dt><dd>{{ obj.get_tipo_display|default:"—" }}</dd>
+          {% if obj.partita_iva %}<dt>Partita IVA</dt><dd>{{ obj.partita_iva }}</dd>{% endif %}
+          {% if obj.email %}<dt>Email</dt><dd>{{ obj.email }}</dd>{% endif %}
+          {% if obj.pec %}<dt>PEC</dt><dd>{{ obj.pec }}</dd>{% endif %}
+          {% if obj.telefono %}<dt>Telefono</dt><dd>{{ obj.telefono }}</dd>{% endif %}
+          {% if indirizzo_principale %}
+            <dt>Indirizzo principale</dt><dd>{{ indirizzo_principale }}</dd>
+          {% elif obj.indirizzo %}
+            <dt>Indirizzo (legacy)</dt><dd>{{ obj.indirizzo }}</dd>
+          {% endif %}
+          {% if obj.created_at %}<dt>Creato</dt><dd>{{ obj.created_at|date:"d/m/Y H:i" }}</dd>{% endif %}
+          {% if obj.updated_at %}<dt>Aggiornato</dt><dd>{{ obj.updated_at|date:"d/m/Y H:i" }}</dd>{% endif %}
+        </dl>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Indirizzi</h2>
+      <div class="body">
+        <div class="form-actions" style="margin-bottom:8px">
+          <a class="btn" href="{% url 'anagrafiche:indirizzo_add_for_anagrafica' obj.pk %}">+ Aggiungi indirizzo</a>
+          <a class="btn btn-secondary" href="{% url 'anagrafiche:indirizzi_list' obj.pk %}">Gestisci indirizzi</a>
+        </div>
+        <ul class="list">
+          {% for ind in indirizzi %}
+            <li>
+              {{ ind }}
+              {% if ind.principale %}<span class="badge">Principale</span>{% endif %}
+              <a class="btn btn-link btn-sm" href="{% url 'anagrafiche:indirizzo_edit' ind.pk %}" style="margin-left:8px">Modifica</a>
+            </li>
+          {% empty %}
+            <li class="muted">Nessun indirizzo presente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Ultime pratiche</h2>
+      <div class="body">
+        <ul>
+          {% for p in pratiche %}
+            {% url 'pratiche:dettaglio' p.pk as pratica_detail_url %}
+            <li>
+              <a class="link" href="{% url 'pratiche:dettaglio' p.pk %}">{% firstof p.titolo p|stringformat:"s" %}</a>
+              {% if p.updated_at %}
+                <span class="muted"> — {{ p.updated_at|date:"d/m/Y H:i" }}</span>
+              {% elif p.created_at %}
+                <span class="muted"> — {{ p.created_at|date:"d/m/Y H:i" }}</span>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessuna pratica recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Ultimi fascicoli</h2>
+      <div class="body">
+        <ul>
+          {% for f in fascicoli %}
+            {% url 'fascicoli:dettaglio' f.pk as fascicolo_detail_url %}
+            <li>
+              <a class="link" href="{% url 'fascicoli:detail' f.pk %}">{% firstof f.codice f|stringformat:"s" %}</a>
+              {% if f.pratica %}<span class="muted"> ({{ f.pratica }})</span>{% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessun fascicolo recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Comunicazioni</h2>
+      <div class="body">
+        <ul class="list">
+          {% for c in comunicazioni %}
+            <li>
+              <span class="badge">{% if c.direzione == 'IN' %}Entrata{% else %}Uscita{% endif %}</span>
+              <a class="link" href="{{ c.get_absolute_url }}">{{ c.oggetto|default:"(senza oggetto)" }}</a>
+              <span class="muted"> • {{ c.get_tipo_display }}</span>
+              {% if c.data_riferimento %}<span class="muted"> — {{ c.data_riferimento|date:"d/m/Y H:i" }}</span>{% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessuna comunicazione per questa anagrafica.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Documenti</h2>
+      <div class="body">
+        <div class="form-actions" style="margin-bottom:8px">
+          <a class="btn" href="{% url 'documenti:nuovo_dinamico' %}?cliente={{ obj.pk }}">+ Nuovo documento per questa anagrafica</a>
+        </div>
+        <form method="get" action="">
+          <div class="form-row">
+            <label for="q">Cerca documenti dell’anagrafica</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Titolo, numero, note, nome file…" />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn">Cerca</button>
+            {% if q %}<a class="btn btn-secondary" href=".">Pulisci</a>{% endif %}
+          </div>
+        </form>
+        <ul style="margin-top:10px">
+          {% for d in documenti %}
+            <li>
+              <a class="link" href="{% url 'documenti:dettaglio' d.pk %}">{% firstof d.titolo d|stringformat:"s" %}</a>
+              {% if d.numero %}<span class="muted"> • {{ d.numero }}</span>{% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessun documento trovato.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ u.get_tipo_display }} — {{ u.nome }} ({{ u.codice }})</h2>
+<p class="text-muted">{{ u.full_path }}</p>
+
+<div class="mb-3">
+  <a class="btn btn-primary" href="{% url 'stampe:etichetta' 'archivio_fisico' 'unitafisica' u.pk %}?modulo=Etichetta_archivio" target="_blank">
+    Stampa etichetta archivio
+  </a>
+  <a class="btn btn-primary" href="{% url 'stampe:lista' 'archivio_fisico' 'catalogounitafisica'%}?lista=LST_CAT&unita={{ u.codice }}" target="_blank">
+    Catalogo unita fisica
+  </a>
+  <a class="btn btn-primary" href="{% url 'stampe:lista' 'archivio_fisico' 'UnitaFisica'%}?lista=LST_SUB&unita={{ u.pk }}" target="_blank">
+    Subunita
+  </a>
+  <a class="btn btn-primary" href="{% url 'stampe:lista' 'archivio_fisico' 'archiviofisicolistastampa'%}?lista=LST_OBJ&unita={{ u.pk }}" target="_blank">
+    elenco oggetti
+  </a>  
+</div>
+
+<div class="treeview">
+  <style>
+    .treeview__list,
+    .treeview__list ul { list-style: none; margin: 0; padding-left: 1rem; }
+    .treeview__summary { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .treeview__summary::-webkit-details-marker { display: none; }
+    .treeview__summary::before {
+      content: "▸";
+      display: inline-block;
+      transform: rotate(90deg);
+      transition: transform 0.2s ease;
+    }
+    details:not([open]) > .treeview__summary::before { transform: rotate(0deg); }
+    .treeview__link { font-size: 0.9rem; text-decoration: none; color: var(--bs-link-color, #0d6efd); }
+    .treeview__link:hover { text-decoration: underline; }
+    .treeview__label { font-weight: 600; }
+    .treeview__hint { font-size: 0.85rem; color: #6c757d; margin-bottom: 0.5rem; }
+  </style>
+
+  <p class="treeview__hint">Espandi i nodi per vedere fascicoli, documenti e sotto-unità.</p>
+  <ul class="treeview__list">
+    <li>
+      <details open>
+        <summary class="treeview__summary">
+          <span class="treeview__label">Unità corrente</span>
+          <a class="treeview__link" href="{% url 'archivio_fisico:unita_detail' u.pk %}">Ricarica</a>
+        </summary>
+        <ul>
+          <li>
+            <details open>
+              <summary class="treeview__summary">
+                <span class="treeview__label">Fascicoli ({{ fascicoli|length }})</span>
+              </summary>
+              <ul>
+                {% if fascicoli %}
+                  {% for fascicolo in fascicoli %}
+                    {% if fascicolo.pk %}
+                      <li>
+                        <a href="{% url 'fascicoli:detail' fascicolo.pk %}">
+                          {{ fascicolo }}
+                        </a>
+                      </li>
+                    {% else %}
+                      <li class="text-warning">{{ fascicolo }}</li>
+                    {% endif %}
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">Nessun fascicolo assegnato.</li>
+                {% endif %}
+              </ul>
+            </details>
+          </li>
+          <li>
+            <details open>
+              <summary class="treeview__summary">
+                <span class="treeview__label">Documenti ({{ documenti|length }})</span>
+              </summary>
+              <ul>
+                {% if documenti %}
+                  {% for documento in documenti %}
+                    <li>{{ documento }}</li>
+                  {% endfor %}
+                {% else %}
+                  <li class="text-muted">Nessun documento assegnato.</li>
+                {% endif %}
+              </ul>
+            </details>
+          </li>
+          <li>
+            <details open>
+              <summary class="treeview__summary">
+                <span class="treeview__label">Sotto-unità ({{ figli|length }})</span>
+              </summary>
+              <ul>
+                {% if figli %}
+                  {% include "archivio_fisico/_unita_tree.html" with nodes=figli %}
+                {% else %}
+                  <li class="text-muted">Nessuna sotto-unità.</li>
+                {% endif %}
+              </ul>
+            </details>
+          </li>
+        </ul>
+      </details>
+    </li>
+  </ul>
+</div>
+{% endblock %}

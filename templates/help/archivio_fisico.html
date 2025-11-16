@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Help Archivio fisico{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Archivio fisico</h1>
+      <p class="text-muted mb-0">Tracciamento scaffali, stanze e unità fisiche per documenti cartacei.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Unità fisiche</h2>
+    <ul>
+      <li>Le unità rappresentano scaffalature, faldoni o altri contenitori fisici.</li>
+      <li>Ogni unità possiede un percorso (<em>full_path</em>) utile per ordinamento e ricerche.</li>
+      <li>È possibile annidare unità per rappresentare livelli (es. deposito &gt; stanza &gt; scaffale).</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Associazione a documenti e fascicoli</h2>
+    <ul>
+      <li>Documenti cartacei: l'ubicazione viene scelta durante la protocollazione.</li>
+      <li>Fascicoli cartacei: richiedono un'unità fisica obbligatoria.</li>
+      <li>Le movimentazioni Protocollo aggiornano automaticamente lo stato di giacenza.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Report e ricerche</h2>
+    <p>L'elenco unità consente filtri per percorso e codice. Utilizzare la vista "Documenti senza ubicazione" per sanare eventuali anomalie.</p>
+  </section>
+</div>
+{% endblock %}

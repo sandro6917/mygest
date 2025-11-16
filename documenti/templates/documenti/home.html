@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Documenti{% endblock %}
+{% block content %}
+  <div class="grid" style="display:grid;grid-template-columns:25% 75%;gap:16px;align-items:start">
+    <!-- Colonna sinistra (25%) -->
+    <div class="col-left">
+      <section class="card">
+        <h2>Azioni rapide</h2>
+        <div class="body">
+          <ul>
+            <li><a class="link" href="{% url 'documenti:nuovo_dinamico' %}">Crea nuovo documento</a></li>
+            <li><a class="link" href="/admin/documenti/documento/add/">Aggiungi da Admin</a></li>
+            <li><a class="link" href="/admin/documenti/documento/">Elenco documenti (Admin)</a></li>
+            <li><a class="link" href="{% url 'archivio_fisico:unita_list' %}">Archivio fisico</a></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Ricerca documenti</h2>
+        <div class="body">
+          <form method="get" action="{% url 'documenti:home' %}">
+            <label for="q">Cerca</label>
+            <input id="q" type="search" name="q" value="{{ q }}" placeholder="descrizione, codice, note…" style="width:100%;max-width:420px">
+            <div class="form-actions">
+              <button type="submit">Cerca</button>
+              <a class="btn btn-secondary" href="{% url 'documenti:home' %}">Azzera</a>
+            </div>
+            <div class="muted" style="margin-top:6px">
+              {% if q %}Filtro: “{{ q }}”.{% else %}Nessun filtro applicato.{% endif %}
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <!-- Colonna destra (75%) -->
+    <div class="col-right">
+      <section class="card">
+        <h2>Ultimi documenti</h2>
+        <div class="body">
+          {% if ultimi_documenti %}
+            <ul>
+              {% for d in ultimi_documenti %}
+                <li>
+                  <div><strong>#{{ d.id }}</strong> — {{ d.descrizione|default:"(senza descrizione)" }}</div>
+                  <div class="muted">
+                    Cliente: {{ d.cliente|default:"—" }}{% if d.tipo %} · Tipo: {{ d.tipo }}{% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">Nessun documento presente.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Clienti recenti</h2>
+        <div class="body">
+          {% if clienti_recenti %}
+            <ul>
+              {% for c in clienti_recenti %}
+                <li>{{ c }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">Nessun cliente recente.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Tipi documento usati di recente</h2>
+        <div class="body">
+          {% if tipi_recenti %}
+            <ul>
+              {% for t in tipi_recenti %}
+                <li>{{ t }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">Nessun tipo utilizzato di recente.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Elenco documenti</h2>
+        <div class="body">
+          {% if documenti_filtrati %}
+            <div class="muted" style="margin-bottom:6px">
+              Visualizzati {{ documenti_filtrati|length }} di {{ documenti_total }}.
+            </div>
+            <ul>
+              {% for d in documenti_filtrati %}
+                <li>
+                  {{ d.descrizione }} ({{ d.codice }}) — {{ d.cliente }}
+                  <a href="{% url 'documenti:dettaglio' d.pk %}">Dettaglio</a>
+                  <a href="{% url 'documenti:modifica_dinamico' d.pk %}">Modifica</a>
+                  {% if d.file %}
+                    <a href="{{ d.file.url }}" target="_blank" rel="noopener">Apri file</a>
+                  {% endif %}
+                  <a href="{% url 'protocollo:protocolla_documento' d.pk %}">Protocolla</a>
+                </li>
+              {% endfor %}
+            </ul>
+            {% if documenti_total > documenti_filtrati|length %}
+              <div class="muted" style="margin-top:6px">
+                Risultati limitati. Raffina la ricerca per vedere più risultati.
+              </div>
+            {% endif %}
+          {% else %}
+            <div class="muted">Nessun documento trovato.</div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Movimenti di protocollo recenti</h2>
+        <div class="body">
+          {% if movimenti_recenti %}
+            <ul>
+              {% for m in movimenti_recenti %}
+                <li>
+                  <strong>{{ m.direzione }}</strong>
+                  n. {{ m.numero }}/{{ m.anno }}
+                  — {{ m.data|date:"d/m/Y H:i" }}
+                  {% if m.documento_id %}
+                    — <a href="{% url 'documenti:dettaglio' m.documento_id %}">
+                        {{ m.documento.descrizione|default:"(senza descrizione)" }}
+                      </a>
+                    {% if m.documento.codice %} ({{ m.documento.codice }}){% endif %}
+                  {% elif m.fascicolo_id %}
+                    — Fascicolo:
+                      <a href="{% url 'fascicoli:detail' m.fascicolo_id %}">
+                        {{ m.fascicolo.codice|default:m.fascicolo_id }}
+                      </a>
+                  {% endif %}
+                  — {{ m.cliente }}
+                  {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
+                  {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
+                  {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}
+                  {% if not m.chiuso and m.direzione == "OUT" %}
+                    <span class="tag" style="background:#f8d775;color:#5a4500;padding:2px 6px;border-radius:4px">APERTO</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">Nessun movimento recente.</div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% if obj %}{% trans "Modifica nota" %}{% else %}{% trans "Nuova nota" %}{% endif %}{% endblock %}
+{% block content %}
+<div class="container" style="max-width:640px">
+  <h1 style="margin-bottom:16px">
+    {% if obj %}{% trans "Modifica nota" %}{% else %}{% trans "Nuova nota" %}{% endif %}
+    <small class="muted">· {{ pratica.codice }}</small>
+  </h1>
+  <form method="post" class="card card-full">
+    <div class="body">
+      {% csrf_token %}
+      {{ form.as_p }}
+    </div>
+    <div class="action" style="display:flex; gap:8px; padding:12px;">
+      <button type="submit" class="btn btn-primary">{% trans "Salva" %}</button>
+      <a class="btn btn-secondary" href="{% url 'pratiche:dettaglio' pratica.pk %}">{% trans "Annulla" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

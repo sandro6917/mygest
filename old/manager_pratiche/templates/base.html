@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Gestione pratiche{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v=20251018">
+  <link rel="icon" href="{% static 'img/favicon.ico' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header>
+  <div class="navbar">
+    <div class="brand"><a href="{% url 'home' %}" class="brand-link">Gestione pratiche</a></div>
+    <nav class="nav-actions">
+      <!-- Link alle home delle app -->
+      <a href="/anagrafiche/">Anagrafiche</a>
+      <a href="{% url 'documenti:home' %}">Documenti</a>
+      <a href="/fascicoli/">Fascicoli</a>
+      <a href="/pratiche/">Pratiche</a>
+      <!-- Azioni rapide -->
+      <a href="/admin/">Admin</a>
+    </nav>
+  </div>
+</header>
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

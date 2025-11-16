@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Archivio — {{ fascicolo.codice }}{% endblock %}
+{% block content %}
+<div class="container">
+  <section class="card">
+    <h2>Archivio fascicolo {{ fascicolo.codice }}</h2>
+    <div class="body">
+      <div class="muted" style="margin-bottom:8px">
+        Radice: <code>{{ base_dir }}</code><br>
+        Corrente: <code>{{ current_dir }}</code>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <a class="btn" href="{% url 'fascicoli:detail' fascicolo.pk %}">Torna al fascicolo</a>
+        {% if up_link %}<a class="btn btn-secondary" href="{{ up_link }}">Su di livello</a>{% endif %}
+      </div>
+      {% if entries %}
+        <ul class="list">
+          {% for e in entries %}
+            <li>
+              {% if e.is_dir %}
+                📁 <a class="link" href="{{ e.dir_url }}">{{ e.name }}/</a>
+              {% else %}
+                📄 <a class="link" href="{{ e.file_url }}" target="_blank" rel="noopener">{{ e.name }}</a>
+                <small class="muted">· {{ e.size }} B</small>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Cartella vuota o non accessibile.</p>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

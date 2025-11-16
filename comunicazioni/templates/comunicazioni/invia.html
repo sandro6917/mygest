@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Invia comunicazione{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Invia comunicazione</h1>
+      <p class="text-muted mb-0">Conferma l'invio della comunicazione selezionata verso i destinatari indicati.</p>
+    </div>
+    {% if back_url %}
+      <a href="{{ back_url }}" class="btn btn-link text-decoration-none">Annulla</a>
+    {% endif %}
+  </div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-header">Riepilogo</div>
+    <div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Oggetto</dt>
+        <dd class="col-sm-8">{{ comunicazione.oggetto }}</dd>
+        <dt class="col-sm-4">Mittente</dt>
+        <dd class="col-sm-8">{{ comunicazione.mittente|default:"Valore predefinito di sistema" }}</dd>
+        <dt class="col-sm-4">Destinatari</dt>
+        <dd class="col-sm-8">{{ comunicazione.destinatari }}</dd>
+        <dt class="col-sm-4">Stato attuale</dt>
+        <dd class="col-sm-8">
+          <span class="badge text-bg-secondary text-uppercase">{{ comunicazione.stato }}</span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-header">Allegati</div>
+    <div class="card-body">
+      {% with allegati_list=comunicazione.allegati.all %}
+        {% if allegati_list %}
+          <ul class="list-group list-group-flush">
+            {% for allegato in allegati_list %}
+              <li class="list-group-item">{{ allegato.documento }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted mb-0">Nessun allegato presente.</p>
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <form method="post" class="mt-4">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Invia comunicazione</button>
+    {% if back_url %}
+      <a href="{{ back_url }}" class="btn btn-link text-decoration-none">Annulla</a>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

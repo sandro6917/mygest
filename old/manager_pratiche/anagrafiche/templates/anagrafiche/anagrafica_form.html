@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{% if is_create %}Nuova anagrafica{% else %}Modifica anagrafica{% endif %}{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>{% if is_create %}Nuova anagrafica{% else %}Modifica anagrafica{% endif %}</h2>
+  <div class="body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <h3>Dati anagrafica</h3>
+      {{ a_form.non_field_errors }}
+      {% for field in a_form %}
+        <div style="margin:6px 0">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label><br>
+          {{ field }}
+          {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+          {% for err in field.errors %}<div style="color:#c62828">{{ err }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+
+      <h3 style="margin-top:14px">Dati cliente</h3>
+      {{ c_form.non_field_errors }}
+      {% for field in c_form %}
+        <div style="margin:6px 0">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label><br>
+          {{ field }}
+          {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+          {% for err in field.errors %}<div style="color:#c62828">{{ err }}</div>{% endfor %}
+        </div>
+      {% endfor %}
+
+      <button type="submit">{% if is_create %}Crea{% else %}Salva{% endif %}</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Anagrafiche{% endblock %}
+{% block content %}
+  <div class="grid">
+    <section class="card">
+      <h2>Ultime anagrafiche</h2>
+      <div class="body">
+        {% if ultimi_clienti %}
+          <ul>
+            {% for c in ultimi_clienti %}
+              <li>{{ c }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessuna anagrafica presente.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Clienti con attività recente</h2>
+      <div class="body">
+        {% if clienti_recenti %}
+          <ul>
+            {% for c in clienti_recenti %}
+              <li>{{ c }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessuna attività recente.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Top clienti (per documenti)</h2>
+      <div class="body">
+        {% if top_clienti %}
+          <ul>
+            {% for c, n in top_clienti %}
+              <li>{{ c }} <span class="muted">· {{ n }} documenti</span></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun dato disponibile.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Azioni rapide</h2>
+      <div class="body">
+        <ul>
+          <li><a class="link" href="{% url 'anagrafiche:create' %}">Nuova anagrafica</a></li>
+          <li><a class="link" href="/admin/anagrafiche/anagrafica/">Elenco anagrafiche (Admin)</a></li>
+          <li><a class="link" href="{% url 'documenti:nuovo_dinamico' %}">Crea nuovo documento</a></li>
+          <li><a class="link" href="{% url 'documenti:home' %}">Vai a Documenti</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Box: ricerca anagrafiche -->
+    <section class="card">
+      <h2>Ricerca anagrafiche</h2>
+      <div class="body">
+        <form method="get" action="{% url 'anagrafiche:home' %}">
+          <label for="q">Cerca</label>
+          <input id="q" type="search" name="q" value="{{ q }}" placeholder="nome, cognome, denominazione, CF/P.IVA, email…" style="width:100%;max-width:420px">
+          <div style="margin-top:8px">
+            <button type="submit">Cerca</button>
+            <a class="link" href="{% url 'anagrafiche:home' %}">Azzera</a>
+          </div>
+          <div class="muted" style="margin-top:6px">
+            {% if q %}Filtro: “{{ q }}”.{% else %}Nessun filtro applicato.{% endif %}
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Box: elenco filtrato -->
+    <section class="card">
+      <h2>Elenco anagrafiche</h2>
+      <div class="body">
+        {% if anagrafiche_filtrate %}
+          <div class="muted" style="margin-bottom:6px">
+            Visualizzate {{ anagrafiche_filtrate|length }} di {{ anagrafiche_total }}.
+          </div>
+          <ul>
+            {% for c in anagrafiche_filtrate %}
+              <li>
+                <a class="link" href="{% url 'anagrafiche:edit' c.pk %}">{{ c }}</a>
+                <span class="muted"> · </span>
+                <a class="link" href="{% url 'anagrafiche:detail' c.pk %}">dettaglio</a>
+              </li>
+            {% endfor %}
+          </ul>
+          {% if anagrafiche_total > anagrafiche_filtrate|length %}
+            <div class="muted" style="margin-top:6px">
+              Risultati limitati. Specifica meglio la ricerca per affinare.
+            </div>
+          {% endif %}
+        {% else %}
+          <div class="muted">Nessuna anagrafica trovata.</div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+{% endblock %}

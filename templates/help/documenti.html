@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Help Documenti{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Documenti</h1>
+      <p class="text-muted mb-0">Archivio digitale con storage NAS, codifica automatica e protocollazione.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Caricamento documenti</h2>
+    <ol>
+      <li>Seleziona <em>Documenti &gt; Nuovo</em> e scegli il tipo documento.</li>
+      <li>Compila fascicolo, cliente, descrizione e data documento.</li>
+      <li>Allega il file: il sistema genererà nome e collocazione secondo il pattern titolario.</li>
+    </ol>
+    <p class="text-muted">I documenti digitali vengono spostati in modo automatico sul percorso NAS configurato.</p>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Protocollazione</h2>
+    <p>Per i documenti tracciabili è possibile aprire il modulo protocollo direttamente dalla scheda dettaglio.</p>
+    <ul>
+      <li>Modalità <strong>IN</strong>: registra ingresso, opzionale il mittente (<em>da chi</em>).</li>
+      <li>Modalità <strong>OUT</strong>: gestisce consegna, destinatario e data di rientro prevista.</li>
+      <li>Vincoli su ubicazione in caso di documenti cartacei legati a fascicolo.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Ricerca e filtri</h2>
+    <ul>
+      <li>Ricerca per cliente, tipo, fascicolo o tag.</li>
+      <li>Badge di stato per tracciabilità (uscito vs in giacenza).</li>
+      <li>Accesso rapido agli ultimi caricamenti dalla home del portale.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

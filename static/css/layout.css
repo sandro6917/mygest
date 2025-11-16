@@ -1,0 +1,55 @@
+/* Griglia responsive: max 3 card per riga */
+.dashboard-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 700px)  { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* Card a tutta larghezza (Dettaglio) */
+.card-full { grid-column: 1 / -1; }
+
+/* Key-Value (dl) pulito e fluido */
+.kv { display: grid; grid-template-columns: minmax(120px, 220px) 1fr; gap: 6px 12px; align-items: start; }
+.kv dt { font-weight: 600; color: #555; }
+.kv dd { margin: 0; }
+.kv a.link { word-break: break-all; }
+
+/* Layout home 3 colonne: 20% / 60% / 20% */
+.home-layout { display: grid; grid-template-columns: 20% 60% 20%; gap: 12px; align-items: start; }
+.home-col-2-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 1024px) {
+  .home-layout { grid-template-columns: 1fr; }
+  .home-col-2-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 700px) {
+  .home-col-2-grid { grid-template-columns: 1fr; }
+}
+
+.form-layout {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  grid-template-columns: repeat(15, minmax(0, 1fr));
+}
+
+.form-layout__main {
+  grid-column: 1 / span 12;
+}
+
+.form-layout__side {
+  grid-column: 13 / span 3;
+}
+
+.form-layout > :not(.form-layout__main):not(.form-layout__side) {
+  grid-column: span 5;
+}
+
+@media (max-width: 1024px) {
+  .form-layout {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .form-layout__main,
+  .form-layout__side,
+  .form-layout > :not(.form-layout__main):not(.form-layout__side) {
+    grid-column: 1 / -1;
+  }
+}

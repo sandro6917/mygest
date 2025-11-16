@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Comunicazioni{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Comunicazioni</h1>
+      <p class="text-muted mb-0">Gestisci le comunicazioni preparate e lo stato degli invii.</p>
+    </div>
+    {% if create_url %}
+      <a href="{{ create_url }}" class="btn btn-primary">Nuova comunicazione</a>
+    {% endif %}
+  </div>
+
+  {% if comunicazioni %}
+    <div class="table-responsive bg-white shadow-sm rounded-3">
+      <table class="table table-striped align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col">Oggetto</th>
+            <th scope="col">Tipo</th>
+            <th scope="col" class="text-nowrap">Direzione</th>
+            <th scope="col">Destinatari</th>
+            <th scope="col" class="text-nowrap">Stato</th>
+            <th scope="col" class="text-nowrap">Protocollo</th>
+            <th scope="col" class="text-nowrap">Creata il</th>
+            <th scope="col" class="text-end">Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for comunicazione in comunicazioni %}
+            <tr>
+              <td class="fw-semibold position-relative">
+                {% if comunicazione.get_absolute_url %}
+                  <a href="{{ comunicazione.get_absolute_url }}" class="stretched-link d-block text-decoration-none text-reset">{{ comunicazione.oggetto }}</a>
+                {% else %}
+                  {{ comunicazione.oggetto }}
+                {% endif %}
+              </td>
+              <td>{{ comunicazione.get_tipo_display|default:comunicazione.tipo }}</td>
+              <td>{{ comunicazione.get_direzione_display }}</td>
+              <td class="text-truncate" style="max-width: 260px;" title="{{ comunicazione.destinatari }}">
+                {{ comunicazione.destinatari }}
+              </td>
+              <td>
+                <span class="badge text-bg-secondary text-uppercase">{{ comunicazione.stato }}</span>
+              </td>
+              <td>
+                {% if comunicazione.protocollo_label %}
+                  <span class="badge text-bg-primary">{{ comunicazione.protocollo_label }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="text-nowrap">{{ comunicazione.data_creazione|date:"d/m/Y H:i" }}</td>
+              <td class="text-end">
+                {% if comunicazione.get_absolute_url %}
+                  <a href="{{ comunicazione.get_absolute_url }}" class="btn btn-sm btn-outline-primary">Dettaglio</a>
+                {% endif %}
+                {% if comunicazione.edit_url %}
+                  <a href="{{ comunicazione.edit_url }}" class="btn btn-sm btn-outline-secondary ms-1">Modifica</a>
+                {% endif %}
+                {% if comunicazione.invia_url %}
+                  <a href="{{ comunicazione.invia_url }}" class="btn btn-sm btn-outline-success ms-1">Invia</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      Nessuna comunicazione disponibile al momento.
+      {% if create_url %}
+        <a href="{{ create_url }}" class="alert-link">Crea la prima comunicazione</a>.
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

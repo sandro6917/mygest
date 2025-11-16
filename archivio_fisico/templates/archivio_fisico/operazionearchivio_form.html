@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Nuova/Modifica Operazione Archivio Fisico</h1>
+<form method="post" enctype="multipart/form-data" data-options-url="{% url 'archivio_fisico:operazionearchivio_riga_options' %}"{% if operazione %} data-operazione-id="{{ operazione.pk }}"{% endif %}>{% csrf_token %}
+  {{ form.non_field_errors }}
+  {{ form.as_p }}
+  <h3>Fascicoli/Documenti movimentati</h3>
+  {{ formset.non_form_errors }}
+  {{ formset.management_form }}
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fascicolo</th>
+        <th>Documento</th>
+        <th>Movimento protocollo</th>
+        <th>Unità di partenza</th>
+        <th>Unità di arrivo</th>
+        <th>Stato precedente</th>
+        <th>Stato successivo</th>
+        <th>Note</th>
+        <th>Elimina</th>
+      </tr>
+    </thead>
+    <tbody data-formset-container>
+      {% for riga_form in formset %}
+      <tr class="formset-row {% if riga_form.errors or riga_form.non_field_errors %}table-danger{% endif %}">
+        <td>
+          {% for hidden in riga_form.hidden_fields %}{{ hidden }}{% endfor %}
+          {{ riga_form.fascicolo.errors }}
+          {{ riga_form.fascicolo }}
+        </td>
+        <td>
+          {{ riga_form.documento.errors }}
+          {{ riga_form.documento }}
+        </td>
+        <td>
+          {{ riga_form.movimento_protocollo.errors }}
+          {{ riga_form.movimento_protocollo }}
+        </td>
+        <td>
+          {{ riga_form.unita_fisica_sorgente.errors }}
+          {{ riga_form.unita_fisica_sorgente }}
+        </td>
+        <td>
+          {{ riga_form.unita_fisica_destinazione.errors }}
+          {{ riga_form.unita_fisica_destinazione }}
+        </td>
+        <td>
+          {{ riga_form.stato_precedente.errors }}
+          {{ riga_form.stato_precedente }}
+        </td>
+        <td>
+          {{ riga_form.stato_successivo.errors }}
+          {{ riga_form.stato_successivo }}
+        </td>
+        <td>
+          {{ riga_form.note.errors }}
+          {{ riga_form.note }}
+        </td>
+        <td>
+          <span class="d-none">{{ riga_form.DELETE }}</span>
+          <button type="button" class="btn btn-outline-danger btn-sm js-remove-form-row">Rimuovi</button>
+        </td>
+      </tr>
+      {% if riga_form.non_field_errors %}
+      <tr class="table-warning">
+        <td colspan="9">{{ riga_form.non_field_errors }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="formset-actions mb-3">
+    <button type="button" class="btn btn-outline-primary" id="add-riga-btn">Aggiungi riga</button>
+  </div>
+  <button type="submit" class="btn btn-success">Salva</button>
+  <a href="{% url 'archivio_fisico:operazionearchivio_list' %}" class="btn btn-secondary">Annulla</a>
+</form>
+<template id="righe-empty-row">
+  <tr class="formset-row">
+    <td>
+      {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+      {{ formset.empty_form.fascicolo.errors }}
+      {{ formset.empty_form.fascicolo }}
+    </td>
+    <td>
+      {{ formset.empty_form.documento.errors }}
+      {{ formset.empty_form.documento }}
+    </td>
+    <td>
+      {{ formset.empty_form.movimento_protocollo.errors }}
+      {{ formset.empty_form.movimento_protocollo }}
+    </td>
+    <td>
+      {{ formset.empty_form.unita_fisica_sorgente.errors }}
+      {{ formset.empty_form.unita_fisica_sorgente }}
+    </td>
+    <td>
+      {{ formset.empty_form.unita_fisica_destinazione.errors }}
+      {{ formset.empty_form.unita_fisica_destinazione }}
+    </td>
+    <td>
+      {{ formset.empty_form.stato_precedente.errors }}
+      {{ formset.empty_form.stato_precedente }}
+    </td>
+    <td>
+      {{ formset.empty_form.stato_successivo.errors }}
+      {{ formset.empty_form.stato_successivo }}
+    </td>
+    <td>
+      {{ formset.empty_form.note.errors }}
+      {{ formset.empty_form.note }}
+    </td>
+    <td>
+      <span class="d-none">{{ formset.empty_form.DELETE }}</span>
+      <button type="button" class="btn btn-outline-danger btn-sm js-remove-form-row">Rimuovi</button>
+    </td>
+  </tr>
+</template>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const form = document.querySelector('form[data-options-url]');
+  const optionsUrl = form ? form.getAttribute('data-options-url') : null;
+  const operazioneId = form ? form.getAttribute('data-operazione-id') : "";
+  const container = document.querySelector('[data-formset-container]');
+  const addBtn = document.getElementById("add-riga-btn");
+  const totalFormsInput = document.getElementById("id_{{ formset.prefix }}-TOTAL_FORMS");
+  const emptyTemplate = document.getElementById("righe-empty-row");
+  const rowControllers = new WeakMap();
+  const observedFields = [
+    "documento",
+    "fascicolo",
+    "movimento_protocollo",
+    "unita_fisica_sorgente",
+    "unita_fisica_destinazione",
+    "stato_precedente",
+    "stato_successivo",
+  ];
+  const lockEvents = ["mousedown", "keydown", "touchstart", "focus"]; 
+
+  if (!container || !totalFormsInput || !emptyTemplate) {
+    return;
+  }
+
+  const getField = (row, suffix) => row.querySelector(`[name$="-${suffix}"]`);
+
+  const setRowWarnings = (row, warnings) => {
+    const uniqueWarnings = (warnings || []).filter(Boolean);
+    if (uniqueWarnings.length) {
+      const message = uniqueWarnings.join(" \u2022 ");
+      row.dataset.warningMessage = message;
+      row.setAttribute("title", uniqueWarnings.join("\n"));
+    } else {
+      delete row.dataset.warningMessage;
+      row.removeAttribute("title");
+    }
+  };
+
+  const ensureLockHandlers = (element) => {
+    if (element.dataset.lockHandlersAttached === "1") {
+      return;
+    }
+    const handler = (event) => {
+      if (element.dataset.locked === "1") {
+        if (event.type === "focus") {
+          element.blur();
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    lockEvents.forEach((evt) => {
+      element.addEventListener(evt, handler, { capture: true });
+    });
+    element.dataset.lockHandlersAttached = "1";
+  };
+
+  const applyLockState = (element, locked, forcedValue) => {
+    ensureLockHandlers(element);
+    if (!element.dataset.originalTabIndex) {
+      if (element.hasAttribute("tabindex")) {
+        element.dataset.originalTabIndex = String(element.tabIndex);
+      } else {
+        element.dataset.originalTabIndex = "";
+      }
+    }
+    if (locked) {
+      element.dataset.locked = "1";
+      if (typeof forcedValue !== "undefined") {
+        element.value = forcedValue;
+        element.dataset.lockedValue = forcedValue;
+      }
+      if (element.tagName !== "SELECT") {
+        element.readOnly = true;
+      }
+      element.classList.add("opacity-75", "locked-field");
+      element.style.pointerEvents = "none";
+      element.setAttribute("tabindex", "-1");
+      element.dataset.userTouched = "0";
+    } else {
+      element.dataset.locked = "0";
+      if (element.tagName !== "SELECT") {
+        element.readOnly = false;
+      }
+      element.classList.remove("opacity-75", "locked-field");
+      element.style.pointerEvents = "";
+      if (typeof element.dataset.lockedValue !== "undefined" && element.dataset.userTouched !== "1") {
+        delete element.dataset.lockedValue;
+      }
+      const originalTab = element.dataset.originalTabIndex;
+      if (originalTab === "") {
+        element.removeAttribute("tabindex");
+      } else if (typeof originalTab !== "undefined") {
+        element.setAttribute("tabindex", originalTab);
+      }
+    }
+  };
+
+  const collectRowParams = (row) => {
+    if (!optionsUrl) {
+      return null;
+    }
+    const params = new URLSearchParams();
+    const tipoField = document.getElementById("id_tipo_operazione");
+    const referenteField = document.getElementById("id_referente_esterno");
+    params.set("tipo_operazione", tipoField ? (tipoField.value || "") : "");
+    params.set("referente_esterno", referenteField ? (referenteField.value || "") : "");
+    if (operazioneId) {
+      params.set("operazione", operazioneId);
+    }
+    observedFields.forEach((name) => {
+      const input = getField(row, name);
+      if (!input) {
+        return;
+      }
+      let value = "";
+      if (input.type === "checkbox") {
+        value = input.checked ? (input.value || "on") : "";
+      } else {
+        value = input.value || "";
+      }
+      params.set(name, value);
+    });
+    const idInput = getField(row, "id");
+    if (idInput && idInput.value) {
+      params.set("riga", idInput.value);
+    }
+    return params;
+  };
+
+  const optionHasValue = (options, value) => {
+    if (!value) {
+      return false;
+    }
+    return (options || []).some((opt) => String(opt.value) === String(value));
+  };
+
+  const applyRowResponse = (row, payload) => {
+    if (!payload || !payload.fields) {
+      return;
+    }
+    const suggested = payload.suggested || {};
+    const directives = payload.directives || {};
+    const warnings = (payload.messages && payload.messages.warnings) || [];
+    setRowWarnings(row, warnings);
+
+    Object.entries(payload.fields).forEach(([name, fieldData]) => {
+      const element = getField(row, name);
+      if (!element || !fieldData) {
+        return;
+      }
+      const directive = directives[name] || {};
+      const locked = fieldData.locked ?? directive.locked ?? false;
+      const forcedValue = fieldData.forceValue ?? directive.forceValue;
+      const touched = element.dataset.userTouched === "1";
+      const previousValue = element.value;
+
+      if (element.tagName === "SELECT") {
+        element.innerHTML = "";
+        (fieldData.options || []).forEach((opt) => {
+          const optionEl = document.createElement("option");
+          optionEl.value = opt.value;
+          optionEl.textContent = opt.label;
+          if (opt.selected) {
+            optionEl.selected = true;
+          }
+          element.appendChild(optionEl);
+        });
+      }
+
+      let nextValue;
+      if (typeof forcedValue !== "undefined") {
+        nextValue = forcedValue;
+      } else if (fieldData.value) {
+        nextValue = fieldData.value;
+      } else if (!touched && suggested[name]) {
+        nextValue = suggested[name];
+      } else if (previousValue && optionHasValue(fieldData.options, previousValue)) {
+        nextValue = previousValue;
+      }
+
+      if (typeof nextValue !== "undefined") {
+        element.value = nextValue;
+        if (locked) {
+          element.dataset.userTouched = "0";
+        }
+      }
+
+      applyLockState(element, Boolean(locked), nextValue);
+    });
+  };
+
+  const fetchRowOptions = (row) => {
+    if (!optionsUrl) {
+      return;
+    }
+    const deleteInput = getField(row, "DELETE");
+    if (deleteInput && deleteInput.checked) {
+      return;
+    }
+    const params = collectRowParams(row);
+    if (!params) {
+      return;
+    }
+    const existingController = rowControllers.get(row);
+    if (existingController) {
+      existingController.abort();
+    }
+    const controller = new AbortController();
+    rowControllers.set(row, controller);
+    fetch(`${optionsUrl}?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Impossibile aggiornare le opzioni (status ${response.status})`);
+        }
+        return response.json();
+      })
+      .then((data) => applyRowResponse(row, data))
+      .catch((error) => {
+        if (error.name === "AbortError") {
+          return;
+        }
+        if (window.console && window.console.warn) {
+          console.warn(error);
+        }
+      });
+  };
+
+  const syncRowState = (row) => {
+    const deleteInput = getField(row, "DELETE");
+    const button = row.querySelector('.js-remove-form-row');
+    if (!deleteInput || !button) {
+      return;
+    }
+    const isDeleted = deleteInput.checked;
+    row.classList.toggle('opacity-50', isDeleted);
+    row.classList.toggle('table-warning', isDeleted);
+    button.classList.toggle('btn-outline-secondary', isDeleted);
+    button.classList.toggle('btn-outline-danger', !isDeleted);
+    button.textContent = isDeleted ? 'Ripristina' : 'Rimuovi';
+  };
+
+  const registerField = (row, name) => {
+    const field = getField(row, name);
+    if (!field) {
+      return;
+    }
+    if (!field.dataset.userTouched) {
+      field.dataset.userTouched = field.value ? "1" : "0";
+    }
+    ensureLockHandlers(field);
+    field.addEventListener('change', function() {
+      if (field.dataset.locked === "1") {
+        field.value = field.dataset.lockedValue || field.value;
+        field.dataset.userTouched = "0";
+        return;
+      }
+      field.dataset.userTouched = "1";
+      fetchRowOptions(row);
+    });
+  };
+
+  const bindRow = (row) => {
+    const button = row.querySelector('.js-remove-form-row');
+    const deleteInput = getField(row, "DELETE");
+    if (button && deleteInput) {
+      button.addEventListener('click', function() {
+        deleteInput.checked = !deleteInput.checked;
+        syncRowState(row);
+      });
+      syncRowState(row);
+    }
+
+    observedFields.forEach((name) => registerField(row, name));
+
+    const documentoField = getField(row, "documento");
+    const fascicoloField = getField(row, "fascicolo");
+    if (documentoField) {
+      documentoField.addEventListener('change', function() {
+        if (documentoField.value && fascicoloField && fascicoloField.value) {
+          fascicoloField.value = "";
+          fascicoloField.dataset.userTouched = "0";
+        }
+      });
+    }
+    if (fascicoloField) {
+      fascicoloField.addEventListener('change', function() {
+        if (fascicoloField.value && documentoField && documentoField.value) {
+          documentoField.value = "";
+          documentoField.dataset.userTouched = "0";
+        }
+      });
+    }
+
+    fetchRowOptions(row);
+  };
+
+  container.querySelectorAll('.formset-row').forEach(bindRow);
+
+  if (addBtn) {
+    addBtn.addEventListener('click', function() {
+      const currentIndex = parseInt(totalFormsInput.value, 10) || 0;
+      const html = emptyTemplate.innerHTML.replace(/__prefix__/g, currentIndex);
+      const wrapper = document.createElement('tbody');
+      wrapper.innerHTML = html.trim();
+      const newRow = wrapper.firstElementChild;
+      container.appendChild(newRow);
+      totalFormsInput.value = currentIndex + 1;
+      bindRow(newRow);
+      const firstInput = newRow.querySelector('select, input, textarea');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    });
+  }
+
+  const tipoField = document.getElementById("id_tipo_operazione");
+  const referenteField = document.getElementById("id_referente_esterno");
+  [tipoField, referenteField].forEach((field) => {
+    if (!field) {
+      return;
+    }
+    field.addEventListener('change', function() {
+      container.querySelectorAll('.formset-row').forEach((row) => fetchRowOptions(row));
+    });
+  });
+});
+</script>
+{% endblock %}

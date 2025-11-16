@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ fascicolo.codice }} — {{ fascicolo.titolo }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- Layout applicato via CSS globale -->
+
+  <div class="dashboard-grid">
+
+    <!-- Card Dettaglio (full width) -->
+    <section class="card card-full">
+      <h2>Dettaglio</h2>
+      <div class="body">
+        <!-- Stile kv applicato via CSS globale -->
+        <dl class="kv">
+          <dt>Codice</dt><dd>{{ fascicolo.codice }}</dd>
+          <dt>Titolo</dt><dd>{{ fascicolo.titolo }}</dd>
+          <dt>Cliente</dt><dd>{{ fascicolo.cliente }}</dd>
+          <dt>Voce titolario</dt><dd>{{ fascicolo.titolario_voce }}</dd>
+          <dt>Anno</dt><dd>{{ fascicolo.anno }}</dd>
+          <dt>Stato</dt><dd>{{ fascicolo.get_stato_display }}</dd>
+          <dt>Progressivo</dt>
+          <dd>{% if fascicolo.parent_id %}{{ fascicolo.sub_progressivo }} (sottofascicolo){% else %}{{ fascicolo.progressivo }}{% endif %}</dd>
+          <dt>Parent</dt>
+          <dd>
+            {% if fascicolo.parent %}
+              <a class="link" href="{% url 'fascicoli:detail' fascicolo.parent.pk %}">{{ fascicolo.parent.codice }}</a>
+            {% else %}-{% endif %}
+          </dd>
+          <dt>Ubicazione</dt>
+          <dd>
+            {% if fascicolo.ubicazione %}
+              <a class="link" href="{% url 'archivio_fisico:unita_detail' fascicolo.ubicazione.pk %}">{{ fascicolo.ubicazione.full_path }}</a>
+            {% else %}-{% endif %}
+          </dd>
+          <dt>Path archivio</dt>
+          <dd>
+            {% if fascicolo.path_archivio %}
+              <a class="link" href="{% url 'fascicoli:archivio' fascicolo.pk %}">link all'archivio</a>
+            {% else %}-{% endif %}
+          </dd>
+          <dt>Creato il</dt><dd>{{ fascicolo.created_at|date:"Y-m-d H:i" }}</dd>
+          <dt>Aggiornato il</dt><dd>{{ fascicolo.updated_at|date:"Y-m-d H:i" }}</dd>
+          <dt>Note</dt><dd>{{ fascicolo.note|linebreaksbr|default:"-" }}</dd>
+        </dl>
+
+        <div class="form-actions" style="margin-top:12px; display:flex; gap:8px;">
+          <a class="btn" href="javascript:history.back()">{% trans "Indietro" %}</a>
+          <a class="btn btn-secondary" href="{% url 'admin:fascicoli_fascicolo_change' fascicolo.pk %}">{% trans "Apri in Admin" %}</a>
+          <a class="btn btn-primary" href="{% url 'fascicoli:modifica' fascicolo.pk %}">{% trans "Modifica fascicolo" %}</a>
+          <a class="btn btn-primary" href="{% url 'protocollo:protocolla_fascicolo' fascicolo.pk %}">{% trans "Protocolla fascicolo" %}</a>
+          <a class="btn btn-secondary" href="{% url 'stampe:etichetta' 'fascicoli' 'fascicolo' fascicolo.pk %}?modulo=CopFas" target="_blank" rel="noopener">
+            {% trans "Stampa fascicolo" %}
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card Pratiche collegate -->
+    <section class="card">
+      <h2>Pratiche collegate</h2>
+      <div class="body">
+        {% with ps=fascicolo.pratiche.all %}
+          {% if ps %}
+            <ul class="list">
+              {% for p in ps %}
+                <li>
+                  <a class="link" href="{% url 'pratiche:dettaglio' p.pk %}">{{ p.codice|default:p }}</a>
+                  {% if p.descrizione %}<small class="muted">— {{ p.descrizione }}</small>{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">Nessuna pratica collegata.</p>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </section>
+
+    <!-- Card Documenti -->
+    <section class="card">
+      <h2>Documenti</h2>
+      <div class="body">
+        {% if documenti %}
+          <ul class="list">
+            {% for d in documenti %}
+              <li>
+                <a class="link" href="{% url 'documenti:dettaglio' d.pk %}">{{ d.codice|default:"(senza codice)" }}</a>
+                — {{ d.descrizione|default:"(senza descrizione)" }}
+                <small class="muted">[{{ d.get_stato_display }} · {{ d.data_documento|date:"Y-m-d" }}]</small>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">Nessun documento collegato.</p>
+        {% endif %}
+        <div class="action" style="margin-top:8px;">
+          <a class="btn btn-primary" href="{% url 'documenti:nuovo_dinamico' %}?fascicolo={{ fascicolo.pk }}">+ Nuovo documento</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card Ricerca Fascicoli -->
+    <section class="card">
+      <h2>Ricerca fascicoli</h2>
+      <div class="body">
+        <form method="get" class="form-inline" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <input type="text" name="search" value="{{ search_query }}" placeholder="Cerca per codice, titolo o oggetto" style="flex:1 1 220px;" />
+          <button type="submit" class="btn btn-primary">Cerca</button>
+          {% for key, value in request.GET.items %}
+            {% if key != "search" %}
+              <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+          {% endfor %}
+        </form>
+        {% if search_query %}
+          {% if fascicoli_search_results %}
+            <ul class="list" style="margin-top:12px;">
+              {% for item in fascicoli_search_results %}
+                <li style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                  <span>
+                    <strong>{{ item.codice|default:item.pk }}</strong> — {{ item.titolo|default:"(senza titolo)" }}
+                  </span>
+                  <form method="post" action="{% url 'fascicoli:collega' fascicolo.pk %}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="target_id" value="{{ item.pk }}">
+                    {% if search_query %}
+                      <input type="hidden" name="search" value="{{ search_query }}">
+                    {% endif %}
+                    <button type="submit" class="btn btn-secondary btn-sm" title="{% trans 'Collega questo fascicolo' %}">✔️</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted" style="margin-top:12px;">Nessun fascicolo trovato.</p>
+          {% endif %}
+        {% else %}
+          <p class="muted" style="margin-top:12px;">Inserisci un termine per cercare altri fascicoli.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Card Gerarchia (Parent/Children) -->
+    <section class="card">
+      <h2>Gerarchia</h2>
+      <div class="body">
+        <p><strong>Parent:</strong>
+          {% if parent %}
+            <a class="link" href="{% url 'fascicoli:detail' parent.pk %}">{{ parent.codice }}</a>
+          {% else %}<span class="muted">—</span>{% endif %}
+        </p>
+        <p><strong>Children:</strong></p>
+        {% if children %}
+          <ul class="list">
+            {% for c in children %}
+              <li><a class="link" href="{% url 'fascicoli:detail' c.pk %}">{{ c.codice }}</a> — {{ c.titolo }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">Nessun sottofascicolo.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Card Pratiche correlate -->
+    <section class="card">
+      <h2>Pratiche correlate</h2>
+      <div class="body">
+        {% if pratiche %}
+          <ul class="list">
+            {% for p in pratiche %}
+              <li>
+                <a class="link" href="{% url 'pratiche:dettaglio' p.pk %}">{{ p.codice|default:p.id }}</a>
+                — {{ p.tipo|default:"Tipo" }} · {{ p.get_stato_display|default:"" }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">Nessuna pratica collegata.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Card Movimenti di protocollo -->
+    <section class="card">
+      <h2>Movimenti di protocollo recenti</h2>
+      <div class="body">
+        {% if movimenti %}
+          <ul class="list">
+            {% for m in movimenti %}
+              <li>
+                <strong>{{ m.direzione }}</strong>
+                n. {{ m.numero }}/{{ m.anno }}
+                — {{ m.data|date:"d/m/Y H:i" }}
+                {% if m.documento_id %}
+                  — <a class="link" href="{% url 'documenti:dettaglio' m.documento_id %}">
+                      {{ m.documento.descrizione|default:"(senza descrizione)" }}
+                    </a>
+                  {% if m.documento.codice %} ({{ m.documento.codice }}){% endif %}
+                {% elif m.fascicolo_id %}
+                  — Fascicolo:
+                    <a class="link" href="{% url 'fascicoli:detail' m.fascicolo_id %}">
+                      {{ m.fascicolo.codice|default:m.fascicolo_id }}
+                    </a>
+                {% endif %}
+                — {{ m.cliente }}
+                {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
+                {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
+                {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}
+                {% if not m.chiuso and m.direzione == "OUT" %}
+                  <span class="tag" style="background:#f8d775;color:#5a4500;padding:2px 6px;border-radius:4px">APERTO</span>
+                {% endif %}
+                <!-- Link rapido per registrare movimento archivio fisico -->
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'archivio_fisico:operazionearchivio_create' %}?movimento_protocollo={{ m.id }}&fascicolo={{ fascicolo.id }}">Registra movimento archivio</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun movimento recente.</div>
+        {% endif %}
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

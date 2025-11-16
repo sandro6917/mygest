@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Accesso{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>Accedi</h2>
+    <div class="body">
+      {% if form.errors %}<div style="color:#c62828">Credenziali non valide.</div>{% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div style="margin:6px 0">
+          <label for="{{ form.username.id_for_label }}">Username</label><br>
+          {{ form.username }}
+        </div>
+        <div style="margin:6px 0">
+          <label for="{{ form.password.id_for_label }}">Password</label><br>
+          {{ form.password }}
+        </div>
+        <input type="hidden" name="next" value="{{ next|default:'/documenti/' }}">
+        <button type="submit" class="link">Entra</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

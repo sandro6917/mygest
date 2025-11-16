@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Nuovo documento: {{ tipo.codice }}{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>Nuovo documento: {{ tipo.codice }} — {{ tipo.nome }}</h2>
+    <div class="body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% for field in form %}
+          <div style="margin:6px 0">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label><br>
+            {{ field }}
+            {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+            {% for err in field.errors %}<div style="color:#c62828">{{ err }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+        <button type="submit">Crea</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

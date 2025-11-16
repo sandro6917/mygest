@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Help Pratiche{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Pratiche</h1>
+      <p class="text-muted mb-0">Gestione attività operative con workflow, stato e scadenze.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Creare una pratica</h2>
+    <ol>
+      <li>Dal menu <em>Pratiche</em> clicca <strong>Nuova pratica</strong>.</li>
+      <li>Compila anagrafica cliente, tipologia e responsabile interno.</li>
+      <li>Imposta descrizione, priorità e eventuale fascicolo collegato.</li>
+    </ol>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Gestione scadenze</h2>
+    <ul>
+      <li>Aggiungi scadenze dalla scheda pratica con data e descrizione.</li>
+      <li>Le scadenze attive appaiono nella dashboard home finché non sono completate.</li>
+      <li>È possibile collegare documenti a supporto della scadenza o registrare note.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Monitoraggio stato</h2>
+    <p>Utilizza i filtri dell'elenco pratiche per monitorare lo stato (aperta, in corso, chiusa) e gli assegnatari.</p>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if is_create %}Nuova anagrafica{% else %}Modifica anagrafica{% endif %}{% endblock %}
+
+{% block content %}
+<section class="card">
+  <h2>{% if is_create %}Nuova anagrafica{% else %}Modifica anagrafica{% endif %}</h2>
+  <div class="body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <h3>Dati anagrafica</h3>
+      {{ a_form.non_field_errors }}
+      <div class="form-grid two-cols">
+        {% for field in a_form %}
+          <div class="form-row">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+            {% for err in field.errors %}<div class="error">{{ err }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <h3>Dati cliente</h3>
+      {{ c_form.non_field_errors }}
+      <div class="form-grid two-cols">
+        {% for field in c_form %}
+          <div class="form-row">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+            {% for err in field.errors %}<div class="error">{{ err }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="actions" style="margin-top: 1rem;">
+        <button type="submit" name="action" value="save" class="btn">{% if is_create %}Crea{% else %}Salva{% endif %}</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

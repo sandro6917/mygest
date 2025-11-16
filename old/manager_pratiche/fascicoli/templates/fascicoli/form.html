@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{% if is_create %}Nuovo fascicolo{% else %}Modifica fascicolo{% endif %}{% endblock %}
+{% block content %}
+<div class="container">
+  <section class="card">
+    <h2>{% if is_create %}Nuovo fascicolo{% else %}Modifica fascicolo{% endif %}</h2>
+    <div class="body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="form-actions" style="margin-top:8px">
+          <button type="submit" class="btn">{% if is_create %}Crea{% else %}Salva{% endif %}</button>
+          <a class="btn btn-secondary" href="{% url 'fascicoli:home' %}">Annulla</a>
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}

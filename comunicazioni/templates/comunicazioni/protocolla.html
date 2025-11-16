@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Protocolla comunicazione{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="card shadow-sm">
+    <div class="card-header">
+      Protocolla comunicazione
+    </div>
+    <div class="card-body">
+      <p class="text-muted mb-3">
+        <strong>{{ comunicazione.oggetto }}</strong>
+        {% if documento %}· Documento: {{ documento }}{% endif %}
+        {% if comunicazione.anagrafica %}· Cliente: {{ comunicazione.anagrafica }}{% endif %}
+      </p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Direzione</label>
+            {{ form.direzione }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Data e ora</label>
+            {{ form.quando }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Ubicazione</label>
+            {{ form.ubicazione }}
+          </div>
+          <div class="col-md-6" data-group="in">
+            <label class="form-label">Da chi (IN)</label>
+            {{ form.da_chi }}
+          </div>
+          <div class="col-md-6" data-group="out">
+            <label class="form-label">A chi (OUT)</label>
+            {{ form.a_chi }}
+          </div>
+          <div class="col-md-4" data-group="out">
+            <label class="form-label">Data rientro prevista</label>
+            {{ form.data_rientro_prevista }}
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Causale</label>
+            {{ form.causale }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Note</label>
+            {{ form.note }}
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary">Protocolla</button>
+          <a href="{{ cancel_url }}" class="btn btn-link text-decoration-none">Annulla</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  function toggleGroups() {
+    var sel = document.querySelector('select[name="direzione"]');
+    var val = sel ? sel.value : 'IN';
+    document.querySelectorAll('[data-group="in"]').forEach(function(el) {
+      el.style.display = (val === 'IN') ? '' : 'none';
+    });
+    document.querySelectorAll('[data-group="out"]').forEach(function(el) {
+      el.style.display = (val === 'OUT') ? '' : 'none';
+    });
+  }
+  var selectDirezione = document.querySelector('select[name="direzione"]');
+  if (selectDirezione) {
+    selectDirezione.addEventListener('change', toggleGroups);
+  }
+  toggleGroups();
+})();
+</script>
+{% endblock %}

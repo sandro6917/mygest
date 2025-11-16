@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>
+  Archivio fisico
+  <span class="ms-3 small">
+    <a href="{% url 'archivio_fisico:operazionearchivio_list' %}">Operazioni archivio</a>
+    &middot;
+    <a href="{% url 'archivio_fisico:unita_inventory_tree' %}">Lista di stampa</a>
+  </span>
+</h2>
+
+<style>
+  .treeview__list,
+  .treeview__list ul { list-style: none; margin: 0; padding-left: 1rem; }
+  .treeview__summary { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+  .treeview__summary::-webkit-details-marker { display: none; }
+  .treeview__summary::before {
+    content: "▸";
+    display: inline-block;
+    transform: rotate(90deg);
+    transition: transform 0.2s ease;
+  }
+  details:not([open]) > .treeview__summary::before { transform: rotate(0deg); }
+  .treeview__link { font-size: 0.9rem; text-decoration: none; color: var(--bs-link-color, #0d6efd); }
+  .treeview__link:hover { text-decoration: underline; }
+  .treeview__leaf { margin-left: 1.5rem; }
+  .treeview__label { font-weight: 600; }
+  .treeview__hint { font-size: 0.85rem; color: #6c757d; margin-bottom: 0.5rem; }
+</style>
+
+{% if radici %}
+<div class="treeview">
+  <div class="d-flex gap-2 flex-wrap mb-2">
+    <button type="button" class="btn btn-outline-secondary btn-sm treeview-toggle" data-tree-target="#tree-unita" data-tree-action="expand">Espandi tutto</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm treeview-toggle" data-tree-target="#tree-unita" data-tree-action="collapse">Comprimi tutto</button>
+  </div>
+  <p class="treeview__hint">Clicca sui nodi per espandere o comprimere.</p>
+  <ul class="treeview__list" id="tree-unita">
+    {% include "archivio_fisico/_unita_tree.html" with nodes=radici %}
+  </ul>
+</div>
+{% else %}
+<p class="muted">Nessuna unità presente.</p>
+{% endif %}
+
+<div class="card mt-4">
+  <div class="card-header">Archivio corrente per cliente</div>
+  <div class="card-body">
+    {% if clienti_tree %}
+      <div class="mb-3">
+        <label class="form-label" for="client-tree-filter">Ricerca cliente</label>
+  <input id="client-tree-filter" type="search" class="form-control form-control-sm" placeholder="Filtra per codice o denominazione..." autocomplete="off">
+      </div>
+      <div class="d-flex gap-2 flex-wrap mb-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm treeview-toggle" data-tree-target="#tree-clienti" data-tree-action="expand">Espandi tutto</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm treeview-toggle" data-tree-target="#tree-clienti" data-tree-action="collapse">Comprimi tutto</button>
+      </div>
+      <p class="treeview__hint">Espandi un cliente per vedere fascicoli e documenti.</p>
+      <p class="text-muted small" id="client-tree-filter-empty" hidden>Nessun cliente corrisponde alla ricerca.</p>
+      <p class="text-muted small" data-filter-counter hidden>
+        Clienti trovati: <span id="client-tree-filter-counter">0</span>
+      </p>
+      <div class="treeview treeview--clienti">
+        <ul class="treeview__list" id="tree-clienti">
+          {% include "archivio_fisico/_client_tree.html" with clienti=clienti_tree %}
+        </ul>
+      </div>
+    {% else %}
+      <p class="text-muted mb-0">Nessun fascicolo o documento risulta collocato nell'archivio corrente.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".treeview__summary .treeview__link").forEach(function (link) {
+    link.addEventListener("click", function (event) {
+      event.stopPropagation();
+    });
+  });
+
+  document.querySelectorAll(".treeview-toggle").forEach(function (button) {
+    var targetSelector = button.getAttribute("data-tree-target");
+    var action = button.getAttribute("data-tree-action");
+    button.addEventListener("click", function () {
+      if (!targetSelector || !action) { return; }
+      var container = document.querySelector(targetSelector);
+      if (!container) { return; }
+      var detailsNodes = container.querySelectorAll("details");
+      var shouldOpen = action === "expand";
+      detailsNodes.forEach(function (node) {
+        node.open = shouldOpen;
+      });
+    });
+  });
+
+  var filterInput = document.getElementById("client-tree-filter");
+  if (!filterInput) { return; }
+
+  var tree = document.querySelector(".treeview--clienti");
+  if (!tree) { return; }
+
+  var list = tree.querySelector(".treeview__list");
+  if (!list) { return; }
+
+  var items = Array.prototype.filter.call(list.children, function (child) {
+    return child.classList && child.classList.contains("treeview__item");
+  });
+
+  if (!items.length) { return; }
+
+  var defaultStates = new WeakMap();
+  items.forEach(function (item) {
+    var details = item.querySelector("details");
+    if (details) {
+      defaultStates.set(details, details.hasAttribute("open"));
+    }
+  });
+
+  var emptyMessage = document.getElementById("client-tree-filter-empty");
+  var counterWrapper = tree.parentElement.querySelector("[data-filter-counter]");
+  var counterValue = document.getElementById("client-tree-filter-counter");
+
+  var normalizeText = function (value) {
+    var text = (value || "").toString().toLowerCase();
+    if (typeof text.normalize === "function") {
+      text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+    return text;
+  };
+
+  var applyFilter = function () {
+    var term = normalizeText(filterInput.value.trim());
+    var matches = 0;
+
+    items.forEach(function (item) {
+      var details = item.querySelector("details");
+      var summary = details ? details.querySelector("summary") : null;
+      var labelEl = summary ? summary.querySelector(".treeview__label") : null;
+      var codeEl = summary ? summary.querySelector(".badge") : null;
+      var labelText = labelEl ? labelEl.textContent : "";
+      var codeText = codeEl ? codeEl.textContent : "";
+      var searchable = normalizeText(labelText + " " + codeText);
+      var match = !term || searchable.indexOf(term) !== -1;
+
+      if (match) {
+        item.classList.remove("d-none");
+        matches += 1;
+        if (details && term) {
+          details.open = true;
+        }
+      } else {
+        item.classList.add("d-none");
+      }
+
+      if (details && !term) {
+        details.open = !!defaultStates.get(details);
+      }
+    });
+
+    if (emptyMessage) {
+      emptyMessage.hidden = matches > 0;
+    }
+
+    if (counterWrapper && counterValue) {
+      counterValue.textContent = matches;
+      counterWrapper.hidden = !term;
+    }
+  };
+
+  filterInput.addEventListener("input", applyFilter);
+  filterInput.addEventListener("search", applyFilter);
+  applyFilter();
+});
+</script>
+{% endblock %}

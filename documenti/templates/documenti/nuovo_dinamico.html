@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{% if form %}Nuovo documento — {{ tipo }}{% else %}Nuovo documento — scegli tipo{% endif %}{% endblock %}
+{% block extra_head %}{% if form %}{{ form.media }}{% endif %}{% endblock %}
+{% block content %}
+<div class="container">
+  <section class="card card-full">
+    <h2>{% if form %}Nuovo documento — {{ tipo }}{% else %}Scegli il tipo di documento{% endif %}</h2>
+    <div class="body">
+
+      {% if not form %}
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="step" value="select_type">
+          <!-- preserva i parametri di contesto (fascicolo/pratica/cliente) -->
+          {% if preserved %}
+            {% for k,v in preserved.items %}
+              <input type="hidden" name="{{ k }}" value="{{ v }}">
+            {% endfor %}
+          {% endif %}
+
+          <div class="form-row" style="margin-bottom:12px">
+            <label for="tipo_id"><strong>Tipo</strong></label>
+            <select id="tipo_id" name="tipo_id" required>
+              <option value="">— scegli —</option>
+              {% for t in tipi %}
+                <option value="{{ t.id }}">{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Continua</button>
+        </form>
+      {% else %}
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+          <!-- preserva parametri se servono al salvataggio -->
+          {% if preserved %}
+            {% for k,v in preserved.items %}
+              <input type="hidden" name="{{ k }}" value="{{ v }}">
+            {% endfor %}
+          {% endif %}
+          {% for hf in form.hidden_fields %}{{ hf }}{% endfor %}
+
+          <!-- passa sempre il tipo selezionato allo step di salvataggio -->
+          <input type="hidden" name="tipo_id" value="{{ tipo.id }}">
+
+          {% for field in form %}
+          <div style="margin:6px 0">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label><br>
+            {{ field }}
+            {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
+            {% for err in field.errors %}<div style="color:#c62828">{{ err }}</div>{% endfor %}
+          </div>
+          {% endfor %}
+
+          <div style="margin-top:12px; display:flex; gap:8px">
+            <button type="submit" class="btn btn-primary">Salva</button>
+            <a class="btn btn-secondary" href="javascript:history.back()">Annulla</a>
+          </div>
+        </form>
+      {% endif %}
+
+    </div>
+  </section>
+</div>
+{% endblock %}

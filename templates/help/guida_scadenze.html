@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Guida app Scadenze{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h1 class="h3 mb-3">App Scadenze – Percorso per principianti</h1>
+      <p class="text-muted">Questa guida riassume i passaggi fondamentali per usare e personalizzare la nuova app <strong>Scadenze</strong>, con esempi pratici lato backend e frontend. La versione estesa è in <code>docs/guida_scadenze_principianti.md</code>.</p>
+    </div>
+  </div>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">1. Setup rapido</h2>
+      <ol>
+        <li>Attiva il virtualenv e installa i requisiti con <code>pip install -r requirements.txt</code>.</li>
+        <li>Esegui le migrazioni: <code>python manage.py migrate scadenze</code>.</li>
+        <li>Crea un superuser (<code>python manage.py createsuperuser</code>) e accedi all'admin per inserire le prime scadenze.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">2. Backend essenziale</h2>
+      <p>File chiave:</p>
+      <ul>
+        <li><code>scadenze/models.py</code>: modelli <em>Scadenza</em>, <em>ScadenzaOccorrenza</em>, log e webhook.</li>
+        <li><code>scadenze/services.py</code>: generatori di occorrenze, dispatcher alert, sincronizzazione Google.</li>
+        <li><code>scadenze/forms.py</code>: form principali con Select2 e label descrittive per collegare pratiche/fascicoli/documenti.</li>
+        <li><code>scadenze/views.py</code>: viste CRUD, generazione massiva e trigger manuale.</li>
+      </ul>
+      <p class="mb-1">Esempio: creare tre occorrenze via shell</p>
+  <pre><code>from django.utils import timezone
+from scadenze.models import Scadenza
+from scadenze.services import OccurrenceGenerator
+
+scad = Scadenza.objects.create(titolo="Verifica trimestrale")
+OccurrenceGenerator(scad).generate(
+    start=timezone.now(),
+    count=3,
+    metodo_alert="email",
+    alert_config={"destinatari": "team@example.com"},
+)</code></pre>
+      <p class="mt-2">Esegui i test dedicati con <code>python manage.py test scadenze</code>.</p>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h5 mb-3">3. Frontend e UX</h2>
+      <ul>
+        <li><code>scadenze/templates/scadenze/home.html</code>: panoramica scadenze con filtri.</li>
+        <li><code>scadenze/templates/scadenze/detail.html</code>: occorrenze, log e azioni rapide.</li>
+        <li><code>scadenze/templates/scadenze/form.html</code>: form intuitivo con riepilogo selezioni M2M.</li>
+      </ul>
+      <p class="mb-1">Snippet per mostrare scadenze imminenti in un'altra pagina:</p>
+      <pre><code>&#123;&#37; if scadenze &#37;&#125;
+  &lt;ul class="list"&gt;
+    &#123;&#37; for occ, url in scadenze &#37;&#125;
+      &lt;li&gt;
+        &#123;&#123; occ.inizio|date:"d/m/Y H:i" &#125;&#125; ·
+        &lt;a href="&#123;&#123; url &#125;&#125;"&gt;&#123;&#123; occ.scadenza.titolo &#125;&#125;&lt;/a&gt;
+      &lt;/li&gt;
+    &#123;&#37; endfor &#37;&#125;
+  &lt;/ul&gt;
+&#123;&#37; endif &#37;&#125;</code></pre>
+  <p class="mt-2">Per personalizzare lo stile aggiungi CSS in <code>static/scadenze/</code> e includilo tramite il tag <code>static</code> nel template.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <h2 class="h5 mb-3">4. Checklist prima del deploy</h2>
+      <ul class="mb-2">
+        <li>Migrazioni complete (<code>python manage.py migrate scadenze</code>).</li>
+        <li>Credenziali Google (se usi Calendar) impostate in <code>settings.py</code>.</li>
+        <li>Test verdi (<code>python manage.py test scadenze</code>).</li>
+        <li>Documentazione aggiornata in <code>docs/</code>.</li>
+      </ul>
+      <p class="text-muted">Per estendere la guida consulta la versione integrale nel repository.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

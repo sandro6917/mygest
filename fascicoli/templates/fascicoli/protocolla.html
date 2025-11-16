@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}Protocolla fascicolo{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>Protocolla: {{ obj.codice|default:"(senza codice)" }}</h2>
+    <div class="body">
+      <form method="post" action="{{ post_url|default:request.path }}">
+        {% csrf_token %}
+        <div>
+          <label>{% trans "Direzione" %}</label>
+          {{ form.direzione }}
+        </div>
+        <div>
+          <label>{% trans "Quando" %}</label>
+          {{ form.quando }}
+        </div>
+        <div data-group="in">
+          <label>{% trans "Da chi (IN)" %}</label>
+          {{ form.da_chi }}
+        </div>
+        <div data-group="out">
+          <label>{% trans "A chi (OUT)" %}</label>
+          {{ form.a_chi }}
+        </div>
+        <div data-group="out">
+          <label>{% trans "Rientro previsto" %}</label>
+          {{ form.data_rientro_prevista }}
+        </div>
+        <div>
+          <label>{% trans "Ubicazione" %}</label>
+          {{ form.ubicazione }}
+        </div>
+        <div>
+          <label>{% trans "Causale" %}</label>
+          {{ form.causale }}
+        </div>
+        <div>
+          <label>{% trans "Note" %}</label>
+          {{ form.note }}
+        </div>
+
+        <div class="form-actions" style="margin-top:10px">
+          <button class="btn btn-primary" type="submit">{% trans "Registra movimento" %}</button>
+          <a class="btn btn-secondary" href="{% url 'fascicoli:detail' obj.pk %}">{% trans "Annulla" %}</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    function toggle() {
+      const sel = document.querySelector('select[name="direzione"]');
+      const val = sel ? sel.value : 'IN';
+      document.querySelectorAll('[data-group="in"]').forEach(el => el.style.display = (val === 'IN') ? '' : 'none');
+      document.querySelectorAll('[data-group="out"]').forEach(el => el.style.display = (val === 'OUT') ? '' : 'none');
+    }
+    const sel = document.querySelector('select[name="direzione"]');
+    if (sel) { sel.addEventListener('change', toggle); }
+    toggle();
+  })();
+  </script>
+{% endblock %}

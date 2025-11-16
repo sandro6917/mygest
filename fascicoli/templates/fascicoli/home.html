@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Fascicoli{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="dashboard-grid">
+
+    <section class="card">
+      <h2>Ultimi 10 fascicoli</h2>
+      <div class="body">
+        <ul>
+          {% for f, url in ultimi_fascicoli %}
+            <li><a class="link" href="{{ url }}">{% firstof f.codice f.titolo f.oggetto f|stringformat:"s" %}</a></li>
+          {% empty %}
+            <li class="muted">Nessun fascicolo recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Ricerca fascicoli</h2>
+      <div class="body">
+        <div class="form-actions" style="margin-bottom:8px">
+          <a class="btn action" href="{% url 'fascicoli:nuovo' %}">+ Nuovo fascicolo</a>
+        </div>
+        <form method="get" action="">
+          <div class="form-row">
+            <label for="q">Cerca per codice, titolo, oggetto, descrizione o note</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Es. PRA-2025, Autorizzazione, …">
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit">Cerca</button>
+            {% if q %}<a class="btn btn-secondary" href=".">Pulisci</a>{% endif %}
+          </div>
+        </form>
+        <ul style="margin-top:10px">
+          {% for f, url in fascicoli_filtrati %}
+            <li><a class="link" href="{{ url }}">{% firstof f.codice f.titolo f.oggetto f|stringformat:"s" %}</a></li>
+          {% empty %}
+            <li class="muted">Nessun fascicolo trovato.</li>
+          {% endfor %}
+        </ul>
+        {% if q %}
+          <p class="muted" style="margin-top:8px">Mostrati {{ fascicoli_filtrati|length }} di {{ fascicoli_total }}</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Tipi recenti</h2>
+      <div class="body">
+        <ul>
+          {% for t in ultimi_tipi %}
+            <li>{{ t }}</li>
+          {% empty %}
+            <li class="muted">Nessun tipo recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Movimenti di protocollo recenti</h2>
+      <div class="body">
+        {% if movimenti_recenti %}
+          <ul>
+            {% for m in movimenti_recenti %}
+              <li>
+                <strong>{{ m.direzione }}</strong>
+                n. {{ m.numero }}/{{ m.anno }}
+                — {{ m.data|date:"d/m/Y H:i" }}
+                {% if m.documento_id %}
+                  — <a href="{% url 'documenti:dettaglio' m.documento_id %}">
+                      {{ m.documento.descrizione|default:"(senza descrizione)" }}
+                    </a>
+                  {% if m.documento.codice %} ({{ m.documento.codice }}){% endif %}
+                {% elif m.fascicolo_id %}
+                  — Fascicolo:
+                    <a href="{% url 'fascicoli:detail' m.fascicolo_id %}">
+                      {{ m.fascicolo.codice|default:m.fascicolo_id }}
+                    </a>
+                {% endif %}
+                — {{ m.cliente }}
+                {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
+                {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
+                {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}
+                {% if not m.chiuso and m.direzione == "OUT" %}
+                  <span class="tag" style="background:#f8d775;color:#5a4500;padding:2px 6px;border-radius:4px">APERTO</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun movimento recente.</div>
+        {% endif %}
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

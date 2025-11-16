@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if form.instance.pk %}Modifica comunicazione{% else %}Nuova comunicazione{% endif %}
+{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">
+        {% if form.instance.pk %}
+          Modifica comunicazione
+        {% else %}
+          Nuova comunicazione
+        {% endif %}
+      </h1>
+      <p class="text-muted mb-0">Compila i dati per programmare o inviare una comunicazione.</p>
+    </div>
+    {% if help_url %}
+      <a href="{{ help_url }}" class="btn btn-outline-secondary" target="_blank" rel="noopener">Guida</a>
+    {% endif %}
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">
+        {% for error in form.non_field_errors %}
+          <div>{{ error }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% for field in form %}
+      <div class="mb-3">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}
+          <div class="form-text">{{ field.help_text }}</div>
+        {% endif %}
+        {% if field.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in field.errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+
+    <div class="d-flex gap-2 flex-wrap">
+      <button type="submit" name="applica_template" value="1" class="btn btn-outline-secondary" formnovalidate>
+        Applica template
+      </button>
+      <button type="submit" class="btn btn-primary">
+        {% if form.instance.pk %}Salva modifiche{% else %}Crea comunicazione{% endif %}
+      </button>
+      {% if cancel_url %}
+        <a href="{{ cancel_url }}" class="btn btn-link text-decoration-none">Annulla</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

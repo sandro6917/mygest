@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Dettaglio anagrafica{% endblock %}
+{% block content %}
+<div class="container">
+  <p><a class="link" href="{% url 'anagrafiche:home' %}">← Torna alla homepage anagrafiche</a></p>
+  <div class="grid">
+
+    <!-- Box 1: Dati anagrafica + indirizzi -->
+    <section class="card">
+      <h2>Dati anagrafica</h2>
+      <div class="body">
+        <h3 style="margin:0 0 8px 0">{{ obj.display_name }}</h3>
+        <dl class="kv">
+          <dt>Codice fiscale</dt><dd>{{ obj.codice_fiscale|default:"—" }}</dd>
+          <dt>Tipo</dt><dd>{{ obj.get_tipo_display|default:"—" }}</dd>
+          {% if obj.partita_iva %}<dt>Partita IVA</dt><dd>{{ obj.partita_iva }}</dd>{% endif %}
+          {% if obj.email %}<dt>Email</dt><dd>{{ obj.email }}</dd>{% endif %}
+          {% if obj.pec %}<dt>PEC</dt><dd>{{ obj.pec }}</dd>{% endif %}
+          {% if obj.telefono %}<dt>Telefono</dt><dd>{{ obj.telefono }}</dd>{% endif %}
+          {% if obj.indirizzo %}<dt>Indirizzo</dt><dd>{{ obj.indirizzo }}</dd>{% endif %}
+          {% if obj.created_at %}<dt>Creato</dt><dd>{{ obj.created_at|date:"d/m/Y H:i" }}</dd>{% endif %}
+          {% if obj.updated_at %}<dt>Aggiornato</dt><dd>{{ obj.updated_at|date:"d/m/Y H:i" }}</dd>{% endif %}
+        </dl>
+
+        {% with indirizzi=obj.indirizzi.all %}
+        {% if indirizzi %}
+          <h3 style="margin:0 0 8px 0">Indirizzi</h3>
+          <dl class="kv">
+            {% for i in indirizzi %}
+              <dt>Indirizzo</dt><dd>{{ i|default_if_none:"" }}</dd>
+            {% empty %}{% endfor %}
+          </dl>
+        {% endif %}
+        {% endwith %}
+
+        <div style="margin-top:8px">
+          <a class="btn" href="{{ edit_url }}">Modifica anagrafica</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Box 2: Ultime 10 pratiche -->
+    <section class="card">
+      <h2>Ultime pratiche</h2>
+      <div class="body">
+        <ul>
+          {% for p in pratiche %}
+            <li>
+              <a class="link" href="{{ p.get_absolute_url|default:'' }}">{% firstof p.titolo p|stringformat:"s" %}</a>
+              {% if p.updated_at %}
+                <span class="muted"> — {{ p.updated_at|date:"d/m/Y H:i" }}</span>
+              {% elif p.created_at %}
+                <span class="muted"> — {{ p.created_at|date:"d/m/Y H:i" }}</span>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessuna pratica recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <!-- Box 3: Ultimi 10 fascicoli -->
+    <section class="card">
+      <h2>Ultimi fascicoli</h2>
+      <div class="body">
+        <ul>
+          {% for f in fascicoli %}
+            <li>
+              <a class="link" href="{{ f.get_absolute_url|default:'' }}">{% firstof f.codice f|stringformat:"s" %}</a>
+              {% if f.pratica %}<span class="muted"> ({{ f.pratica }})</span>{% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessun fascicolo recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <!-- Box 4: Ricerca documenti -->
+    <section class="card">
+      <h2>Documenti</h2>
+      <div class="body">
+        <div class="form-actions" style="margin-bottom:8px">
+          <a class="btn" href="{% url 'documenti:nuovo_dinamico' %}?cliente={{ obj.pk }}">+ Nuovo documento per questa anagrafica</a>
+        </div>
+        <form method="get" action="">
+          <div class="form-row">
+            <label for="q">Cerca documenti dell’anagrafica</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Titolo, numero, note, nome file…" />
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn">Cerca</button>
+            {% if q %}<a class="btn btn-secondary" href=".">Pulisci</a>{% endif %}
+          </div>
+        </form>
+        <ul style="margin-top:10px">
+          {% for d in documenti %}
+            <li>
+              <a class="link" href="{% url 'documenti:dettaglio' d.pk %}">{% firstof d.titolo d|stringformat:"s" %}</a>
+              {% if d.numero %}<span class="muted"> • {{ d.numero }}</span>{% endif %}
+            </li>
+          {% empty %}
+            <li class="muted">Nessun documento trovato.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

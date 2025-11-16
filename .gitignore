@@ -1,0 +1,35 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+.env/
+
+# Logs and caches
+*.log
+logs/
+*.sqlite3
+*.db
+*.dump
+.cluster/
+.pytest_cache/
+
+# Django collectstatic output
+staticfiles/
+
+# User uploads
+media/
+archivio/
+
+# Secrets and environment
+.env
+secrets/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.code-workspace

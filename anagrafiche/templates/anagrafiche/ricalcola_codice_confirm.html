@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Ricalcola codice anagrafica{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Ricalcola codice CLI</h2>
+  <div class="body">
+    <p>
+      Codice attuale: <b>{{ codice_attuale|default:"—" }}</b><br>
+      Nuovo codice proposto: <b>{{ nuovo_codice }}</b>
+    </p>
+    {% if codice_attuale != nuovo_codice %}
+      <form method="post">{% csrf_token %}
+        <p>Vuoi aggiornare il codice dell’anagrafica?</p>
+        <button type="submit" name="conferma" value="yes" class="btn">Sì, aggiorna</button>
+        <a href="{{ obj.get_absolute_url }}" class="btn btn-secondary">Annulla</a>
+      </form>
+    {% else %}
+      <p>Il codice è già corretto.</p>
+      <a href="{{ obj.get_absolute_url }}" class="btn">Torna al dettaglio</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

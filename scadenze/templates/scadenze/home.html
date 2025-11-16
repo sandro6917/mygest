@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Scadenze" %}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>{% trans "Scadenze" %}</h1>
+    <div class="actions">
+      <a class="btn btn-primary" href="{% url 'scadenze:create' %}">{% trans "Nuova scadenza" %}</a>
+    </div>
+  </div>
+
+  <form method="get" class="card" style="margin-bottom:16px;">
+    <div class="body" style="display:flex; gap:12px; flex-wrap:wrap;">
+      <input type="text" name="q" placeholder="{% trans 'Cerca per titolo o descrizione' %}" value="{{ q }}" style="flex:1; min-width:200px;">
+      <select name="stato">
+        <option value="">{% trans "Stato" %}</option>
+        {% for value,label in stato_choices %}
+          <option value="{{ value }}" {% if stato == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="priorita">
+        <option value="">{% trans "Priorità" %}</option>
+        {% for value,label in priorita_choices %}
+          <option value="{{ value }}" {% if priorita == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-secondary" type="submit">{% trans "Filtra" %}</button>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="body">
+      {% if scadenze %}
+        <ul class="list">
+          {% for sc in scadenze %}
+            <li>
+              <a class="link" href="{% url 'scadenze:detail' sc.pk %}"><strong>{{ sc.titolo }}</strong></a>
+              <small class="muted">· {{ sc.get_stato_display }} · {{ sc.get_priorita_display }}</small>
+              {% if sc.prossima_occorrenza %}
+                <div class="muted">{% trans "Prossima" %}: {{ sc.prossima_occorrenza.inizio|date:"d/m/Y H:i" }}</div>
+              {% endif %}
+              {% with pratiche=sc.pratiche.all %}
+                {% if pratiche %}
+                  <div class="muted">{% trans "Pratiche" %}: {% for pr in pratiche %}<a href="{% url 'pratiche:dettaglio' pr.pk %}">{{ pr.codice }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+                {% endif %}
+              {% endwith %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="muted">{% trans "Nessuna scadenza trovata" %}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

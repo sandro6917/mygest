@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Dettaglio comunicazione{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">{{ comunicazione.oggetto }}</h1>
+      <div class="text-muted">
+        {{ comunicazione.get_tipo_display|default:comunicazione.tipo }}
+        · creata il {{ comunicazione.data_creazione|date:"d/m/Y H:i" }}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      {% if edit_url %}
+        <a href="{{ edit_url }}" class="btn btn-outline-secondary">Modifica</a>
+      {% endif %}
+      {% if send_url %}
+        <a href="{{ send_url }}" class="btn btn-success">Invia ora</a>
+      {% endif %}
+        {% if protocolla_url %}
+          <a href="{{ protocolla_url }}" class="btn btn-outline-primary">Protocolla</a>
+        {% endif %}
+      {% if back_url %}
+        <a href="{{ back_url }}" class="btn btn-link text-decoration-none">Torna all'elenco</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card shadow-sm">
+        <div class="card-header">Contenuto</div>
+        <div class="card-body">
+          {% if comunicazione.corpo_html %}
+            <h2 class="h6 text-muted">Corpo HTML</h2>
+            <div class="border rounded-3 p-3 bg-light mb-3">
+              {{ comunicazione.corpo_html|safe }}
+            </div>
+          {% endif %}
+          <h2 class="h6 text-muted">Corpo testo</h2>
+          <div class="border rounded-3 p-3 bg-light">
+            {{ comunicazione.corpo|linebreaksbr|default:"<em>Nessun contenuto disponibile.</em>"|safe }}
+          </div>
+        </div>
+      </div>
+      {% if comunicazione.log_errore %}
+        <div class="card shadow-sm mt-3 border-danger">
+          <div class="card-header bg-danger text-white">Ultimo errore di invio</div>
+          <div class="card-body">
+            <pre class="mb-0 text-danger" style="white-space: pre-wrap; word-break: break-word;">{{ comunicazione.log_errore }}</pre>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header">Dettagli</div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-5">Stato</dt>
+            <dd class="col-sm-7">
+              <span class="badge text-bg-secondary text-uppercase">{{ comunicazione.stato }}</span>
+            </dd>
+            <dt class="col-sm-5">Direzione</dt>
+            <dd class="col-sm-7">{{ comunicazione.get_direzione_display }}</dd>
+            <dt class="col-sm-5">Mittente</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.mittente %}
+                {{ comunicazione.mittente }}
+              {% else %}
+                <span class="text-muted">Valore predefinito di sistema</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Template</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.template %}
+                {{ comunicazione.template.nome }}
+              {% else %}
+                <span class="text-muted">Nessun template</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Firma</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.firma %}
+                {{ comunicazione.firma.nome }}
+              {% else %}
+                <span class="text-muted">Nessuna firma</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Destinatari</dt>
+            <dd class="col-sm-7">{{ comunicazione.destinatari }}</dd>
+            <dt class="col-sm-5">Contatti</dt>
+            <dd class="col-sm-7">
+              {% if contatti_destinatari %}
+                <ul class="list-unstyled mb-0">
+                  {% for contatto in contatti_destinatari %}
+                    <li>{{ contatto.nominativo|default:contatto.email }} <span class="text-muted">({{ contatto.email }})</span></li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <span class="text-muted">Nessun contatto selezionato</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Liste</dt>
+            <dd class="col-sm-7">
+              {% if liste_destinatari %}
+                <ul class="list-unstyled mb-0">
+                  {% for lista in liste_destinatari %}
+                    <li>{{ lista.nome }} <span class="text-muted">({{ lista.contatti.count }} contatti, {{ lista.indirizzi_extra.count }} indirizzi extra)</span></li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <span class="text-muted">Nessuna lista associata</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Anagrafica</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.anagrafica %}
+                {{ comunicazione.anagrafica }}
+              {% else %}
+                <span class="text-muted">Non specificata</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Data invio</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.data_invio %}
+                {{ comunicazione.data_invio|date:"d/m/Y H:i" }}
+              {% else %}
+                <span class="text-muted">Non ancora inviata</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Message-ID</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.email_message_id %}
+                <code>{{ comunicazione.email_message_id }}</code>
+              {% else %}
+                <span class="text-muted">Non disponibile</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Importata il</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.importato_il %}
+                {{ comunicazione.importato_il|date:"d/m/Y H:i" }}
+                {% if comunicazione.import_source %}
+                  <span class="text-muted">da {{ comunicazione.import_source }}</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">Non importata</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Documento da protocollare</dt>
+            <dd class="col-sm-7">
+              {% if comunicazione.documento_protocollo %}
+                {{ comunicazione.documento_protocollo }}
+              {% else %}
+                <span class="text-muted">Non impostato</span>
+              {% endif %}
+            </dd>
+            <dt class="col-sm-5">Protocollo</dt>
+            <dd class="col-sm-7">
+              {% if protocollo_label %}
+                <span class="badge text-bg-primary">{{ protocollo_label }}</span>
+              {% else %}
+                <span class="text-muted">Non protocollata</span>
+              {% endif %}
+            </dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header">Allegati</div>
+        <div class="card-body">
+          {% with allegati_list=comunicazione.allegati.all %}
+            {% if allegati_list %}
+              <ul class="list-group list-group-flush">
+                {% for allegato in allegati_list %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span>{{ allegato.documento }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                      {% if allegato.documento.file %}
+                        <a href="{{ allegato.documento.file.url }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                          Scarica
+                        </a>
+                      {% endif %}
+                      <form method="post" action="{% url 'comunicazioni:attachments-remove' comunicazione.pk allegato.pk %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Rimuovi</button>
+                      </form>
+                    </div>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p class="text-muted mb-0">Nessun allegato associato.</p>
+            {% endif %}
+          {% endwith %}
+          <hr class="my-3">
+          <form method="post" action="{{ allegato_add_url }}">
+            {% csrf_token %}
+            {% if allegato_form.non_field_errors %}
+              <div class="alert alert-danger">
+                {% for error in allegato_form.non_field_errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+            <div class="mb-3">
+              {{ allegato_form.documento.label_tag }}
+              {{ allegato_form.documento }}
+              {% if allegato_form.documento.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in allegato_form.documento.errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary">Aggiungi allegato</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

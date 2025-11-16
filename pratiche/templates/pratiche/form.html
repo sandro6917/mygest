@@ -1,0 +1,67 @@
+{% extends "layout_form.html" %}
+{% load i18n %}
+{% block title %}{% if obj %}Modifica{% else %}Nuova{% endif %} pratica{% endblock %}
+
+{% block form_main %}
+<div class="container">
+  <section class="card">
+    <h2>{% if obj %}Modifica{% else %}Nuova{% endif %} pratica</h2>
+    <div class="body">
+      {% if form.errors %}
+        <div class="alert alert-danger" style="margin-bottom:12px">
+          <strong>{% trans "Correggi gli errori evidenziati." %}</strong>
+        </div>
+      {% endif %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger" style="margin-bottom:12px">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          {% for field in form.visible_fields %}
+            {% if field.name != "padre" and field.name != "figli" and field.name != "tipo_relazione" %}
+              <div>
+                <label for="{{ field.id_for_label }}"><strong>{{ field.label }}</strong></label>
+                  {{ field }}
+                {% if field.help_text %}
+                  <div class="muted" style="font-size:.9em">{{ field.help_text }}</div>
+                {% endif %}
+                {% for e in field.errors %}
+                  <div class="text-danger" style="color:#b00020">{{ e }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:8px">
+          <button type="submit" class="btn btn-primary">{% trans "Salva" %}</button>
+          {% if obj %}
+            <a class="btn btn-secondary" href="{% url 'pratiche:dettaglio' obj.pk %}">{% trans "Annulla" %}</a>
+          {% else %}
+            <a class="btn btn-secondary" href="{% url 'pratiche:home' %}">{% trans "Annulla" %}</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </section>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const cliente = document.getElementById("id_cliente");
+  if (cliente) {
+    $(cliente).select2({
+      width: '100%',
+      placeholder: 'Seleziona un cliente',
+      allowClear: true
+    });
+  }
+});
+</script>
+{% endblock %}

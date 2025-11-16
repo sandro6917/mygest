@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Importazione Anagrafiche da CSV</h1>
+  <p>
+    Scarica un <a href="{% url 'anagrafiche:facsimile_csv' %}">fac-simile CSV</a> da compilare.<br>
+    <small>Campi obbligatori: tipo, codice_fiscale</small>
+  </p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Importa</button>
+  </form>
+  {% if messages %}
+    <ul>
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock %}

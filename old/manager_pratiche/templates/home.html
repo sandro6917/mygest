@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Home - Gestione pratiche{% endblock %}
+{% block content %}
+<div class="dashboard-grid">
+  <section class="card">
+    <h2>Ultime 10 pratiche</h2>
+    <div class="body">
+      <ul>
+        {% for obj, url in pratiche %}
+          <li><a href="{{ url }}">{{ obj }}</a></li>
+        {% empty %}
+          <li>Nessuna pratica.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Ultimi 10 documenti</h2>
+    <div class="body">
+      <ul>
+        {% for obj, url in documenti %}
+          <li><a href="{{ url }}">{{ obj }}</a></li>
+        {% empty %}
+          <li>Nessun documento.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Ultimi 10 fascicoli</h2>
+    <div class="body">
+      <ul>
+        {% for obj, url in fascicoli %}
+          <li><a href="{{ url }}">{{ obj }}</a></li>
+        {% empty %}
+          <li>Nessun fascicolo.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Ultime 10 anagrafiche</h2>
+    <div class="body">
+      <ul>
+        {% for obj, url in anagrafiche %}
+          <li><a href="{{ url }}">{{ obj }}</a></li>
+        {% empty %}
+          <li>Nessuna anagrafica.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+</div>
+
+<style>
+  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 16px; }
+  .box { border: 1px solid #ddd; border-radius: 6px; padding: 12px; background: #fff; }
+  .box h2 { margin: 0 0 8px 0; font-size: 1.1rem; }
+  .box ul { list-style: none; padding: 0; margin: 0; }
+  .box li { padding: 6px 0; border-bottom: 1px dashed #eee; }
+  .box li:last-child { border-bottom: none; }
+</style>
+{% endblock %}

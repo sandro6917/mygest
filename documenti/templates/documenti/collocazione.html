@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Collocazione fisica{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>Collocazione fisica — {{ doc.codice|default:"(senza codice)" }}</h2>
+    <div class="body">
+      <p class="muted">
+        Documento: {{ doc.descrizione|default:"(senza descrizione)" }}
+        {% if doc.cliente %} · Cliente: {{ doc.cliente }}{% endif %}
+        {% if doc.tipo %} · Tipo: {{ doc.tipo }}{% endif %}
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <div>
+          <label>Unità fisica</label>
+          {{ form.unita }}
+        </div>
+        <div>
+          <label>Note</label>
+          {{ form.note }}
+        </div>
+        <div class="form-actions" style="margin-top:10px">
+          <button type="submit" class="btn btn-primary">Salva collocazione</button>
+          <a href="{% url 'documenti:dettaglio' doc.pk %}" class="btn btn-secondary">Annulla</a>
+        </div>
+      </form>
+
+      {% with coll=doc.collocazione_fisica %}
+        <hr>
+        <div class="muted">
+          Collocazione attuale:
+          {% if coll %}
+            {{ coll.unita.get_tipo_display }} — {{ coll.unita.nome }} ({{ coll.unita.codice }})
+            · dal {{ coll.dal|date:"d/m/Y" }}{% if coll.al %} al {{ coll.al|date:"d/m/Y" }}{% endif %}
+          {% else %}
+            Nessuna.
+          {% endif %}
+        </div>
+      {% endwith %}
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Protocolla documento{% endblock %}
+{% block content %}
+  <section class="card">
+    <h2>Protocolla: {{ doc.codice|default:"(senza codice)" }} — {{ doc.descrizione|default:"(senza descrizione)" }}</h2>
+    <div class="body">
+      <p class="muted">
+        Cliente: {{ doc.cliente|default:"—" }}{% if doc.tipo %} · Tipo: {{ doc.tipo }}{% endif %}
+        {% if doc.file %} · <a href="{{ doc.file.url }}" target="_blank" rel="noopener">Apri file</a>{% endif %}
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <div>
+          <label>Direzione</label>
+          {{ form.direzione }}
+        </div>
+        <div>
+          <label>Quando</label>
+          {{ form.quando }}
+        </div>
+        <div data-group="in">
+          <label>Da chi (IN)</label>
+          {{ form.da_chi }}
+        </div>
+        <div data-group="out">
+          <label>A chi (OUT)</label>
+          {{ form.a_chi }}
+        </div>
+        <div data-group="out">
+          <label>Rientro previsto</label>
+          {{ form.data_rientro_prevista }}
+        </div>
+        <div>
+          <label>Ubicazione</label>
+          {{ form.ubicazione }}
+        </div>
+        <div>
+          <label>Causale</label>
+          {{ form.causale }}
+        </div>
+        <div>
+          <label>Note</label>
+          {{ form.note }}
+        </div>
+
+        <div class="form-actions" style="margin-top:10px">
+          <button type="submit" class="btn btn-primary">Protocolla</button>
+          <a href="{% url 'documenti:collocazione' doc.pk %}" class="btn">Collocazione fisica</a>
+          <a href="{% url 'documenti:dettaglio' doc.pk %}" class="btn btn-secondary">Annulla</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    function toggle() {
+      var sel = document.querySelector('select[name="direzione"]');
+      var val = sel ? sel.value : 'IN';
+      document.querySelectorAll('[data-group="in"]').forEach(el => el.style.display = (val === 'IN') ? '' : 'none');
+      document.querySelectorAll('[data-group="out"]').forEach(el => el.style.display = (val === 'OUT') ? '' : 'none');
+    }
+    var sel = document.querySelector('select[name="direzione"]');
+    if (sel) { sel.addEventListener('change', toggle); }
+    toggle();
+  })();
+  </script>
+{% endblock %}

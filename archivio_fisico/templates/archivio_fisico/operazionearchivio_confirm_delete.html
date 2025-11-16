@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Elimina Operazione Archivio Fisico</h1>
+<p>Sei sicuro di voler eliminare questa operazione?</p>
+<ul>
+  <li><strong>Tipo:</strong> {{ operazione.get_tipo_operazione_display }}</li>
+  <li><strong>Data/Ora:</strong> {{ operazione.data_ora }}</li>
+  <li><strong>Referente interno:</strong> {{ operazione.referente_interno }}</li>
+  <li><strong>Referente esterno:</strong> {{ operazione.referente_esterno }}</li>
+</ul>
+<form method="post">{% csrf_token %}
+  <button type="submit" class="btn btn-danger">Conferma eliminazione</button>
+  <a href="{% url 'archivio_fisico:operazionearchivio_detail' operazione.id %}" class="btn btn-secondary">Annulla</a>
+</form>
+{% endblock %}

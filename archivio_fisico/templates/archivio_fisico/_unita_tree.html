@@ -1,0 +1,23 @@
+{% for node in nodes %}
+<li class="treeview__item">
+  {% with figli=node.figli.all %}
+    {% if figli %}
+      <details class="treeview__node" open>
+        <summary class="treeview__summary">
+          <span class="treeview__label">{{ node.get_tipo_display }} — {{ node.nome }} ({{ node.codice }})</span>
+          <a class="treeview__link" href="{% url 'archivio_fisico:unita_detail' node.pk %}">Dettagli</a>
+        </summary>
+        <ul>
+          {% include "archivio_fisico/_unita_tree.html" with nodes=figli %}
+        </ul>
+      </details>
+    {% else %}
+      <div class="treeview__leaf">
+        <a class="treeview__link" href="{% url 'archivio_fisico:unita_detail' node.pk %}">
+          {{ node.get_tipo_display }} — {{ node.nome }} ({{ node.codice }})
+        </a>
+      </div>
+    {% endif %}
+  {% endwith %}
+</li>
+{% endfor %}

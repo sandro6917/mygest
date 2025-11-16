@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <h1>{{ title }}</h1>
+  <form method="post" action="">{% csrf_token %}
+    {{ form.as_p }}
+    <input type="hidden" name="action" value="{{ action_name }}">
+    <input type="hidden" name="apply" value="1">
+    {% for fascicolo in fascicoli %}
+      <input type="hidden" name="{{ action_checkbox_name }}" value="{{ fascicolo.pk }}">
+      <p>Fascicolo: <strong>{{ fascicolo }}</strong></p>
+    {% endfor %}
+    <button type="submit" class="default">{% trans "Duplica e sostituisci" %}</button>
+  </form>
+{% endblock %}

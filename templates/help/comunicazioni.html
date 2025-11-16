@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Help Comunicazioni{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Comunicazioni</h1>
+      <p class="text-muted mb-0">Creazione, invio email e protocollazione integrata con il sistema documentale.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Obiettivi</h2>
+    <p>
+      L'app <strong>Comunicazioni</strong> gestisce messaggi informativi verso clienti o gruppi, con supporto a allegati
+      dal repository documentale e protocollazione tramite l'app <em>Protocollo</em>.
+    </p>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Modello dati</h2>
+    <ul>
+      <li><strong>Comunicazione</strong>: contiene tipo, direzione (IN/OUT), oggetto, corpo, mittente/destinatari, stato invio.</li>
+      <li><strong>documento_protocollo</strong>: documento da protocollare; obbligatorio per avviare il flusso protocollo.</li>
+      <li><strong>protocollo_movimento</strong>: collegamento 1:1 con il movimento generato nell'app Protocollo.</li>
+      <li><strong>AllegatoComunicazione</strong>: mappa documenti aggiuntivi allegati all'email.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Flusso operativo</h2>
+    <ol>
+      <li>Accedi a <em>Comunicazioni &gt; Nuova comunicazione</em> e compila il form.</li>
+      <li>Aggiungi eventuali allegati dalla scheda dettaglio.</li>
+      <li>Per protocollare, seleziona un <em>Documento</em> nel form e usa il pulsante <strong>Protocolla</strong>.</li>
+      <li>Il form di protocollazione riutilizza quello di Protocollo (campi direzione, destinatario, ubicazione, note).</li>
+      <li>Una volta protocollata, la comunicazione mostra il numero assegnato e blocca modifiche a direzione/documento.</li>
+      <li>Per l'invio email usare il pulsante <strong>Invia ora</strong>; gli allegati vengono appesi al messaggio.</li>
+    </ol>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Punti di estensione</h2>
+    <ul>
+      <li>Implementare import massivo da caselle IMAP creando servizi periodici in <code>comunicazioni/services.py</code>.</li>
+      <li>Collegare rubriche e liste di distribuzione attraverso relazioni con <code>anagrafiche</code>.</li>
+      <li>Esporre API REST per integrazione con applicazioni esterne.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Test e manutenzione</h2>
+    <p>Eseguire <code>python manage.py test comunicazioni</code> dopo modifiche per garantire la copertura dei casi chiave.</p>
+  </section>
+</div>
+{% endblock %}

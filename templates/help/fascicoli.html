@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Help Fascicoli{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Fascicoli</h1>
+      <p class="text-muted mb-0">Raggruppamento pratiche e documenti per cliente e titolario.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Creazione fascicolo</h2>
+    <ol>
+      <li>Dal menu <em>Fascicoli</em> seleziona <strong>Nuovo fascicolo</strong>.</li>
+      <li>Indica cliente, anno, voce di titolario e titolo descrittivo.</li>
+      <li>Associa le pratiche correlate oppure aggiungile successivamente dalla scheda.</li>
+    </ol>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Collegamento documenti</h2>
+    <ul>
+      <li>I documenti creati specificando il fascicolo ereditano titolario e collocazione archivio.</li>
+      <li>Per fascicoli cartacei è possibile indicare l'unità fisica di archiviazione.</li>
+      <li>Il modulo protocollo consente entrate/uscite dal fascicolo con numerazione dedicata.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Monitoraggio</h2>
+    <p>La scheda dettaglio mostra pratiche collegate, documenti prodotti e storia delle movimentazioni protocollo.</p>
+  </section>
+</div>
+{% endblock %}

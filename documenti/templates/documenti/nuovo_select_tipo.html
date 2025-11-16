@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Nuovo documento – seleziona tipo{% endblock %}
+{% block content %}
+  <section class="card card-full">
+    <h2>Nuovo documento – seleziona tipo</h2>
+    <div class="body">
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="step" value="select_type">
+        <!-- preserva i parametri di contesto -->
+        {% if preserved %}
+          {% for k,v in preserved.items %}
+            <input type="hidden" name="{{ k }}" value="{{ v }}">
+          {% endfor %}
+        {% endif %}
+        <label for="tipo_id">Tipo documento</label>
+        <select id="tipo_id" name="tipo_id" required>
+          <option value="">— scegli —</option>
+          {% for t in tipi %}
+            <option value="{{ t.id }}">{{ t.codice }} — {{ t.nome }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary" style="margin-left:8px">Continua</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

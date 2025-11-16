@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Help Protocollo{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Protocollo</h1>
+      <p class="text-muted mb-0">Numerazione progressiva e movimentazioni IN/OUT per documenti e fascicoli.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Contatori e numerazione</h2>
+    <ul>
+      <li>Contatori separati per cliente, anno e direzione (IN/OUT).</li>
+      <li>La numerazione è atomica: il sistema effettua retry in caso di concorrenza.</li>
+      <li>Ogni movimento contiene anno e numero formattato, esposto nelle app collegate.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Registrare un movimento</h2>
+    <ol>
+      <li>Dal dettaglio documento o fascicolo selezionare <strong>Protocolla</strong>.</li>
+      <li>Compilare i campi del form (direzione, destinatario/mittente, note, ubicazione se cartaceo).</li>
+      <li>Per le uscite indicare la data di rientro prevista; al rientro registrare una nuova entrata.</li>
+    </ol>
+    <p>Le uscite aperte vengono chiuse automaticamente quando si registra il rientro sullo stesso target.</p>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Integrazioni</h2>
+    <ul>
+      <li>L'app <strong>Comunicazioni</strong> sfrutta il servizio <code>protocollo.services.protocolla</code> per numerare i messaggi.</li>
+      <li>È possibile richiamare i servizi di protocollo da altre app passando documento o fascicolo come target.</li>
+      <li>I vincoli garantiscono unicità: un documento o fascicolo non può ottenere più protocolli.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

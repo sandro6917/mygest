@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Conferma eliminazione{% endblock %}
+{% block content %}
+
+  <div class="wrap">
+    <h1 class="danger">Elimina anagrafica</h1>
+    <p>Confermare l'eliminazione di: <strong>{{ object.display_name }}</strong> (CF {{ object.codice_fiscale }})?</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit">Conferma eliminazione</button>
+      <a href="{{ object.get_absolute_url }}" style="margin-left:12px">Annulla</a>
+    </form>
+  </div>
+
+{% endblock %}

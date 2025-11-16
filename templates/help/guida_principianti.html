@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Guida principianti{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h1 class="h3 mb-3">Guida per principianti</h1>
+      <p class="text-muted">Questo percorso ti accompagna nell'installazione dell'ambiente, nella comprensione del backend Django e nella modifica dei template frontend.</p>
+      <p class="mb-0">
+        La versione completa è disponibile nel repository in <code>docs/guida_principianti_backend_frontend.md</code>.
+        Copia il file tra gli statici se desideri offrirne il download diretto agli utenti finali.
+      </p>
+    </div>
+  </div>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h4">1. Preparazione dell'ambiente</h2>
+      <ol>
+        <li>Installa Python 3.10+, Git e (opzionale) PostgreSQL.</li>
+        <li>Clona il repository: <code>git clone &lt;URL_DEL_REPO&gt; mygest</code>.</li>
+        <li>Crea il virtualenv: <code>python3 -m venv venv</code> e attivalo con <code>source venv/bin/activate</code>.</li>
+        <li>Aggiorna pip e installa le dipendenze: <code>pip install --upgrade pip</code> quindi <code>pip install -r requirements.txt</code>.</li>
+        <li>Esegui le migrazioni: <code>python manage.py migrate</code> e crea l'utente admin con <code>python manage.py createsuperuser</code>.</li>
+        <li>Avvia il server di sviluppo: <code>python manage.py runserver</code> e visita <code>http://127.0.0.1:8000</code>.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h4">2. Architettura backend</h2>
+      <p>MyGest è un progetto Django composto da più app specializzate. I file più importanti:</p>
+      <ul>
+        <li><code>mygest/settings.py</code>: configurazione generale.</li>
+        <li><code>mygest/urls.py</code>: include i router delle varie app.</li>
+        <li><code>mygest/views.py</code>: viste generiche (home, help, ecc.).</li>
+        <li><code>pratiche/</code>: gestione delle pratiche, note, relazioni.</li>
+        <li><code>scadenze/</code>: nuova app per le scadenze con modelli dedicati.</li>
+      </ul>
+      <p>Le scadenze sono ora indipendenti dalle pratiche e includono occorrenze, log e webhook. Vedi i servizi in <code>scadenze/services.py</code> per generazione massiva, notifiche e sincronizzazione Google Calendar.</p>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h4">3. Workflow di sviluppo backend</h2>
+      <ol>
+        <li>Modifica o aggiungi modelli in <code>models.py</code>.</li>
+        <li>Genera le migrazioni con <code>python manage.py makemigrations &lt;app&gt;</code>.</li>
+        <li>Applica le migrazioni con <code>python manage.py migrate</code>.</li>
+        <li>Scrivi o aggiorna i test (es. <code>pratiche/tests.py</code>).</li>
+        <li>Esegui la suite con <code>python manage.py test</code>.</li>
+        <li>Verifica dal browser le pagine interessate.</li>
+      </ol>
+      <p class="text-muted">Suggerimento: installa <code>django-extensions</code> per usare <code>shell_plus</code> e sperimentare con l'ORM.</p>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h4">4. Template e frontend</h2>
+      <p>I template sono organizzati per app. Alcuni esempi utili:</p>
+      <ul>
+        <li><code>pratiche/templates/pratiche/home.html</code>: dashboard con pratiche recenti e scadenze imminenti.</li>
+        <li><code>scadenze/templates/scadenze/detail.html</code>: dettaglio di una scadenza con occorrenze.</li>
+        <li><code>scadenze/templates/scadenze/form.html</code>: form di creazione/modifica scadenza.</li>
+      </ul>
+      <p>Per aggiungere risorse statiche, utilizza <code>static/</code> e carica le librerie con <code>{% load static %}</code>. Il layout base è in <code>templates/base.html</code>.</p>
+      <ol>
+        <li>Identifica il template da modificare.</li>
+        <li>Aggiungi blocchi HTML e template tag.</li>
+        <li>Se servono filtri personalizzati, crea un modulo <code>templatetags/</code>.</li>
+        <li>Verifica il rendering con il server di sviluppo.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-body">
+      <h2 class="h4">5. Checklist prima del commit</h2>
+      <ul class="mb-3">
+        <li>Ambiente virtuale attivo.</li>
+        <li>Migrazioni generate e applicate.</li>
+        <li>Test eseguiti e passati.</li>
+        <li>Template/statici controllati dal browser.</li>
+        <li>Nessun file temporaneo o credenziale nel commit.</li>
+      </ul>
+      <p>Per approfondimenti consulta la documentazione ufficiale:</p>
+      <ul>
+        <li><a href="https://docs.djangoproject.com/en/4.2/" target="_blank" rel="noopener">Documentazione Django</a></li>
+        <li><a href="https://www.djangoproject.com/" target="_blank" rel="noopener">Community Django</a></li>
+        <li><a href="https://getbootstrap.com/" target="_blank" rel="noopener">Bootstrap</a> per il design responsivo.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-body">
+      <h2 class="h4">6. Prossimi passi</h2>
+      <p>Quando ti senti a tuo agio con le basi:</p>
+      <ul>
+        <li>Esplora <code>scadenze/services.py</code> per aggiungere nuovi canali di notifica.</li>
+        <li>Scrivi test dedicati in <code>scadenze/tests/</code> per validare casi particolari.</li>
+        <li>Documenta ogni funzionalità in <code>docs/</code> così il team può seguirti.</li>
+      </ul>
+      <p class="text-muted">Buon lavoro con MyGest!</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% for node in nodes %}
+<li class="treeview__item">
+  <details class="treeview__node" open>
+    <summary class="treeview__summary">
+  <span class="treeview__label">{{ node.unit.get_tipo_display }} - {{ node.unit.nome }} ({{ node.unit.codice }})</span>
+      <span class="text-muted small ms-auto">
+        Fascicoli {{ node.fascicoli|length }} | Documenti sciolti {{ node.documenti_sciolti|length }}
+      </span>
+    </summary>
+    <ul>
+      {% if node.fascicoli %}
+      <li>
+        <details class="treeview__node" open>
+          <summary class="treeview__summary">
+            <span class="treeview__label">Fascicoli ({{ node.fascicoli|length }})</span>
+          </summary>
+          <ul>
+            {% for fasc in node.fascicoli %}
+            <li class="treeview__item">
+              <details class="treeview__node" {% if fasc.documenti %}open{% endif %}>
+                <summary class="treeview__summary">
+                  <span class="treeview__label">
+                    {% if fasc.fascicolo.codice %}{{ fasc.fascicolo.codice }} - {% endif %}{{ fasc.fascicolo.titolo }}
+                  </span>
+                  <a class="treeview__link" href="{% url 'fascicoli:detail' fasc.fascicolo.pk %}">Dettagli</a>
+                  <span class="text-muted small">Documenti {{ fasc.documenti|length }}</span>
+                </summary>
+                <ul>
+                  {% if fasc.documenti %}
+                    {% for documento in fasc.documenti %}
+                    <li>
+                      <div class="treeview__leaf">
+                        <a class="treeview__link" href="{% url 'documenti:dettaglio' documento.pk %}">
+                          {{ documento.codice|default:documento.descrizione }}
+                        </a>
+                        {% if documento.descrizione and documento.descrizione != documento.codice %}
+                          <span class="text-muted small">{{ documento.descrizione }}</span>
+                        {% endif %}
+                      </div>
+                    </li>
+                    {% endfor %}
+                  {% else %}
+                    <li class="text-muted small">Nessun documento collocato in questa unità.</li>
+                  {% endif %}
+                </ul>
+              </details>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+      </li>
+      {% endif %}
+      {% if node.documenti_sciolti %}
+      <li>
+        <details class="treeview__node" open>
+          <summary class="treeview__summary">
+            <span class="treeview__label">Documenti senza fascicolo ({{ node.documenti_sciolti|length }})</span>
+          </summary>
+          <ul>
+            {% for documento in node.documenti_sciolti %}
+            <li>
+              <div class="treeview__leaf">
+                <a class="treeview__link" href="{% url 'documenti:dettaglio' documento.pk %}">
+                  {{ documento.codice|default:documento.descrizione }}
+                </a>
+                {% if documento.descrizione and documento.descrizione != documento.codice %}
+                  <span class="text-muted small">{{ documento.descrizione }}</span>
+                {% endif %}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+      </li>
+      {% endif %}
+      {% if node.children %}
+      <li>
+        <details class="treeview__node" open>
+          <summary class="treeview__summary">
+            <span class="treeview__label">Sotto-unità ({{ node.children|length }})</span>
+          </summary>
+          <ul>
+            {% include "archivio_fisico/_unit_inventory_tree.html" with nodes=node.children %}
+          </ul>
+        </details>
+      </li>
+      {% endif %}
+      {% if not node.fascicoli and not node.documenti_sciolti and not node.children %}
+        <li class="text-muted small">Nessuna collocazione attiva per questa unità.</li>
+      {% endif %}
+    </ul>
+  </details>
+</li>
+{% endfor %}

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Pratiche{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="dashboard-grid">
+
+    <!-- Box 1: Ultime pratiche -->
+    <section class="card">
+      <h2>Ultime pratiche</h2>
+      <div class="body">
+        {% if ultimi_pratiche %}
+          <ul class="list">
+            {% for p in ultimi_pratiche %}
+              <li>
+                <strong>{{ p.codice }}</strong> — {{ p.oggetto }}
+                <small class="muted">· {{ p.cliente }}</small>
+                <small class="muted">· {{ p.tipo.nome }}</small>
+                <a class="btn btn-xs" href="{% url 'pratiche:dettaglio' p.pk %}">Apri</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessuna pratica.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Box 2: Ricerca -->
+    <section class="card">
+      <h2>Ricerca</h2>
+      <div class="body">
+        <form method="get" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap">
+          <input type="search" name="q" value="{{ q }}" placeholder="Codice, oggetto, cliente, tipo" style="flex:1; min-width:200px">
+          <button class="btn" type="submit">Cerca</button>
+          {% if q %}<a class="btn btn-secondary" href="{% url 'pratiche:home' %}">Pulisci</a>{% endif %}
+          <a class="btn btn-primary" href="{% url 'pratiche:nuova' %}">Nuova pratica</a>
+        </form>
+
+        {% if pratiche_filtrate %}
+          <div class="muted" style="margin-bottom:6px">
+            {{ pratiche_total }} risultati{% if pratiche_total > pratiche_filtrate|length %} (mostrati {{ pratiche_filtrate|length }}){% endif %}
+          </div>
+          <ul class="list">
+            {% for p in pratiche_filtrate %}
+              <li>
+                <strong>{{ p.codice }}</strong> — {{ p.oggetto }}
+                <small class="muted">· {{ p.cliente }}</small>
+                <small class="muted">· {{ p.tipo.nome }}</small>
+                <a class="btn btn-xs" href="{% url 'pratiche:dettaglio' p.pk %}">Apri</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun risultato.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Box 3: Ultimi clienti -->
+    <section class="card">
+      <h2>Clienti recenti</h2>
+      <div class="body">
+        {% if clienti_recenti %}
+          <ul class="list">
+            {% for c in clienti_recenti %}
+              <li>{{ c }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun cliente recente.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Box 4: Tipi di pratica -->
+    <section class="card">
+      <h2>Tipi di pratica</h2>
+      <div class="body">
+        <form method="get" style="margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap">
+          <input type="hidden" name="q" value="{{ q }}">
+          <input type="search" name="tipo_q" value="{{ tipo_q }}" placeholder="Codice o nome tipo pratica" style="flex:1; min-width:200px">
+          <button class="btn" type="submit">Cerca</button>
+          {% if tipo_q %}
+            <a class="btn btn-secondary" href="{% url 'pratiche:home' %}{% if q %}?q={{ q|urlencode }}{% endif %}">Pulisci</a>
+          {% endif %}
+        </form>
+
+        {% if tipi_filtrati %}
+          <div class="muted" style="margin-bottom:6px">
+            {{ tipi_total }} tipi trovati{% if tipi_total > tipi_filtrati|length %} (mostrati {{ tipi_filtrati|length }}){% endif %}
+          </div>
+          <ul class="list">
+            {% for t in tipi_filtrati %}
+              <li>
+                <strong>{{ t.codice }}</strong> — {{ t.nome }}
+                <small class="muted">· {{ t.pratiche_count }} pratiche</small>
+                <a class="btn btn-xs" href="{% url 'pratiche:tipo_dettaglio' t.pk %}">Dettaglio</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun tipo pratica trovato.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Box 5: Scadenze imminenti -->
+    <section class="card">
+      <h2>Scadenze imminenti</h2>
+      <div class="body">
+        {% with imminenti=imminenti %}
+        {% if imminenti %}
+          <ul class="list">
+            {% for occ in imminenti %}
+              <li>
+                <strong>{{ occ.scadenza.titolo }}</strong> — {{ occ.inizio|date:"d/m/Y H:i" }}
+                <small class="muted">· {{ occ.scadenza.get_priorita_display }}</small>
+                {% with pratiche=occ.scadenza.pratiche.all %}
+                  {% if pratiche %}
+                    <small class="muted">· {% for pr in pratiche %}{{ pr.codice }}{% if not forloop.last %}, {% endif %}{% endfor %}</small>
+                  {% endif %}
+                {% endwith %}
+                <a class="btn btn-xs" href="{% url 'scadenze:detail' occ.scadenza_id %}">Apri</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessuna scadenza imminente.</div>
+        {% endif %}
+        {% endwith %}
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

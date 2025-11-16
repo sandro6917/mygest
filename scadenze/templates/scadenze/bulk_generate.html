@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Generazione massiva" %}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>{% trans "Generazione massiva" %} · {{ scadenza.titolo }}</h1>
+  </div>
+  <form method="post" class="card">
+    {% csrf_token %}
+    <div class="body">
+      {{ form.non_field_errors }}
+      <div class="form-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px;">
+        {% for field in form %}
+          <div class="field">
+            <label for="id_{{ field.name }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<small class="muted">{{ field.help_text }}</small>{% endif %}
+            {% for error in field.errors %}<div class="error">{{ error }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="actions" style="padding:12px; display:flex; gap:8px;">
+      <button class="btn btn-primary" type="submit">{% trans "Genera" %}</button>
+      <a class="btn" href="{% url 'scadenze:detail' scadenza.pk %}">{% trans "Annulla" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

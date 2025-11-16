@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dettaglio Operazione Archivio Fisico</h1>
+<p><strong>Tipo:</strong> {{ operazione.get_tipo_operazione_display }}</p>
+<p><strong>Data/Ora:</strong> {{ operazione.data_ora }}</p>
+<p><strong>Referente interno:</strong> {{ operazione.referente_interno }}</p>
+<p><strong>Referente esterno:</strong> {{ operazione.referente_esterno }}</p>
+{% if sorgenti_unita %}
+<p><strong>Unità fisiche di partenza:</strong> {{ sorgenti_unita|join:", " }}</p>
+{% endif %}
+{% if destinazioni_unita %}
+<p><strong>Unità fisiche di arrivo:</strong> {{ destinazioni_unita|join:", " }}</p>
+{% endif %}
+<p><strong>Note:</strong> {{ operazione.note }}</p>
+{% if operazione.verbale_scan %}
+<p><strong>Verbale scannerizzato:</strong> <a href="{{ operazione.verbale_scan.url }}" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">Scarica</a></p>
+{% endif %}
+
+<h3>Fascicoli/Documenti movimentati</h3>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Fascicolo</th>
+      <th>Documento</th>
+      <th>Movimento protocollo</th>
+      <th>Unità di partenza</th>
+      <th>Unità di arrivo</th>
+      <th>Stato precedente</th>
+      <th>Stato successivo</th>
+      <th>Note</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for riga in righe %}
+    <tr>
+      <td>{{ riga.fascicolo }}</td>
+      <td>{{ riga.documento }}</td>
+      <td>{{ riga.movimento_protocollo }}</td>
+      <td>{{ riga.unita_fisica_sorgente }}</td>
+      <td>{{ riga.unita_fisica_destinazione }}</td>
+      <td>{{ riga.stato_precedente }}</td>
+      <td>{{ riga.stato_successivo }}</td>
+      <td>{{ riga.note }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="8">Nessun movimento registrato.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if verbale_templates %}
+<div class="card mb-4">
+  <div class="card-body">
+    <h3 class="card-title h5">Verbale di consegna</h3>
+    <form method="get" action="{% url 'archivio_fisico:operazionearchivio_verbale_docx' operazione.id %}">
+      <div class="row g-2 align-items-end">
+        <div class="col-sm-6 col-md-4">
+          <label class="form-label" for="verbale-template-select">Template</label>
+          <select id="verbale-template-select" name="template" class="form-select">
+            {% for tpl in verbale_templates %}
+            <option value="{{ tpl.slug }}"{% if tpl.is_default %} selected{% endif %}>{{ tpl.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-sm-6 col-md-3">
+          <button type="submit" class="btn btn-success w-100">Scarica verbale Word</button>
+        </div>
+      </div>
+      {% if verbale_templates|length > 0 %}
+      <p class="text-muted small mt-2 mb-0">I template possono includere i campi di operazione, righe, documenti, fascicoli e protocollo.</p>
+      {% endif %}
+    </form>
+  </div>
+</div>
+{% else %}
+<p class="text-muted">Nessun template Word configurato per i verbali di consegna.</p>
+{% endif %}
+
+<a href="{% url 'archivio_fisico:operazionearchivio_update' operazione.id %}" class="btn btn-primary">Modifica</a>
+<a href="{% url 'archivio_fisico:operazionearchivio_delete' operazione.id %}" class="btn btn-danger">Elimina</a>
+<a href="{% url 'archivio_fisico:operazionearchivio_list' %}" class="btn btn-secondary">Torna all'elenco</a>
+{% endblock %}

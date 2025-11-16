@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Conferma entrata documento{% endblock %}
+
+{% block content %}
+  <h1>{% trans "Conferma ENTRATA documenti" %}</h1>
+
+  <p>
+    {% blocktrans %}Stai per registrare un movimento di <strong>ENTRATA</strong> per i documenti selezionati.{% endblocktrans %}
+    <br>
+    {% trans "Se esiste una USCITA aperta, verrà chiusa e collegata come rientro." %}
+  </p>
+
+  <div class="module aligned">
+    <form method="post" action="">{% csrf_token %}
+      {{ form.media }}
+      <fieldset class="module aligned">
+        {{ form.as_p }}
+      </fieldset>
+
+      <h3 style="margin-top:1em">{% trans "Documenti selezionati" %} ({{ queryset|length }})</h3>
+      <div class="module">
+        <ul>
+          {% for obj in queryset %}
+            <li>{{ obj.codice }} — {{ obj.descrizione }} ({{ obj.cliente }})</li>
+            <input type="hidden" name="_selected_action" value="{{ obj.pk }}">
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- mantieni il contesto dell'azione admin -->
+      <input type="hidden" name="action" value="azione_entrata">
+      <input type="hidden" name="apply" value="1">
+      {% if request.POST.index %}<input type="hidden" name="index" value="{{ request.POST.index }}">{% endif %}
+      {% if request.POST.select_across %}<input type="hidden" name="select_across" value="{{ request.POST.select_across }}">{% endif %}
+
+      <div class="submit-row">
+        <input type="submit" value="{% trans 'Conferma ENTRATA' %}" class="default">
+        <a class="button" href="{% url 'admin:documenti_documento_changelist' %}">{% trans "Annulla" %}</a>
+      </div>
+    </form>
+  </div>
+
+  <p class="help">
+    {% trans "Suggerimento:" %} {% trans "puoi indicare l'ubicazione fisica per archiviare il documento in ingresso." %}
+  </p>
+{% endblock %}

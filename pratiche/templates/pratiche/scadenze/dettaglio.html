@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dettaglio Scadenza</h2>
+<ul>
+    <li><b>Pratica:</b> {{ scadenza.pratica.codice }} - {{ scadenza.pratica.oggetto }}</li>
+    <li><b>Titolo:</b> {{ scadenza.titolo }}</li>
+    <li><b>Descrizione:</b> {{ scadenza.descrizione }}</li>
+    <li><b>Data scadenza:</b> <span id="data-scadenza">{{ scadenza.scadenza_at|date:"d/m/Y H:i" }}</span></li>
+</ul>
+
+<button id="calcola-btn" class="btn btn-primary">Calcola nuova data scadenza</button>
+
+<!-- Popup semplice -->
+<div id="popup" style="display:none; position:fixed; left:50%; top:30%; background:#fff; border:1px solid #ccc; padding:20px; z-index:1000;">
+    <label>Giorni da aggiungere alla data della pratica:</label>
+    <input type="number" id="giorni-input" value="30" min="1" />
+    <button id="conferma-btn" class="btn btn-success">Calcola</button>
+    <button onclick="document.getElementById('popup').style.display='none'" class="btn btn-secondary">Annulla</button>
+</div>
+
+<script>
+document.getElementById("calcola-btn").onclick = function() {
+    document.getElementById("popup").style.display = "block";
+};
+
+document.getElementById("conferma-btn").onclick = function() {
+    var giorni = document.getElementById("giorni-input").value;
+    fetch("{% url 'pratiche:calcola_scadenza' scadenza.pk %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "giorni=" + giorni
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.nuova_data) {
+            document.getElementById("data-scadenza").innerText = data.nuova_data;
+            alert("Nuova data calcolata: " + data.nuova_data);
+        } else {
+            alert("Errore: " + (data.error || "Impossibile calcolare"));
+        }
+        document.getElementById("popup").style.display = "none";
+    });
+};
+</script>
+{% endblock %}

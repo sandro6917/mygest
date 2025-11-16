@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Documento {{ doc.codice }}{% endblock %}
+
+{% block content %}
+  <div class="grid" style="display:grid;grid-template-columns:60% 40%;gap:16px;align-items:start">
+    <div>
+      <section class="card">
+        <h2>Dettaglio documento</h2>
+        <div class="body">
+          <div><strong>Codice:</strong> {{ doc.codice|default:"—" }}</div>
+          <div><strong>Descrizione:</strong> {{ doc.descrizione|default:"(senza descrizione)" }}</div>
+          <div><strong>Cliente:</strong> {{ doc.cliente|default:"—" }}</div>
+          <div><strong>Tipo:</strong> {{ doc.tipo|default:"—" }}</div>
+          <div><strong>Data documento:</strong> {{ doc.data_documento|date:"d/m/Y" }}</div>
+          {% if doc.fascicolo %}<div><strong>Fascicolo:</strong> {{ doc.fascicolo }}</div>{% endif %}
+          {% if doc.note %}<div><strong>Note:</strong> {{ doc.note }}</div>{% endif %}
+          {% if doc.file %}
+            <div><strong>File:</strong> <a href="{{ doc.file.url }}" target="_blank" rel="noopener">Apri file</a></div>
+          {% endif %}
+          <div style="margin-top:8px">
+            <a class="btn" href="{% url 'documenti:modifica_dinamico' doc.pk %}">Modifica</a>
+            <a class="btn" href="{% url 'documenti:protocolla' doc.pk %}">Protocolla</a>
+            <a class="btn btn-secondary" href="{% url 'documenti:home' %}">Torna all’elenco</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Collocazione fisica</h2>
+        <div class="body">
+          {% with coll=doc.collocazione_fisica %}
+            {% if coll %}
+              <div><strong>Unità:</strong> {{ coll.unita.get_tipo_display }} — {{ coll.unita.nome }} ({{ coll.unita.codice }})</div>
+              <div><strong>Dal:</strong> {{ coll.dal|date:"d/m/Y" }}{% if coll.al %} — <strong>Al:</strong> {{ coll.al|date:"d/m/Y" }}{% endif %}</div>
+              {% if coll.note %}<div><strong>Note:</strong> {{ coll.note }}</div>{% endif %}
+            {% else %}
+              <div class="muted">Nessuna collocazione assegnata.</div>
+            {% endif %}
+          {% endwith %}
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap">
+            <a class="btn" href="{% url 'documenti:collocazione' doc.pk %}">Assegna/Modifica collocazione</a>
+            {% if doc.collocazioni_fisiche.all %}
+              <form method="post" action="{% url 'documenti:collocazione_delete_last' doc.pk %}" onsubmit="return confirm('Cancellare l’ultima collocazione?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Cancella ultima collocazione</button>
+              </form>
+            {% endif %}
+          </div>
+          {% if doc.collocazioni_fisiche.all %}
+            <hr>
+            <div class="muted" style="margin-bottom:6px">Storico collocazioni</div>
+            <ul>
+              {% for c in doc.collocazioni_fisiche.all|dictsortreversed:"dal" %}
+                <li>
+                  {{ c.unita.get_tipo_display }} — {{ c.unita.nome }} ({{ c.unita.codice }})
+                  · dal {{ c.dal|date:"d/m/Y" }}{% if c.al %} al {{ c.al|date:"d/m/Y" }}{% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <section class="card">
+        <h2>Movimenti di protocollo</h2>
+        <div class="body">
+          <div style="margin-bottom:8px">
+            <a class="btn" href="{% url 'documenti:protocolla' doc.pk %}">Nuovo movimento</a>
+          </div>
+          {% if movimenti %}
+            <ul>
+              {% for m in movimenti %}
+                <li style="margin-bottom:6px">
+                  <strong>{{ m.direzione }}</strong> n. {{ m.numero }}/{{ m.anno }}
+                  — {{ m.data|date:"d/m/Y H:i" }}
+                  — {{ m.cliente }}
+                  {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
+                  {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
+                  {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}
+                  {% if m.causale %} — Causale: {{ m.causale }}{% endif %}
+                  {% if m.note %} — Note: {{ m.note }}{% endif %}
+                  {% if not m.chiuso and m.direzione == "OUT" %}
+                    <span class="tag" style="background:#f8d775;color:#5a4500;padding:2px 6px;border-radius:4px;margin-left:6px">APERTO</span>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="muted">Nessun movimento presente.</div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

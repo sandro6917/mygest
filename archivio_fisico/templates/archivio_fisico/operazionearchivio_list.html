@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Operazioni Archivio Fisico</h1>
+<a href="{% url 'archivio_fisico:operazionearchivio_create' %}" class="btn btn-primary">Nuova operazione</a>
+<table class="table mt-3">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Data/Ora</th>
+            <th>Referente interno</th>
+            <th>Referente esterno</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for op in operazioni %}
+        <tr>
+            <td>{{ op.id }}</td>
+            <td>{{ op.get_tipo_operazione_display }}</td>
+            <td>{{ op.data_ora }}</td>
+            <td>{{ op.referente_interno }}</td>
+            <td>{{ op.referente_esterno }}</td>
+            <td>
+                <a href="{% url 'archivio_fisico:operazionearchivio_detail' op.id %}">Dettaglio</a>
+                |
+                <a href="{% url 'archivio_fisico:operazionearchivio_update' op.id %}">Modifica</a>
+                |
+                <a href="{% url 'archivio_fisico:operazionearchivio_delete' op.id %}">Elimina</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="6">Nessuna operazione trovata.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

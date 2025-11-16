@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{% if is_create %}Nuovo fascicolo{% else %}Modifica fascicolo{% endif %}{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  {# preserva l'eventuale pratica di contesto in POST #}
+  {% if request.GET.pratica %}
+    <input type="hidden" name="pratica" value="{{ request.GET.pratica }}">
+  {% elif request.POST.pratica %}
+    <input type="hidden" name="pratica" value="{{ request.POST.pratica }}">
+  {% endif %}
+
+  {% if form.helper %}{{ form|crispy }}{% else %}{{ form.as_p }}{% endif %}
+
+  <div style="margin-top:10px; display:flex; gap:8px">
+    <button type="submit" class="btn btn-primary">Salva</button>
+    <a href="{% url 'fascicoli:home' %}" class="btn btn-outline-secondary">Annulla</a>
+  </div>
+
+  {% if request.GET.pratica %}
+    <p class="muted" style="margin-top:8px">
+      Il fascicolo verrà collegato automaticamente alla pratica #{{ request.GET.pratica }} e il cliente sarà ereditato se non impostato.
+    </p>
+  {% endif %}
+</form>
+{% endblock %}

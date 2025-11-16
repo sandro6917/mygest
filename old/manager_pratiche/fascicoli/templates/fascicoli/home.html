@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Fascicoli{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="dashboard-grid">
+
+    <section class="card">
+      <h2>Ultimi 10 fascicoli</h2>
+      <div class="body">
+        <ul>
+          {% for f, url in ultimi_fascicoli %}
+            <li><a class="link" href="{{ url }}">{% firstof f.codice f.titolo f.oggetto f|stringformat:"s" %}</a></li>
+          {% empty %}
+            <li class="muted">Nessun fascicolo recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Ricerca fascicoli</h2>
+      <div class="body">
+        <div class="form-actions" style="margin-bottom:8px">
+          <a class="btn" href="{% url 'fascicoli:nuovo' %}">+ Nuovo fascicolo</a>
+        </div>
+        <form method="get" action="">
+          <div class="form-row">
+            <label for="q">Cerca per codice, titolo, oggetto, descrizione o note</label>
+            <input type="search" id="q" name="q" value="{{ q }}" placeholder="Es. PRA-2025, Autorizzazione, …">
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit">Cerca</button>
+            {% if q %}<a class="btn btn-secondary" href=".">Pulisci</a>{% endif %}
+          </div>
+        </form>
+        <ul style="margin-top:10px">
+          {% for f, url in fascicoli_filtrati %}
+            <li><a class="link" href="{{ url }}">{% firstof f.codice f.titolo f.oggetto f|stringformat:"s" %}</a></li>
+          {% empty %}
+            <li class="muted">Nessun fascicolo trovato.</li>
+          {% endfor %}
+        </ul>
+        {% if q %}
+          <p class="muted" style="margin-top:8px">Mostrati {{ fascicoli_filtrati|length }} di {{ fascicoli_total }}</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Tipi recenti</h2>
+      <div class="body">
+        <ul>
+          {% for t in ultimi_tipi %}
+            <li>{{ t }}</li>
+          {% empty %}
+            <li class="muted">Nessun tipo recente.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

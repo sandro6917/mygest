@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Pratica {{ pratica.codice }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="dashboard-grid">
+
+    <!-- 1) Box Dettaglio -->
+    <section class="card card-full">
+      <h2>Dettaglio</h2>
+      <div class="body">
+        <dl class="kv">
+          <dt>Codice</dt><dd>{{ pratica.codice }}</dd>
+          <dt>Oggetto</dt><dd>{{ pratica.oggetto }}</dd>
+          <dt>Cliente</dt><dd>{{ pratica.cliente }}</dd>
+          <dt>Tipo</dt><dd>{{ pratica.tipo }}</dd>
+          <dt>Stato</dt><dd>{{ pratica.get_stato_display }}</dd>
+          <dt>Responsabile</dt><dd>{{ pratica.responsabile|default:"—" }}</dd>
+          <dt>Data apertura</dt><dd>{{ pratica.data_apertura|date:"d/m/Y" }}</dd>
+          <dt>Data chiusura</dt><dd>{{ pratica.data_chiusura|date:"d/m/Y"|default:"—" }}</dd>
+          <dt>Periodo di riferimento</dt><dd>{{ pratica.get_periodo_riferimento_display }} ({{ pratica.data_riferimento|date:"d/m/Y" }})</dd>
+          <dt>Tag</dt><dd>{{ pratica.tag|default:"—" }}</dd>
+          <dt>Note</dt><dd>{{ pratica.note|linebreaksbr|default:"—" }}</dd>
+        </dl>
+        <div class="form-actions" style="margin-top:12px; display:flex; gap:8px;">
+          <a class="btn btn-primary" href="{% url 'pratiche:modifica' pratica.pk %}">Modifica pratica</a>
+          <a class="btn btn-secondary" href="{% url 'admin:pratiche_pratica_change' pratica.pk %}">Apri in Admin</a>
+          <a class="btn" href="javascript:history.back()">Indietro</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) Box Fascicoli collegati -->
+    <section class="card">
+      <h2>Fascicoli collegati</h2>
+      <div class="body">
+        {% if fascicoli %}
+          <ul class="list">
+            {% for f in fascicoli %}
+              <li>
+                <a class="link" href="{% url 'fascicoli:detail' f.pk %}">{{ f.codice|default:f.titolo }}</a>
+                — {{ f.titolo }}
+                <small class="muted">· {{ f.anno }}</small>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun fascicolo collegato.</div>
+        {% endif %}
+      </div>
+      <div class="action" style="margin-bottom:8px; margin-left: 8px; display:flex; gap:8px;">
+        <a class="btn btn-secondary" href="{% url 'fascicoli:nuovo' %}?pratica={{ pratica.pk }}">
+          Crea Fascicolo
+        </a>
+      </div>
+    </section>
+
+    <!-- Collega fascicoli -->
+    <section class="card">
+      <h2>Collega fascicoli</h2>
+      <div class="body">
+        <form method="get" class="row" style="gap:8px; align-items:center; margin-bottom:8px">
+          <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Cerca per codice o descrizione" style="flex:1; min-width:240px">
+          <button class="btn btn-secondary" type="submit">Cerca</button>
+        </form>
+
+        {% if fascicoli_risultati is not None %}
+          {% if fascicoli_risultati %}
+            <ul class="list">
+              {% for f in fascicoli_risultati %}
+                <li>
+                  <a class="link" href="{% url 'fascicoli:detail' f.pk %}">{{ f.codice|default:f }}</a>
+                  {% if f.descrizione %}<small class="muted">— {{ f.descrizione }}</small>{% endif %}
+                  <form method="post" action="{% url 'pratiche:collega_fascicolo' pratica.pk %}" style="display:inline-block; margin-left:8px">
+                    {% csrf_token %}
+                    <input type="hidden" name="fascicolo_id" value="{{ f.pk }}">
+                    <button class="btn btn-primary btn-sm" type="submit">Collega</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">Nessun fascicolo trovato.</p>
+          {% endif %}
+        {% else %}
+          <p class="muted">Inserisci almeno 2 caratteri per cercare.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- 3) Box Documenti collegati -->
+    <section class="card">
+      <h2>Documenti collegati</h2>
+      <div class="body">
+        {% if documenti %}
+          <ul class="list">
+            {% for d in documenti %}
+              <li>
+                <a class="link" href="{% url 'documenti:dettaglio' d.pk %}">
+                  {{ d.descrizione|default:"(senza descrizione)" }}
+                </a>
+                {% if d.codice %}<small class="muted">· {{ d.codice }}</small>{% endif %}
+                {% if d.fascicolo %}<small class="muted">· Fascicolo: {{ d.fascicolo.codice|default:d.fascicolo.titolo }}</small>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessun documento collegato.</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Note collegate -->
+    <section class="card">
+      <h2>Note</h2>
+      <div class="body">
+        {% if note %}
+          <ul class="list">
+            {% for n in note %}
+              <li>
+                <a class="link" href="{% url 'pratiche:nota_modifica' n.pk %}">
+                  <strong>{{ n.get_tipo_display }}</strong>
+                </a>
+                <small class="muted">· {{ n.data|date:"d/m/Y" }} · {{ n.get_stato_display }}</small>
+                <div class="muted" style="margin-top:4px">{{ n.testo|linebreaksbr }}</div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessuna nota.</div>
+        {% endif %}
+      </div>
+      <div class="action" style="margin-bottom:8px; margin-left:8px;">
+        <a class="btn btn-secondary" href="{% url 'pratiche:nota_nuova' pratica.pk %}">Nuova nota</a>
+      </div>
+    </section>
+
+    <!-- 4) Box Scadenze (nuova app) -->
+    <section class="card">
+      <h2>Scadenze</h2>
+      <div class="body">
+        {% if scadenze %}
+          <ul class="list">
+            {% for s in scadenze %}
+              <li>
+                <a class="link" href="{% url 'scadenze:detail' s.pk %}"><strong>{{ s.titolo }}</strong></a>
+                <small class="muted">· {{ s.get_stato_display }} · {{ s.get_priorita_display }}</small>
+                {% with prossima=s.prossima_occorrenza %}
+                  {% if prossima %}
+                    <div class="muted">Prossima: {{ prossima.inizio|date:"d/m/Y H:i" }} ({{ prossima.get_metodo_alert_display }})</div>
+                  {% endif %}
+                {% endwith %}
+                {% if s.descrizione %}<div class="muted">{{ s.descrizione|linebreaksbr }}</div>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="muted">Nessuna scadenza.</div>
+        {% endif %}
+        <div style="margin-top:8px">
+          <a class="btn btn-secondary" href="{% url 'scadenze:create' %}?pratica={{ pratica.pk }}">Nuova scadenza</a>
+          <a class="btn btn-link" href="{% url 'scadenze:home' %}">Vai a tutte le scadenze</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5) Box Pratiche collegate -->
+    <section class="card">
+      <h2>Pratiche collegate</h2>
+      <div class="body">
+        {% if relazioni_entrata or relazioni_uscita %}
+          {% if relazioni_entrata %}
+            <div class="muted" style="margin-bottom:6px">Genitori</div>
+            <ul class="list">
+              {% for r in relazioni_entrata %}
+                <li>
+                  <a class="link" href="{% url 'pratiche:dettaglio' r.parent_id %}">{{ r.parent.codice }}</a>
+                  — {{ r.parent.oggetto }} ({{ r.parent.get_stato_display }})
+                  <small class="muted">· {{ r.get_tipo_display }}</small>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if relazioni_uscita %}
+            <div class="muted" style="margin:10px 0 6px">Figli</div>
+            <ul class="list">
+              {% for r in relazioni_uscita %}
+                <li>
+                  <a class="link" href="{% url 'pratiche:dettaglio' r.child_id %}">{{ r.child.codice }}</a>
+                  — {{ r.child.oggetto }} ({{ r.child.get_stato_display }})
+                  <small class="muted">· {{ r.get_tipo_display }}</small>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% else %}
+          <div class="muted">Nessuna pratica collegata.</div>
+        {% endif %}
+      </div>
+      <div class="action" style="margin-bottom:8px; margin-left:8px;">
+        <a class="btn btn-secondary"
+           href="{% url 'stampe:lista' 'pratiche' 'pratica' %}?pratica_id={{ pratica.pk }}&lista=EL_PR_COLL"
+           target="_blank">
+          Stampa elenco pratiche collegate
+        </a>
+      </div>
+    </section>
+
+    <!-- Box ricerca pratiche collegate -->
+    <section class="card">
+      <h2>Collega altra pratica</h2>
+      <div class="body">
+        <form method="get" class="row" style="gap:8px; align-items:center; margin-bottom:8px">
+          <input type="text" name="q_pratica" value="{{ q_pratica|default:'' }}" placeholder="Cerca per codice o oggetto" style="flex:1; min-width:240px">
+          <button class="btn btn-secondary" type="submit">Cerca</button>
+        </form>
+
+        {% if pratiche_risultati is not None %}
+          {% if pratiche_risultati %}
+            <ul class="list">
+              {% for p in pratiche_risultati %}
+                <li>
+                  <a class="link" href="{% url 'pratiche:dettaglio' p.pk %}">{{ p.codice }}</a>
+                  — {{ p.oggetto }}
+                  <form method="post" action="{% url 'pratiche:collega_pratica' pratica.pk %}" style="display:inline-block; margin-left:8px">
+                    {% csrf_token %}
+                    <input type="hidden" name="pratica_id" value="{{ p.pk }}">
+                    <button class="btn btn-primary btn-sm" type="submit">Collega</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="muted">Nessuna pratica trovata.</p>
+          {% endif %}
+        {% else %}
+          <p class="muted">Inserisci almeno 2 caratteri per cercare.</p>
+        {% endif %}
+      </div>
+    </section>
+
+  </div>
+</div>
+{% endblock %}

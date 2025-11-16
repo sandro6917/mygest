@@ -1,0 +1,118 @@
+{% for cliente in clienti %}
+<li class="treeview__item">
+  <details class="treeview__node" open>
+    <summary class="treeview__summary">
+      <span class="treeview__label">{{ cliente.label }}</span>
+      {% if cliente.code %}
+        <span class="badge bg-secondary text-uppercase">{{ cliente.code }}</span>
+      {% endif %}
+      {% if cliente.url %}
+        <a class="treeview__link" href="{{ cliente.url }}">Scheda cliente</a>
+      {% endif %}
+      <span class="ms-auto text-muted small">
+        Fascicoli {{ cliente.fascicoli|length }} · Documenti {{ cliente.documenti_count }}
+      </span>
+    </summary>
+    <ul>
+      {% if cliente.fascicoli %}
+      <li>
+        <details class="treeview__node" open>
+          <summary class="treeview__summary">
+            <span class="treeview__label">Fascicoli ({{ cliente.fascicoli|length }})</span>
+          </summary>
+          <ul>
+            {% for fascicolo in cliente.fascicoli %}
+            <li>
+              <details class="treeview__node" {% if fascicolo.documenti_corrente %}open{% endif %}>
+                <summary class="treeview__summary">
+                  <span class="treeview__label">
+                    {% if fascicolo.codice %}{{ fascicolo.codice }} — {% endif %}{{ fascicolo.titolo }}
+                  </span>
+                  <a class="treeview__link" href="{% url 'fascicoli:detail' fascicolo.pk %}">Dettagli</a>
+                  {% if fascicolo.ubicazione %}
+                    <a class="treeview__link small" href="{% url 'archivio_fisico:unita_detail' fascicolo.ubicazione.pk %}">
+                      {{ fascicolo.ubicazione.full_path|default:fascicolo.ubicazione.nome }}
+                    </a>
+                  {% else %}
+                    <span class="text-muted small">Senza unità fisica</span>
+                  {% endif %}
+                </summary>
+                <ul>
+                  {% if fascicolo.documenti_corrente %}
+                    {% for documento in fascicolo.documenti_corrente %}
+                    <li>
+                      <div class="treeview__leaf">
+                        <a class="treeview__link" href="{% url 'documenti:dettaglio' documento.pk %}">
+                          {{ documento.codice|default:documento.descrizione }}
+                        </a>
+                        {% if documento.descrizione and documento.descrizione != documento.codice %}
+                          <span class="text-muted small">{{ documento.descrizione }}</span>
+                        {% endif %}
+                        {% if documento.collocazioni_attive %}
+                          <span class="text-muted small d-block">
+                            {% if documento.collocazioni_attive|length == 1 %}Unità fisica:{% else %}Unità fisiche:{% endif %}
+                            {% for collocazione in documento.collocazioni_attive %}
+                              <a class="treeview__link" href="{% url 'archivio_fisico:unita_detail' collocazione.unita.pk %}">
+                                {{ collocazione.unita.full_path|default:collocazione.unita.nome }}
+                              </a>{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                          </span>
+                        {% else %}
+                          <span class="text-muted small d-block">Senza unità fisica</span>
+                        {% endif %}
+                      </div>
+                    </li>
+                    {% endfor %}
+                  {% else %}
+                    <li class="text-muted">Nessun documento collocato.</li>
+                  {% endif %}
+                </ul>
+              </details>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+      </li>
+      {% endif %}
+      {% if cliente.documenti_sciolti %}
+      <li>
+        <details class="treeview__node" open>
+          <summary class="treeview__summary">
+            <span class="treeview__label">Documenti senza fascicolo ({{ cliente.documenti_sciolti|length }})</span>
+          </summary>
+          <ul>
+            {% for documento in cliente.documenti_sciolti %}
+            <li>
+              <div class="treeview__leaf">
+                <a class="treeview__link" href="{% url 'documenti:dettaglio' documento.pk %}">
+                  {{ documento.codice|default:documento.descrizione }}
+                </a>
+                {% if documento.descrizione and documento.descrizione != documento.codice %}
+                  <span class="text-muted small">{{ documento.descrizione }}</span>
+                {% endif %}
+                {% if documento.collocazioni_attive %}
+                  <span class="text-muted small d-block">
+                    {% if documento.collocazioni_attive|length == 1 %}Unità fisica:{% else %}Unità fisiche:{% endif %}
+                    {% for collocazione in documento.collocazioni_attive %}
+                      <a class="treeview__link" href="{% url 'archivio_fisico:unita_detail' collocazione.unita.pk %}">
+                        {{ collocazione.unita.full_path|default:collocazione.unita.nome }}
+                      </a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </span>
+                {% else %}
+                  <span class="text-muted small d-block">Senza unità fisica</span>
+                {% endif %}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </details>
+      </li>
+      {% endif %}
+      {% if not cliente.fascicoli and not cliente.documenti_sciolti %}
+        <li class="text-muted">Nessun fascicolo o documento assegnato.</li>
+      {% endif %}
+    </ul>
+  </details>
+</li>
+{% endfor %}

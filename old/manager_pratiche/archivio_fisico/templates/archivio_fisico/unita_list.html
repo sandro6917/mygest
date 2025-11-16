@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Archivio fisico</h2>
+<ul>
+  {% for r in radici %}
+    <li><a href="{% url 'archivio_fisico:unita_detail' r.pk %}">{{ r.get_tipo_display }} — {{ r.nome }} ({{ r.codice }})</a></li>
+  {% empty %}
+    <li class="muted">Nessuna unità presente.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

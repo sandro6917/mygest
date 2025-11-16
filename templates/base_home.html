@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="home-layout">
+  <aside class="home-col-1">
+    {% block home_col1 %}{% endblock %}
+  </aside>
+
+  <main class="home-col-2">
+    <div class="home-col-2-grid">
+      {% block home_col2 %}{% endblock %}
+    </div>
+  </main>
+
+  <aside class="home-col-3">
+    {% block home_col3 %}{% endblock %}
+  </aside>
+</div>
+{% endblock %}

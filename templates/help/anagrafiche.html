@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Help Anagrafiche{% endblock %}
+{% block content %}
+<div class="mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1 class="h3 mb-1">Anagrafiche</h1>
+      <p class="text-muted mb-0">Gestione dei soggetti con dati fiscali, recapiti e relazioni cliente.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{% url 'help-index' %}">Indice help</a>
+  </div>
+
+  <section class="mb-4">
+    <h2 class="h4">Funzioni principali</h2>
+    <ul>
+      <li>Creazione di soggetti persona fisica o giuridica con validazione codice fiscale/partita IVA.</li>
+      <li>Gestione recapiti (email, PEC, telefono) e indirizzi multipli.</li>
+      <li>Relazione 1:1 con il modello <code>Cliente</code> per soggetti attivi nel gestionale.</li>
+      <li>Collegamento rapido a pratiche, fascicoli e documenti tramite schermata dettaglio.</li>
+    </ul>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Come aggiungere un nuovo cliente</h2>
+    <ol>
+      <li>Accedere a <em>Anagrafiche</em> dal menu principale.</li>
+      <li>Creare l'anagrafica specificando tipo soggetto, dati identificativi e recapiti.</li>
+      <li>Dal dettaglio anagrafica utilizzare l'azione "Crea cliente" per impostare dati contrattuali e fatturazione.</li>
+    </ol>
+  </section>
+
+  <section class="mb-4">
+    <h2 class="h4">Controlli automatici</h2>
+    <ul>
+      <li>Normalizzazione automatica di campi in fase di salvataggio (maiuscolo, trimming spazi).</li>
+      <li>Verifica coerenza indirizzi associati al cliente.</li>
+      <li>Indice e vincoli su PEC, partita IVA e codice cliente per prevenire duplicati.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}

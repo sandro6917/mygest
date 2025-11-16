@@ -1,0 +1,262 @@
+/* ===================================
+   Variabili tema
+=================================== */
+:root {
+  --blue: #0d47a1;
+  --azul: #1976d2;
+  --blue-hover: #125ea7;
+  --light: #e3f2fd;
+  --white: #fff;
+  --text: #1f2d3d;
+  --muted: #6b7c93;
+
+  --border: #dbe5f3;
+  --border-soft: #e5e5e5;
+
+  --container-max: 1100px;
+  --space: 16px;
+
+  --navbar-h: 56px;
+}
+
+/* ===================================
+   Base / Reset
+=================================== */
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  background: var(--light);
+  color: var(--text);
+}
+
+/* Link helpers */
+a.link { color: var(--azul); text-decoration: none; }
+a.link:hover { text-decoration: underline; }
+
+.muted { color: var(--muted); font-size: 12px; }
+
+/* ===================================
+   Layout
+=================================== */
+.container {
+  max-width: var(--container-max);
+  margin: 24px auto;
+  padding: 0 var(--space);
+}
+
+/* Griglie base */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space);
+}
+
+@media (max-width: 840px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ===================================
+   Navbar (fissa)
+=================================== */
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  height: var(--navbar-h);
+  background: var(--blue);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(var(--space) + 2px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.navbar .brand { font-weight: 600; }
+.navbar .brand-link { color: var(--white); text-decoration: none; }
+
+.navbar .nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar .nav-actions a {
+  color: var(--white);
+  text-decoration: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.navbar .nav-actions a:hover {
+  background: rgba(255,255,255,.12);
+}
+
+/* Spazio sotto la navbar per i contenuti */
+main.container { padding-top: calc(var(--navbar-h) + 8px); }
+
+/* ===================================
+   Card / Liste
+=================================== */
+/* Stile unico per i box: card (compatibile con .box) */
+.card, .box {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  overflow: hidden;
+}
+
+.card > h2, .box > h2 {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 16px;
+  background: linear-gradient(90deg, var(--azul), var(--blue));
+  color: var(--white);
+}
+
+.card .body, .box .body {
+  padding: 10px 14px;
+}
+
+/* Liste standard dentro ai box */
+.card ul, .box ul { list-style: none; margin: 0; padding: 0; }
+.card li, .box li { padding: 8px 0; border-bottom: 1px solid #eef2fa; }
+.card li:last-child, .box li:last-child { border-bottom: none; }
+
+/* Key/Value inline */
+.kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: start;
+}
+.kv dt { font-weight: 600; margin: 0; white-space: nowrap; }
+.kv dd { margin: 0; }
+
+/* Su schermi piccoli, vai a singola colonna e consenti a capo */
+@media (max-width: 560px) {
+  .kv { grid-template-columns: 1fr; }
+  .kv dt { white-space: normal; }
+}
+
+/* ===================================
+   Form
+=================================== */
+form { margin: 0; }
+
+label {
+  display: inline-block;
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="file"],
+textarea,
+select {
+  width: 100%;
+  max-width: 560px;
+  padding: 10px 12px;
+  border: 1px solid #c9d7ee;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+
+textarea { min-height: 100px; resize: vertical; }
+input[type="file"] { padding: 8px; }
+
+input::placeholder, textarea::placeholder { color: #9aa9bf; }
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(25,118,210,.15);
+}
+
+input:disabled, textarea:disabled, select:disabled {
+  background: #f3f6fb;
+  color: #8aa0bd;
+  cursor: not-allowed;
+}
+
+/* Errori Django */
+ul.errorlist {
+  margin: 6px 0 0;
+  padding-left: 0;
+  list-style: none;
+  color: #c62828;
+  font-size: 13px;
+}
+ul.errorlist li { margin: 2px 0; }
+
+.field-error, .error-text { color: #c62828; font-size: 13px; }
+
+/* ===================================
+   Bottoni
+=================================== */
+button,
+input[type="submit"],
+input[type="button"],
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--azul);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color .15s ease, box-shadow .15s ease, transform .02s ease;
+}
+
+button:hover,
+input[type="submit"]:hover,
+.btn:hover { background: var(--blue-hover); }
+
+button:active,
+input[type="submit"]:active,
+.btn:active { transform: translateY(1px); }
+
+button:disabled,
+input[type="submit"]:disabled,
+.btn:disabled {
+  background: #90caf9;
+  cursor: not-allowed;
+}
+
+/* Varianti */
+.btn-secondary { background: #455a64; }
+.btn-secondary:hover { background: #37474f; }
+.btn-danger { background: #d32f2f; }
+.btn-danger:hover { background: #b71c1c; }
+
+/* Gruppi */
+.form-row { margin: 10px 0; }
+.form-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Allineamento form dentro le card */
+.card .body form > div { margin: 8px 0; }
+
+/* ===================================
+   Responsive minori
+=================================== */
+@media (max-width: 560px) {
+  .navbar .nav-actions a { padding: 6px 6px; }
+  .container { margin: 16px auto; }
+}
