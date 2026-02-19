@@ -18,4 +18,15 @@ jobs:
             echo "✅ SSH Connection from GitHub Actions OK"
             whoami
             pwd
-            cd /srv/mygest/app && git status
+            echo "---"
+            echo "Checking VPS environment:"
+            cd /srv/mygest/app
+            echo "Current directory: $(pwd)"
+            echo "Git branch: $(git branch --show-current)"
+            echo "Latest commit: $(git log -1 --oneline)"
+            echo "---"
+            echo "Python environment:"
+            source /srv/mygest/venv/bin/activate
+            python --version
+            echo "---"
+            echo "✅ All checks passed!"
