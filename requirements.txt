@@ -7,7 +7,7 @@ djangorestframework-simplejwt==5.5.1
 django-filter==24.3
 django-addanother==2.2.2
 django-crispy-forms==2.3
-crispy-bootstrap5==2.0.0
+crispy-bootstrap5==2024.10
 graphene-django==3.2.2
 
 # Caching & Performance
