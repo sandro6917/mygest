@@ -135,25 +135,41 @@ WSGI_APPLICATION = 'mygest.wsgi.application'
 # Disabilita connection pooling in CI/CD (più semplice per test)
 USE_DB_POOL = not env.bool('DISABLE_DB_POOL', default=False)
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'dj_db_conn_pool.backends.postgresql' if USE_DB_POOL else 'django.db.backends.postgresql',
-        'NAME': 'mygest',
-        'USER': 'mygest_user',
-        'PASSWORD': 'ScegliUnaPasswordSicura',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
+# Se DATABASE_URL è presente, usala (ha priorità)
+if 'DATABASE_URL' in os.environ:
+    DATABASES = {
+        'default': env.db('DATABASE_URL')
     }
-}
-
-# Aggiungi opzioni pool solo se abilitato
-if USE_DB_POOL:
-    DATABASES['default']['POOL_OPTIONS'] = {
-        'POOL_SIZE': 10,
-        'MAX_OVERFLOW': 20,
-        'RECYCLE': 3600,  # Ricicla connessioni dopo 1 ora
-        'PRE_PING': True,  # Verifica connessioni prima dell'uso
+    # Sovrascrivi ENGINE con pool se abilitato (solo se non è SQLite)
+    if USE_DB_POOL and DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3':
+        DATABASES['default']['ENGINE'] = 'dj_db_conn_pool.backends.postgresql'
+        DATABASES['default']['POOL_OPTIONS'] = {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': 20,
+            'RECYCLE': 3600,
+            'PRE_PING': True,
+        }
+else:
+    # Configurazione di default (sviluppo locale)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'dj_db_conn_pool.backends.postgresql' if USE_DB_POOL else 'django.db.backends.postgresql',
+            'NAME': 'mygest',
+            'USER': 'mygest_user',
+            'PASSWORD': 'ScegliUnaPasswordSicura',
+            'HOST': '127.0.0.1',
+            'PORT': '5432',
+        }
     }
+    
+    # Aggiungi opzioni pool solo se abilitato
+    if USE_DB_POOL:
+        DATABASES['default']['POOL_OPTIONS'] = {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': 20,
+            'RECYCLE': 3600,
+            'PRE_PING': True,
+        }
 
 
 # ====================================
