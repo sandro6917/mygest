@@ -3,10 +3,20 @@ Django==4.2.16
 django-environ==0.11.2
 whitenoise==6.7.0
 djangorestframework==3.15.2
+djangorestframework-simplejwt==5.5.1
+django-filter==24.3
 graphene-django==3.2.2
+
+# Caching & Performance
+django-redis==5.4.0
+redis==5.0.1
+django-debug-toolbar==4.4.6
+django-compressor==4.5.1
+Brotli==1.1.0
 
 # Database (scegline uno; PostgreSQL consigliato)
 psycopg2-binary==2.9.9        # PostgreSQL
+django-db-connection-pool==1.2.4  # Connection pooling
 # mysqlclient==2.2.5          # MySQL/MariaDB
 # mssql-django==1.5.0         # SQL Server (richiede anche pyodbc)
 # pyodbc==5.1.0               # Necessario per SQL Server
@@ -14,6 +24,9 @@ psycopg2-binary==2.9.9        # PostgreSQL
 
 # File/Immagini
 Pillow==11.0.0
+python-magic==0.4.27          # Validazione MIME types
+clamdpy==0.1.0                # ClamAV per antivirus scan
+pdfplumber==0.11.4            # PDF parsing per cedolini
 
 # Utilities
 python-dateutil==2.9.0.post0
@@ -27,6 +40,9 @@ pytest==8.3.3
 pytest-django==4.9.0
 coverage==7.6.4
 model-bakery==1.19.5
+pytest-cov==5.0.0
+pytest-xdist==3.6.1
+locust==2.32.3
 
 # Lint/Format/Typing (dev)
 ruff==0.6.9
