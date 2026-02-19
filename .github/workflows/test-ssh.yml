@@ -7,6 +7,14 @@ jobs:
   test-ssh:
     runs-on: ubuntu-latest
     steps:
+      - name: Debug Secrets Configuration
+        run: |
+          echo "Checking secrets configuration..."
+          echo "SSH_HOST configured: ${{ secrets.SSH_HOST != '' }}"
+          echo "SSH_USER configured: ${{ secrets.SSH_USER != '' }}"
+          echo "SSH_KEY configured: ${{ secrets.SSH_KEY != '' }}"
+          echo "SSH_PORT configured: ${{ secrets.SSH_PORT != '' }}"
+          
       - name: Test SSH Connection
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -14,19 +22,23 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          debug: true
+          command_timeout: 30m
+          script_stop: true
           script: |
+            set -e
             echo "✅ SSH Connection from GitHub Actions OK"
             whoami
             pwd
             echo "---"
             echo "Checking VPS environment:"
-            cd /srv/mygest/app
+            cd /srv/mygest/app || exit 1
             echo "Current directory: $(pwd)"
             echo "Git branch: $(git branch --show-current)"
             echo "Latest commit: $(git log -1 --oneline)"
             echo "---"
             echo "Python environment:"
-            source /srv/mygest/venv/bin/activate
+            source /srv/mygest/venv/bin/activate || exit 1
             python --version
             echo "---"
             echo "✅ All checks passed!"

@@ -1,0 +1,58 @@
+name: Test SSH Simple
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-connection:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Secrets
+        run: |
+          echo "Verifying secrets are set..."
+          if [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "❌ SSH_HOST is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_USER }}" ]; then
+            echo "❌ SSH_USER is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_KEY }}" ]; then
+            echo "❌ SSH_KEY is not set"
+            exit 1
+          fi
+          echo "✅ All secrets are configured"
+          
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Test SSH with Native Command
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT }} \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+              "echo '✅ SSH Connection OK' && whoami && uname -a"
+              
+      - name: Test VPS Commands
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT }} \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e
+            echo "=== VPS Environment Check ==="
+            cd /srv/mygest/app
+            echo "Directory: $(pwd)"
+            echo "Git branch: $(git branch --show-current)"
+            echo "Latest commit: $(git log -1 --oneline)"
+            echo "---"
+            source /srv/mygest/venv/bin/activate
+            echo "Python: $(python --version)"
+            echo "✅ All checks passed!"
+          EOF
