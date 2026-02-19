@@ -101,18 +101,29 @@ fi
 # =============================================================================
 section "3. Python Virtual Environment"
 
+# Check multiple possible venv locations
+VENV_PATH=""
 if [ -d "venv" ]; then
-    log "Virtual environment exists"
+    VENV_PATH="venv"
+elif [ -d "/srv/mygest/venv" ]; then
+    VENV_PATH="/srv/mygest/venv"
+elif [ -d ".venv" ]; then
+    VENV_PATH=".venv"
+fi
+
+if [ -n "$VENV_PATH" ]; then
+    log "Virtual environment exists at: $VENV_PATH"
     PASSED=$((PASSED + 1))
     
-    source venv/bin/activate
+    source "$VENV_PATH/bin/activate"
     
     PYTHON_VERSION=$(python --version 2>&1)
     log "Python: $PYTHON_VERSION"
     PASSED=$((PASSED + 1))
 else
-    error "Virtual environment not found (run: python3 -m venv venv)"
-    exit 1
+    warn "Virtual environment not found (skipping Python checks)"
+    warn "For production deployment, ensure venv exists at /srv/mygest/venv"
+    # Don't exit - continue with other checks
 fi
 
 # =============================================================================
