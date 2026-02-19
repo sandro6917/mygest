@@ -1,0 +1,175 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { apiClient } from '../api/client';
+import { 
+  DashboardIcon, 
+  DocumentiIcon, 
+  CalendarIcon, 
+  ClientIcon,
+  CheckIcon,
+  InfoIcon,
+  RefreshIcon,
+  PraticheIcon
+} from '../components/icons/Icons';
+
+interface DashboardStats {
+  pratiche_attive: number;
+  pratiche_chiuse: number;
+  documenti_count: number;
+  scadenze_oggi: number;
+  clienti_attivi: number;
+  pratiche_per_mese: Array<{ mese: string; count: number }>;
+}
+
+export function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get<DashboardStats>('/dashboard/stats/');
+      setStats(response.data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Errore nel caricamento dei dati');
+      console.error('Error loading stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <DashboardIcon size={28} />
+            <div>
+              <h1 style={{ margin: 0 }}>Dashboard</h1>
+              <p className="text-muted" style={{ margin: '0.25rem 0 0' }}>Panoramica del sistema</p>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <RefreshIcon size={32} />
+          <p className="text-muted" style={{ marginTop: '1rem' }}>Caricamento dati...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="page-container">
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <DashboardIcon size={28} />
+            <div>
+              <h1 style={{ margin: 0 }}>Dashboard</h1>
+              <p className="text-muted" style={{ margin: '0.25rem 0 0' }}>Panoramica del sistema</p>
+            </div>
+          </div>
+          <button onClick={loadStats} className="btn btn-primary">
+            <RefreshIcon size={16} />
+            <span>Ricarica</span>
+          </button>
+        </div>
+        <div className="card" style={{ margin: '1rem 0' }}>
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <InfoIcon size={32} />
+            <p className="text-danger" style={{ marginTop: '1rem' }}>{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <h1>📊 Dashboard</h1>
+        <p className="text-muted">Panoramica del sistema MyGest</p>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-icon">📋</div>
+          <div className="stat-content">
+            <h3>Pratiche Attive</h3>
+            <p className="stat-value">{stats?.pratiche_attive || 0}</p>
+            <p className="text-muted text-sm">{stats?.pratiche_chiuse || 0} chiuse</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">📄</div>
+          <div className="stat-content">
+            <h3>Documenti</h3>
+            <p className="stat-value">{stats?.documenti_count || 0}</p>
+            <p className="text-muted text-sm">Totale archivio</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">📅</div>
+          <div className="stat-content">
+            <h3>Scadenze Attive</h3>
+            <p className="stat-value">{stats?.scadenze_oggi || 0}</p>
+            <p className="text-muted text-sm">In corso</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">👥</div>
+          <div className="stat-content">
+            <h3>Clienti Attivi</h3>
+            <p className="stat-value">{stats?.clienti_attivi || 0}</p>
+            <p className="text-muted text-sm">Ultimi 6 mesi</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-content">
+        <div className="card">
+          <h2>� Pratiche per Mese</h2>
+          <div className="chart-container">
+            {stats?.pratiche_per_mese.map((item) => (
+              <div key={item.mese} className="chart-bar">
+                <div className="bar-label">{item.mese}</div>
+                <div className="bar-wrapper">
+                  <div 
+                    className="bar-fill" 
+                    style={{ 
+                      height: `${item.count > 0 ? (item.count / Math.max(...stats.pratiche_per_mese.map(p => p.count))) * 100 : 0}%` 
+                    }}
+                  >
+                    <span className="bar-value">{item.count}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>🚀 Benvenuto nel Nuovo MyGest!</h2>
+          <p>
+            Stai utilizzando la nuova interfaccia React con autenticazione JWT.
+          </p>
+          <ul>
+            <li>✅ Login e autenticazione funzionanti</li>
+            <li>✅ Dashboard con dati reali dal database</li>
+            <li>✅ API REST Django configurata</li>
+            <li>⏳ Prossimo: moduli Pratiche, Documenti, Anagrafiche</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}

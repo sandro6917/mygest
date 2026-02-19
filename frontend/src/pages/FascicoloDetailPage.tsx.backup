@@ -1,0 +1,1129 @@
+/**
+ * Fascicolo Detail Page
+ */
+import { useState, useEffect, useCallback } from 'react';
+import { isAxiosError } from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
+import { fascicoliApi, previewEtichettaFascicoloPDF, previewCopertinaFascicoloPDF } from '@/api/fascicoli';
+import { documentiApi } from '@/api/documenti';
+import type { Fascicolo, FascicoloListItem } from '@/types/fascicolo';
+import type { Documento } from '@/types/documento';
+import { openProtocollazionePopup } from '@/utils/protocollazionePopup';
+import {
+  ArrowBackIcon,
+  EditIcon,
+  DeleteIcon,
+  AddIcon,
+  VisibilityIcon,
+  PrintIcon,
+  DescriptionIcon,
+} from '@/components/icons/Icons';
+
+export default function FascicoloDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [fascicolo, setFascicolo] = useState<Fascicolo | null>(null);
+  const [sottofascicoli, setSottofascicoli] = useState<FascicoloListItem[]>([]);
+  const [fascicoliCollegabili, setFascicoliCollegabili] = useState<FascicoloListItem[]>([]);
+  const [fascicoliCollegabiliM2M, setFascicoliCollegabiliM2M] = useState<FascicoloListItem[]>([]);
+  const [searchCollegabili, setSearchCollegabili] = useState('');
+  const [documenti, setDocumenti] = useState<Documento[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showStampaMenu, setShowStampaMenu] = useState(false);
+
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (isAxiosError(err)) {
+      return (
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        fallback
+      );
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return fallback;
+  };
+
+  const parseId = useCallback(() => {
+    if (!id) {
+      return null;
+    }
+    const numericId = Number(id);
+    if (Number.isNaN(numericId)) {
+      return null;
+    }
+    return numericId;
+  }, [id]);
+
+  const loadFascicolo = useCallback(async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) {
+      setError('ID fascicolo non valido');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await fascicoliApi.get(fascicoloId);
+      setFascicolo(data);
+      setError(null);
+    } catch (err) {
+      setError(getErrorMessage(err, 'Errore nel caricamento del fascicolo'));
+    } finally {
+      setLoading(false);
+    }
+  }, [parseId]);
+
+  const loadSottofascicoli = useCallback(async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    try {
+      const data = await fascicoliApi.listSottofascicoli(fascicoloId);
+      setSottofascicoli(data);
+    } catch (err) {
+      console.error('Error loading sottofascicoli:', err);
+    }
+  }, [parseId]);
+
+  const loadDocumenti = useCallback(async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    try {
+      // Carica documenti del fascicolo corrente
+      const response = await documentiApi.list({ fascicolo: fascicoloId });
+      let allDocumenti = response.results.map(doc => ({ ...doc, fonte: 'fascicolo_corrente' }));
+
+      // Carica documenti dei sottofascicoli
+      const sottofascicoliData = await fascicoliApi.listSottofascicoli(fascicoloId);
+      for (const sottofasc of sottofascicoliData) {
+        const sottoResponse = await documentiApi.list({ fascicolo: sottofasc.id });
+        const sottoDocumenti = sottoResponse.results.map(doc => ({
+          ...doc,
+          fonte: 'sottofascicolo',
+          fonte_fascicolo: sottofasc.codice,
+          fonte_fascicolo_id: sottofasc.id
+        }));
+        allDocumenti = [...allDocumenti, ...sottoDocumenti];
+      }
+
+      // Carica il fascicolo per ottenere i fascicoli collegati
+      const fascicoloData = await fascicoliApi.get(fascicoloId);
+      if (fascicoloData.fascicoli_collegati_details) {
+        for (const collegato of fascicoloData.fascicoli_collegati_details) {
+          const collegResponse = await documentiApi.list({ fascicolo: collegato.id });
+          const collegDocumenti = collegResponse.results.map(doc => ({
+            ...doc,
+            fonte: 'fascicolo_collegato',
+            fonte_fascicolo: collegato.codice,
+            fonte_fascicolo_id: collegato.id
+          }));
+          allDocumenti = [...allDocumenti, ...collegDocumenti];
+        }
+      }
+
+      setDocumenti(allDocumenti);
+    } catch (err) {
+      console.error('Error loading documenti:', err);
+    }
+  }, [parseId]);
+
+  const loadFascicoliCollegabili = useCallback(async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    try {
+      const data = await fascicoliApi.getSottofascicoliCollegabili(fascicoloId);
+      setFascicoliCollegabili(data);
+    } catch (err) {
+      console.error('Error loading fascicoli collegabili:', err);
+    }
+  }, [parseId]);
+
+  const loadFascicoliCollegabiliM2M = useCallback(async (search?: string) => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    // Se non c'è un criterio di ricerca, svuota l'elenco
+    if (!search || search.trim() === '') {
+      setFascicoliCollegabiliM2M([]);
+      return;
+    }
+
+    try {
+      const data = await fascicoliApi.getFascicoliCollegabili(fascicoloId, { search });
+      setFascicoliCollegabiliM2M(data);
+    } catch (err) {
+      console.error('Error loading fascicoli collegabili M2M:', err);
+    }
+  }, [parseId]);
+
+  useEffect(() => {
+    loadFascicolo();
+  }, [loadFascicolo]);
+
+  useEffect(() => {
+    loadSottofascicoli();
+  }, [loadSottofascicoli]);
+
+  useEffect(() => {
+    loadDocumenti();
+  }, [loadDocumenti]);
+
+  useEffect(() => {
+    loadFascicoliCollegabili();
+  }, [loadFascicoliCollegabili]);
+
+  // NON caricare automaticamente i fascicoli collegabili M2M
+  // L'utente deve usare la ricerca per popolare l'elenco
+
+  const handleDelete = async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null || !window.confirm('Sei sicuro di voler eliminare questo fascicolo?')) return;
+
+    try {
+      await fascicoliApi.delete(fascicoloId);
+      navigate(-1); // Torna alla pagina precedente
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore durante l\'eliminazione'));
+    }
+  };
+
+  const handleDeleteSottofascicolo = async (sottofascicoloId: number) => {
+    if (!window.confirm('Sei sicuro di voler eliminare questo sottofascicolo?')) return;
+
+    try {
+      await fascicoliApi.delete(sottofascicoloId);
+      await loadSottofascicoli();
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore durante l\'eliminazione'));
+    }
+  };
+
+  const handleScollegaDocumento = async (documentoId: number) => {
+    if (!window.confirm('Sei sicuro di voler scollegare questo documento dal fascicolo?')) return;
+
+    try {
+      // Aggiorna il documento rimuovendo il fascicolo
+      await documentiApi.update(documentoId, {
+        fascicolo: null,
+      });
+
+      // Ricarica la lista documenti
+      await loadDocumenti();
+
+      alert('Documento scollegato con successo!');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore durante lo scollegamento del documento'));
+    }
+  };
+
+  const handleCollegaSottofascicolo = async (targetId: number, targetCodice: string) => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    const confirmMessage = `Sei sicuro di voler collegare il fascicolo ${targetCodice} come sottofascicolo di ${fascicolo?.codice}?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      await fascicoliApi.collegaSottofascicolo(fascicoloId, targetId);
+      
+      // Ricarica sottofascicoli e fascicoli collegabili
+      await loadSottofascicoli();
+      await loadFascicoliCollegabili();
+      
+      alert(`Fascicolo ${targetCodice} collegato con successo!`);
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore durante il collegamento del fascicolo'));
+    }
+  };
+
+  const handleCollegaFascicoloM2M = async (targetId: number, targetCodice: string) => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    const confirmMessage = `Sei sicuro di voler collegare il fascicolo ${targetCodice} a ${fascicolo?.codice}?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      const result = await fascicoliApi.collegaFascicolo(fascicoloId, targetId);
+      
+      // Ricarica fascicolo e fascicoli collegabili
+      await loadFascicolo();
+      await loadFascicoliCollegabiliM2M(searchCollegabili);
+      
+      alert(result.message || 'Fascicolo collegato con successo!');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore durante il collegamento del fascicolo'));
+    }
+  };
+
+  const handleScollegaFascicoloM2M = async (targetId: number, targetCodice: string) => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+
+    const confirmMessage = `Sei sicuro di voler scollegare il fascicolo ${targetCodice} da ${fascicolo?.codice}?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      const result = await fascicoliApi.scollegaFascicolo(fascicoloId, targetId);
+      
+      // Ricarica fascicolo e fascicoli collegabili
+      await loadFascicolo();
+      await loadFascicoliCollegabiliM2M(searchCollegabili);
+      
+      alert(result.message || 'Fascicolo scollegato con successo!');
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore durante lo scollegamento del fascicolo'));
+    }
+  };
+
+  const handleStampaEtichetta = async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+    
+    try {
+      await previewEtichettaFascicoloPDF(fascicoloId);
+    } catch (err) {
+      console.error('Errore nella stampa dell\'etichetta:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Errore durante la generazione dell\'etichetta';
+      alert(errorMessage);
+    }
+  };
+
+  const handleStampaCopertina = async () => {
+    const fascicoloId = parseId();
+    if (fascicoloId === null) return;
+    
+    try {
+      await previewCopertinaFascicoloPDF(fascicoloId);
+    } catch (err) {
+      console.error('Errore nella stampa della copertina:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Errore durante la generazione della copertina';
+      alert(errorMessage);
+    }
+  };
+
+  // Chiudi il menu dropdown quando si clicca fuori
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.dropdown-wrapper')) {
+        setShowStampaMenu(false);
+      }
+    };
+
+    if (showStampaMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStampaMenu]);
+
+  const handleAnteprimaDocumento = (doc: any) => {
+    if (doc.file) {
+      // Apri il file in una nuova finestra
+      window.open(doc.file, '_blank');
+    } else {
+      alert('Nessun file disponibile per l\'anteprima');
+    }
+  };
+
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleString('it-IT');
+  };
+
+  const getStatoBadgeClass = (stato: string) => {
+    switch (stato) {
+      case 'corrente':
+        return 'badge-success';
+      case 'deposito':
+        return 'badge-info';
+      case 'storico':
+        return 'badge-secondary';
+      case 'scartato':
+        return 'badge-danger';
+      default:
+        return 'badge-secondary';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <p>Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !fascicolo) {
+    return (
+      <div className="page-container">
+        <div className="alert alert-error">
+          {error || 'Fascicolo non trovato'}
+        </div>
+        <button onClick={() => navigate(-1)} className="btn-secondary">
+          Torna indietro
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <button
+              onClick={() => navigate(-1)}
+              className="btn-secondary"
+              title="Torna alla pagina precedente"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <ArrowBackIcon size={20} />
+              Indietro
+            </button>
+            <h1 className="page-title">{fascicolo.codice}</h1>
+            <span className={`badge ${getStatoBadgeClass(fascicolo.stato)}`}>
+              {fascicolo.stato_display}
+            </span>
+          </div>
+          <p className="page-subtitle">{fascicolo.titolo}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div className="dropdown-wrapper" style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setShowStampaMenu(!showStampaMenu)}
+              title="Stampe"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <PrintIcon size={20} />
+              <span>Stampe</span>
+              <span style={{ marginLeft: '4px' }}>▼</span>
+            </button>
+            {showStampaMenu && (
+              <div 
+                className="dropdown-menu" 
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  marginTop: '4px',
+                  backgroundColor: 'white',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  zIndex: 1000,
+                  minWidth: '200px',
+                }}
+              >
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    handleStampaEtichetta();
+                    setShowStampaMenu(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    width: '100%',
+                    padding: '8px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  🏷️ Etichetta
+                </button>
+                <button
+                  className="dropdown-item"
+                  onClick={() => {
+                    handleStampaCopertina();
+                    setShowStampaMenu(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    width: '100%',
+                    padding: '8px 16px',
+                    textAlign: 'left',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  📄 Copertina
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => navigate(`/fascicoli/${id}/modifica`)}
+            className="btn-secondary"
+          >
+            <EditIcon size={20} />
+            Modifica
+          </button>
+          <button onClick={handleDelete} className="btn-danger">
+            <DeleteIcon size={20} />
+            Elimina
+          </button>
+        </div>
+      </div>
+
+      {/* Layout a 2 colonne per le informazioni */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        
+        {/* Informazioni principali */}
+        <div className="card">
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
+            Informazioni Principali
+          </h2>
+          <div className="detail-row">
+            <span className="detail-label">Codice:</span>
+            <span className="detail-value"><strong>{fascicolo.codice}</strong></span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Titolo:</span>
+            <span className="detail-value">{fascicolo.titolo}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Anno:</span>
+            <span className="detail-value">{fascicolo.anno}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Cliente:</span>
+            <span className="detail-value">{fascicolo.cliente_display || '-'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Stato:</span>
+            <span className="detail-value">
+              <span className={`badge ${getStatoBadgeClass(fascicolo.stato)}`}>
+                {fascicolo.stato_display}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Classificazione */}
+        <div className="card">
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
+            Classificazione e Archivio
+          </h2>
+          <div className="detail-row">
+            <span className="detail-label">Titolario:</span>
+            <span className="detail-value">
+              {fascicolo.titolario_voce_detail ? (
+                <>
+                  {fascicolo.titolario_voce_detail.codice} - {fascicolo.titolario_voce_detail.titolo}
+                </>
+              ) : (
+                '-'
+              )}
+            </span>
+          </div>
+          {fascicolo.parent_display && (
+            <div className="detail-row">
+              <span className="detail-label">Fascicolo Padre:</span>
+              <span className="detail-value">{fascicolo.parent_display}</span>
+            </div>
+          )}
+          <div className="detail-row">
+            <span className="detail-label">Progressivo:</span>
+            <span className="detail-value">
+              {fascicolo.progressivo}
+              {fascicolo.sub_progressivo > 0 && `.${fascicolo.sub_progressivo}`}
+            </span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Ubicazione:</span>
+            <span className="detail-value">
+              {fascicolo.ubicazione_detail ? (
+                <>
+                  {fascicolo.ubicazione_detail.codice} - {fascicolo.ubicazione_detail.nome}
+                  {fascicolo.ubicazione_full_path && (
+                    <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>
+                      {fascicolo.ubicazione_full_path}
+                    </div>
+                  )}
+                </>
+              ) : (
+                '-'
+              )}
+            </span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Retention:</span>
+            <span className="detail-value">{fascicolo.retention_anni} anni</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Protocollo e Movimenti */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+            Protocollo e Movimenti
+          </h2>
+          <button
+            onClick={() => {
+              openProtocollazionePopup({
+                tipo: 'fascicolo',
+                id: fascicolo.id,
+                titolo: fascicolo.titolo,
+                onSuccess: loadFascicolo,
+              });
+            }}
+            className="btn-primary"
+            style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+          >
+            <PrintIcon size={16} />
+            <span>Protocolla</span>
+          </button>
+        </div>
+        
+        {fascicolo.protocollo_attivo && (
+          <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e7f3ff', borderRadius: '0.375rem', border: '1px solid #b3d9ff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <span style={{ fontWeight: '600', color: '#0056b3' }}>
+                Protocollo Attivo: {fascicolo.protocollo_attivo.protocollo_label}
+              </span>
+              <span className={`badge ${fascicolo.protocollo_attivo.direzione === 'IN' ? 'badge-success' : 'badge-warning'}`}>
+                {fascicolo.protocollo_attivo.direzione === 'IN' ? 'Entrata ⬅️' : 'Uscita ➡️'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+              Data: {new Date(fascicolo.protocollo_attivo.data).toLocaleString('it-IT')}
+            </div>
+            {!fascicolo.protocollo_attivo.chiuso && fascicolo.protocollo_attivo.direzione === 'OUT' && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <span className="badge badge-warning">⚠️ In prestito</span>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {fascicolo.movimenti_protocollo && fascicolo.movimenti_protocollo.length > 0 ? (
+          <div>
+            <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+              Storico Movimenti ({fascicolo.movimenti_protocollo.length})
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {fascicolo.movimenti_protocollo.map((mov) => (
+                <div
+                  key={mov.id}
+                  style={{
+                    padding: '0.75rem',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '0.375rem',
+                    backgroundColor: mov.chiuso ? '#f8f9fa' : '#fff'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span
+                        className={`badge ${
+                          mov.direzione === 'IN' ? 'badge-success' : 'badge-warning'
+                        }`}
+                      >
+                        {mov.direzione === 'IN' ? 'IN' : 'OUT'}
+                      </span>
+                      <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>
+                        {mov.protocollo_label}
+                      </span>
+                    </div>
+                    {mov.chiuso && (
+                      <span className="badge badge-secondary">Chiuso</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                    {new Date(mov.data).toLocaleString('it-IT')}
+                  </div>
+                  {mov.destinatario && (
+                    <p style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                      {mov.direzione === 'IN' ? 'Da' : 'A'}: <strong>{mov.destinatario}</strong>
+                    </p>
+                  )}
+                  {mov.causale && (
+                    <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6c757d' }}>
+                      Causale: {mov.causale}
+                    </p>
+                  )}
+                  {mov.note && (
+                    <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6c757d', fontStyle: 'italic' }}>
+                      {mov.note}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem 0', color: '#6c757d' }}>
+            <PrintIcon size={48} />
+            <p style={{ marginBottom: '1rem', marginTop: '0.5rem' }}>Nessuna protocollazione registrata</p>
+            <p style={{ fontSize: '0.875rem' }}>Utilizza il pulsante "Protocolla" in alto per registrare un movimento</p>
+          </div>
+        )}
+      </div>
+
+      {/* Informazioni aggiuntive */}
+      {fascicolo.note && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
+            Note
+          </h2>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{fascicolo.note}</p>
+        </div>
+      )}
+
+      {/* Pratiche collegate */}
+      {fascicolo.pratiche_details && fascicolo.pratiche_details.length > 0 && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+              Pratiche Collegate ({fascicolo.pratiche_details.length})
+            </h2>
+          </div>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Codice</th>
+                  <th>Oggetto</th>
+                  <th style={{ width: '80px' }}>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fascicolo.pratiche_details.map((pratica) => (
+                  <tr key={pratica.id}>
+                    <td><strong>{pratica.codice}</strong></td>
+                    <td>{pratica.oggetto}</td>
+                    <td>
+                      <button
+                        onClick={() => navigate(`/pratiche/${pratica.id}`)}
+                        className="btn-icon"
+                        title="Visualizza"
+                      >
+                        <VisibilityIcon size={18} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Documenti */}
+      <div className="card" style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+            Documenti ({documenti.length})
+          </h2>
+          <button
+            onClick={() => navigate(`/documenti/new?fascicolo_id=${id}`)}
+            className="btn-primary"
+          >
+            <AddIcon size={18} />
+            Crea Documento
+          </button>
+        </div>
+        {documenti.length === 0 ? (
+          <p style={{ color: '#6c757d', textAlign: 'center', padding: '2rem' }}>
+            Nessun documento associato a questo fascicolo.
+          </p>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Codice</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Descrizione</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Tipo</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Data</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Fonte</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'left', fontWeight: 600 }}>Stato</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 600, width: '180px' }}>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documenti.map((doc: any) => (
+                  <tr key={`${doc.id}-${doc.fonte}`} style={{ borderBottom: '1px solid #dee2e6' }}>
+                    <td style={{ padding: '0.75rem' }}>{doc.codice}</td>
+                    <td style={{ padding: '0.75rem' }}>{doc.descrizione}</td>
+                    <td style={{ padding: '0.75rem' }}>{doc.tipo_detail?.nome || doc.tipo}</td>
+                    <td style={{ padding: '0.75rem' }}>
+                      {new Date(doc.data_documento).toLocaleDateString('it-IT')}
+                    </td>
+                    <td style={{ padding: '0.75rem' }}>
+                      {doc.fonte === 'fascicolo_corrente' && (
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          backgroundColor: '#d1ecf1',
+                          color: '#0c5460'
+                        }}>
+                          Fascicolo corrente
+                        </span>
+                      )}
+                      {doc.fonte === 'sottofascicolo' && (
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          backgroundColor: '#fff3cd',
+                          color: '#856404'
+                        }} title={`Sottofascicolo: ${doc.fonte_fascicolo}`}>
+                          Sottofasc: {doc.fonte_fascicolo}
+                        </span>
+                      )}
+                      {doc.fonte === 'fascicolo_collegato' && (
+                        <span style={{
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          backgroundColor: '#e2e3e5',
+                          color: '#383d41'
+                        }} title={`Fascicolo collegato: ${doc.fonte_fascicolo}`}>
+                          Colleg: {doc.fonte_fascicolo}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.75rem' }}>
+                      <span style={{
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.875rem',
+                        backgroundColor: doc.stato === 'definitivo' ? '#d4edda' : '#fff3cd',
+                        color: doc.stato === 'definitivo' ? '#155724' : '#856404'
+                      }}>
+                        {doc.stato}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                        <button
+                          onClick={() => navigate(`/documenti/${doc.id}`)}
+                          className="btn-icon"
+                          title="Visualizza dettaglio documento"
+                        >
+                          <VisibilityIcon size={18} />
+                        </button>
+                        {doc.file && (
+                          <button
+                            onClick={() => handleAnteprimaDocumento(doc)}
+                            className="btn-icon"
+                            title="Anteprima file"
+                            style={{ backgroundColor: '#17a2b8', color: 'white' }}
+                          >
+                            <DescriptionIcon size={18} />
+                          </button>
+                        )}
+                        {doc.fonte === 'fascicolo_corrente' && (
+                          <button
+                            onClick={() => handleScollegaDocumento(doc.id)}
+                            className="btn-icon btn-icon-danger"
+                            title="Scollega documento dal fascicolo"
+                          >
+                            <DeleteIcon size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Sottofascicoli */}
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+            Sottofascicoli ({sottofascicoli.length})
+          </h2>
+          <button
+            onClick={() => navigate(`/fascicoli/nuovo?parent=${id}`)}
+            className="btn-primary"
+          >
+            <AddIcon size={18} />
+            Nuovo Sottofascicolo
+          </button>
+        </div>
+
+        {sottofascicoli.length === 0 ? (
+          <p style={{ color: '#6c757d', textAlign: 'center', padding: '2rem' }}>
+            Nessun sottofascicolo presente
+          </p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Codice</th>
+                  <th>Titolo</th>
+                  <th>Anno</th>
+                  <th>Stato</th>
+                  <th>Ubicazione</th>
+                  <th style={{ width: '120px' }}>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sottofascicoli.map((sottofascicolo) => (
+                  <tr key={sottofascicolo.id}>
+                    <td><strong>{sottofascicolo.codice}</strong></td>
+                    <td>{sottofascicolo.titolo}</td>
+                    <td>{sottofascicolo.anno}</td>
+                    <td>
+                      <span className={`badge ${getStatoBadgeClass(sottofascicolo.stato)}`}>
+                        {sottofascicolo.stato_display}
+                      </span>
+                    </td>
+                    <td>{sottofascicolo.ubicazione_full_path || '-'}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => navigate(`/fascicoli/${sottofascicolo.id}`)}
+                          className="btn-icon"
+                          title="Visualizza"
+                        >
+                          <VisibilityIcon size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSottofascicolo(sottofascicolo.id)}
+                          className="btn-icon btn-icon-danger"
+                          title="Elimina"
+                        >
+                          <DeleteIcon size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Collega Fascicolo Esistente */}
+      <div className="card">
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+          Collega Fascicolo Esistente come Sottofascicolo
+        </h2>
+        <p style={{ fontSize: '0.875rem', color: '#6c757d', marginBottom: '1rem' }}>
+          Fascicoli dello stesso cliente, titolario e anno non ancora collegati ad altri fascicoli
+        </p>
+
+        {fascicoliCollegabili.length === 0 ? (
+          <p style={{ color: '#6c757d', textAlign: 'center', padding: '2rem' }}>
+            Nessun fascicolo collegabile disponibile
+          </p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Codice</th>
+                  <th>Titolo</th>
+                  <th>Progressivo</th>
+                  <th style={{ width: '120px' }}>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fascicoliCollegabili.map((fasc) => (
+                  <tr key={fasc.id}>
+                    <td><strong>{fasc.codice}</strong></td>
+                    <td>{fasc.titolo}</td>
+                    <td>{fasc.progressivo}</td>
+                    <td>
+                      <button
+                        onClick={() => handleCollegaSottofascicolo(fasc.id, fasc.codice)}
+                        className="btn-primary btn-sm"
+                        title={`Collega ${fasc.codice} come sottofascicolo`}
+                      >
+                        + Collega
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Fascicoli Collegati */}
+      {fascicolo.fascicoli_collegati_details && fascicolo.fascicoli_collegati_details.length > 0 && (
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+              Fascicoli Collegati ({fascicolo.fascicoli_collegati_details.length})
+            </h2>
+          </div>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Codice</th>
+                  <th>Titolo</th>
+                  <th>Anno</th>
+                  <th>Cliente</th>
+                  <th>Stato</th>
+                  <th style={{ width: '140px' }}>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fascicolo.fascicoli_collegati_details.map((fasc) => (
+                  <tr key={fasc.id}>
+                    <td><strong>{fasc.codice}</strong></td>
+                    <td>{fasc.titolo}</td>
+                    <td>{fasc.anno}</td>
+                    <td>{fasc.cliente_display || '-'}</td>
+                    <td>
+                      <span className={`badge ${getStatoBadgeClass(fasc.stato)}`}>
+                        {fasc.stato_display}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => navigate(`/fascicoli/${fasc.id}`)}
+                          className="btn-icon"
+                          title="Visualizza dettaglio fascicolo"
+                        >
+                          <VisibilityIcon size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleScollegaFascicoloM2M(fasc.id, fasc.codice)}
+                          className="btn-icon btn-icon-danger"
+                          title={`Scollega ${fasc.codice}`}
+                        >
+                          <DeleteIcon size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Gestione Collegamenti Fascicoli */}
+      <div className="card">
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+          Gestione Collegamenti Fascicoli
+        </h2>
+        <p style={{ fontSize: '0.875rem', color: '#6c757d', marginBottom: '1.5rem' }}>
+          Cerca e collega altri fascicoli a questo
+        </p>
+        
+        {/* Barra di ricerca */}
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Cerca fascicoli per codice, titolo o cliente..."
+            value={searchCollegabili}
+            onChange={(e) => {
+              setSearchCollegabili(e.target.value);
+              loadFascicoliCollegabiliM2M(e.target.value);
+            }}
+            style={{ maxWidth: '500px' }}
+          />
+        </div>
+
+        {fascicoliCollegabiliM2M.length === 0 ? (
+          <p style={{ color: '#6c757d', textAlign: 'center', padding: '2rem' }}>
+            {searchCollegabili 
+              ? 'Nessun fascicolo trovato con i criteri di ricerca' 
+              : 'Inizia a digitare nella barra di ricerca per trovare fascicoli da collegare'}
+          </p>
+        ) : (
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Codice</th>
+                  <th>Titolo</th>
+                  <th>Anno</th>
+                  <th>Cliente</th>
+                  <th>Stato</th>
+                  <th style={{ width: '120px' }}>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fascicoliCollegabiliM2M.map((fasc) => (
+                  <tr key={fasc.id}>
+                    <td><strong>{fasc.codice}</strong></td>
+                    <td>{fasc.titolo}</td>
+                    <td>{fasc.anno}</td>
+                    <td>{fasc.cliente_display || '-'}</td>
+                    <td>
+                      <span className={`badge ${getStatoBadgeClass(fasc.stato)}`}>
+                        {fasc.stato_display}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleCollegaFascicoloM2M(fasc.id, fasc.codice)}
+                        className="btn-primary btn-sm"
+                        title={`Collega ${fasc.codice}`}
+                      >
+                        + Collega
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Informazioni sistema */}
+      <div className="card" style={{ marginTop: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
+          Informazioni Sistema
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          <div className="detail-row">
+            <span className="detail-label">Creato il:</span>
+            <span className="detail-value">{formatDateTime(fascicolo.created_at)}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">Ultima modifica:</span>
+            <span className="detail-value">{formatDateTime(fascicolo.updated_at)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

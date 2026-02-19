@@ -1,0 +1,668 @@
+import { useState, useEffect, useCallback } from 'react';
+import { isAxiosError } from 'axios';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { documentiApi } from '@/api/documenti';
+import type { Documento } from '@/types/documento';
+import { openProtocollazionePopup } from '@/utils/protocollazionePopup';
+import {
+  EditIcon,
+  DeleteIcon,
+  ArrowBackIcon,
+  DownloadIcon,
+  DocumentiIcon,
+  InfoIcon,
+  CheckIcon,
+  PrintIcon,
+  AddIcon,
+} from '@/components/icons/Icons';
+
+export function DocumentoDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [documento, setDocumento] = useState<Documento | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (isAxiosError(err)) {
+      return (
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        fallback
+      );
+    }
+    return fallback;
+  };
+
+  const loadDocumento = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      setLoading(true);
+      const data = await documentiApi.get(Number(id));
+      setDocumento(data);
+      setError(null);
+    } catch (err) {
+      const message = getErrorMessage(err, 'Errore nel caricamento del documento');
+      setError(message);
+      console.error('Error loading documento:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadDocumento();
+  }, [loadDocumento]);
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    if (!confirm('Sei sicuro di voler eliminare questo documento?')) {
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      await documentiApi.delete(Number(id));
+      navigate(-1); // Torna alla pagina precedente
+    } catch (err) {
+      alert(getErrorMessage(err, 'Errore nell\'eliminazione del documento'));
+      setDeleting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!id || !documento?.file) return;
+
+    try {
+      const blob = await documentiApi.downloadFile(Number(id));
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = documento.file_name || `documento_${documento.codice}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Errore durante il download: ' + getErrorMessage(err, 'Operazione non riuscita'));
+    }
+  };
+
+  const handleStampaEtichettaProtocollo = (movimentoId: number) => {
+    // Apre la stampa etichetta in nuova tab usando il modulo ET_PROT_DOC
+    const url = `/etichette/stampa/ET_PROT_DOC/?movimento_id=${movimentoId}`;
+    window.open(url, '_blank');
+  };
+
+  const getStatoBadgeClass = (stato: string) => {
+    const classes: Record<string, string> = {
+      bozza: 'badge-warning',
+      definitivo: 'badge-success',
+      protocollato: 'badge-info',
+      archiviato: 'badge-secondary',
+      annullato: 'badge-danger',
+    };
+    return classes[stato] || 'badge-secondary';
+  };
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <p>Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !documento) {
+    return (
+      <div className="page-container">
+        <div className="card">
+          <div style={{ color: '#dc3545', marginBottom: '1rem' }}>
+            {error || 'Documento non trovato'}
+          </div>
+          <button onClick={() => navigate(-1)} className="btn-secondary">
+            <ArrowBackIcon size={18} />
+            <span>Torna indietro</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container">
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <DocumentiIcon size={32} />
+            {documento.codice}
+          </h1>
+          <p className="text-muted">{documento.descrizione}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={() => navigate(-1)} className="btn-secondary">
+            <ArrowBackIcon size={18} />
+            <span>Indietro</span>
+          </button>
+          <Link to={`/documenti/${id}/edit`} className="btn-primary">
+            <EditIcon size={18} />
+            <span>Modifica</span>
+          </Link>
+          {documento.file && (
+            <button onClick={handleDownload} className="btn-primary" style={{ backgroundColor: '#28a745' }}>
+              <DownloadIcon size={18} />
+              <span>Download</span>
+            </button>
+          )}
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="btn-primary"
+            style={{ backgroundColor: '#dc3545' }}
+          >
+            <DeleteIcon size={18} />
+            <span>{deleting ? 'Eliminazione...' : 'Elimina'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Contenuto principale */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+          {/* Colonna sinistra - Dettagli */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Card Informazioni Base */}
+            <div className="card">
+              <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <InfoIcon size={20} />
+                Informazioni Base
+              </h2>
+              <div className="detail-row">
+                <span className="detail-label">Codice:</span>
+                <span className="detail-value" style={{ fontWeight: '500' }}>{documento.codice}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Data Documento:</span>
+                <span className="detail-value">
+                  {new Date(documento.data_documento).toLocaleDateString('it-IT')}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Tipo:</span>
+                <span className="detail-value">{documento.tipo_detail?.nome || '-'}</span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Stato:</span>
+                <span className="detail-value">
+                  <span className={`badge ${getStatoBadgeClass(documento.stato)}`}>
+                    {documento.stato}
+                  </span>
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Cliente:</span>
+                <span className="detail-value">
+                  {documento.cliente_detail ? (
+                    <Link 
+                      to={`/anagrafiche/${documento.cliente_detail.anagrafica}`}
+                      style={{ color: '#007bff', textDecoration: 'none' }}
+                      title="Vai al dettaglio anagrafica"
+                    >
+                      {documento.cliente_detail.anagrafica_display}
+                    </Link>
+                  ) : (
+                    '-'
+                  )}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Fascicolo:</span>
+                <span className="detail-value">
+                  {documento.fascicolo_detail ? (
+                    <Link 
+                      to={`/fascicoli/${documento.fascicolo}`}
+                      style={{ color: '#007bff', textDecoration: 'none' }}
+                      title="Vai al dettaglio fascicolo"
+                    >
+                      {documento.fascicolo_detail.codice}
+                    </Link>
+                  ) : (
+                    '-'
+                  )}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Formato:</span>
+                <span className="detail-value">
+                  {documento.digitale ? '💾 Digitale' : '📄 Cartaceo'}
+                </span>
+              </div>
+              <div className="detail-row">
+                <span className="detail-label">Tracciabile:</span>
+                <span className="detail-value">
+                  {documento.tracciabile ? (
+                    <span style={{ color: '#28a745' }}>
+                      <CheckIcon size={20} /> Sì
+                    </span>
+                  ) : (
+                    'No'
+                  )}
+                </span>
+              </div>
+              {documento.descrizione && (
+                <div className="detail-row" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e5e7eb' }}>
+                  <span className="detail-label">Descrizione:</span>
+                  <span className="detail-value">{documento.descrizione}</span>
+                </div>
+              )}
+              {documento.note && (
+                <div className="detail-row" style={{ marginTop: documento.descrizione ? '0' : '1rem', paddingTop: documento.descrizione ? '0' : '1rem', borderTop: documento.descrizione ? 'none' : '1px solid #e5e7eb' }}>
+                  <span className="detail-label">Note:</span>
+                  <span className="detail-value" style={{ whiteSpace: 'pre-wrap' }}>{documento.note}</span>
+                </div>
+              )}
+              {documento.tags && (
+                <div className="detail-row" style={{ marginTop: (documento.descrizione || documento.note) ? '0' : '1rem', paddingTop: (documento.descrizione || documento.note) ? '0' : '1rem', borderTop: (documento.descrizione || documento.note) ? 'none' : '1px solid #e5e7eb' }}>
+                  <span className="detail-label">Tags:</span>
+                  <span className="detail-value" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {documento.tags.split(',').map((tag, i) => (
+                      <span key={i} className="badge badge-secondary">
+                        {tag.trim()}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Attributi Personalizzati */}
+            {documento.attributi && documento.attributi.length > 0 && (
+              <div className="card">
+                <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
+                  Attributi Personalizzati
+                </h2>
+                {documento.attributi.map((attr) => (
+                  <div key={attr.id} className="detail-row">
+                    <span className="detail-label">
+                      {attr.definizione_detail?.nome || attr.definizione}:
+                    </span>
+                    <span className="detail-value">{attr.valore || '-'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Protocollo */}
+            {(documento.protocollo_numero || documento.movimenti_protocollo || documento.tracciabile) && (
+              <div className="card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h2 style={{ fontSize: '1.125rem', fontWeight: '600', margin: 0 }}>
+                    Protocollo e Movimenti
+                  </h2>
+                  {documento.tracciabile && (
+                    <button
+                      onClick={() => {
+                        openProtocollazionePopup({
+                          tipo: 'documento',
+                          id: documento.id,
+                          titolo: documento.descrizione,
+                          onSuccess: loadDocumento,
+                        });
+                      }}
+                      className="btn-primary"
+                      style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+                    >
+                      <DocumentiIcon size={16} />
+                      <span>Protocolla</span>
+                    </button>
+                  )}
+                </div>
+                
+                {documento.protocollo_attivo && (
+                  <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#e7f3ff', borderRadius: '0.375rem', border: '1px solid #b3d9ff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <span style={{ fontWeight: '600', color: '#0056b3' }}>
+                        Protocollo Attivo: {documento.protocollo_attivo.protocollo_label}
+                      </span>
+                      <span className={`badge ${documento.protocollo_attivo.direzione === 'IN' ? 'badge-success' : 'badge-warning'}`}>
+                        {documento.protocollo_attivo.direzione === 'IN' ? 'Entrata ⬅️' : 'Uscita ➡️'}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                      Data: {new Date(documento.protocollo_attivo.data).toLocaleString('it-IT')}
+                    </div>
+                    {!documento.protocollo_attivo.chiuso && documento.protocollo_attivo.direzione === 'OUT' && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <span className="badge badge-warning">⚠️ In prestito</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {documento.protocollo_numero && (
+                  <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '0.375rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label>Numero</label>
+                        <p style={{ marginTop: '0.25rem', fontWeight: '500' }}>{documento.protocollo_numero}</p>
+                      </div>
+                      <div className="form-group">
+                        <label>Anno</label>
+                        <p style={{ marginTop: '0.25rem' }}>{documento.protocollo_anno}</p>
+                      </div>
+                      <div className="form-group">
+                        <label>Direzione</label>
+                        <p style={{ marginTop: '0.25rem' }}>
+                          {documento.protocollo_direzione === 'IN' ? 'Entrata ⬅️' : 'Uscita ➡️'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {documento.movimenti_protocollo && documento.movimenti_protocollo.length > 0 && (
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                      Storico Movimenti ({documento.movimenti_protocollo.length})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {documento.movimenti_protocollo.map((mov) => (
+                        <div
+                          key={mov.id}
+                          style={{
+                            padding: '0.75rem',
+                            border: '1px solid #dee2e6',
+                            borderRadius: '0.375rem',
+                            backgroundColor: mov.chiuso ? '#f8f9fa' : '#fff'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span
+                                className={`badge ${
+                                  mov.direzione === 'IN' ? 'badge-success' : 'badge-warning'
+                                }`}
+                              >
+                                {mov.direzione === 'IN' ? 'IN' : 'OUT'}
+                              </span>
+                              <span style={{ fontWeight: '600', fontSize: '0.875rem' }}>
+                                {mov.protocollo_label}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              {mov.chiuso && (
+                                <span className="badge badge-secondary">
+                                  <CheckIcon size={14} /> Chiuso
+                                </span>
+                              )}
+                              <button
+                                onClick={() => handleStampaEtichettaProtocollo(mov.id)}
+                                className="btn btn-sm btn-outline-primary"
+                                title="Stampa Etichetta Protocollo"
+                                style={{ 
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.875rem',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.25rem'
+                                }}
+                              >
+                                <PrintIcon size={14} />
+                                Stampa Etichetta
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '0.875rem', color: '#6c757d' }}>
+                            {new Date(mov.data).toLocaleString('it-IT')}
+                          </div>
+                          {mov.destinatario && (
+                            <p style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                              {mov.direzione === 'IN' ? 'Da' : 'A'}: <strong>{mov.destinatario}</strong>
+                            </p>
+                          )}
+                          {mov.causale && (
+                            <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6c757d' }}>
+                              Causale: {mov.causale}
+                            </p>
+                          )}
+                          {mov.note && (
+                            <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6c757d', fontStyle: 'italic' }}>
+                              {mov.note}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {documento.movimenti && documento.movimenti.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {documento.movimenti.map((mov) => (
+                      <div
+                        key={mov.id}
+                        style={{
+                          padding: '0.75rem',
+                          border: '1px solid #dee2e6',
+                          borderRadius: '0.375rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <span
+                              className={`badge ${
+                                mov.direzione === 'IN' ? 'badge-success' : 'badge-warning'
+                              }`}
+                            >
+                              {mov.direzione === 'IN' ? 'Entrata ⬅️' : 'Uscita ➡️'}
+                            </span>
+                            <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', color: '#6c757d' }}>
+                              {new Date(mov.data_movimento).toLocaleDateString('it-IT')}
+                            </span>
+                          </div>
+                          {mov.chiuso && (
+                            <span style={{ fontSize: '0.75rem', color: '#28a745' }}>
+                              <CheckIcon size={16} /> Chiuso
+                            </span>
+                          )}
+                        </div>
+                        {mov.destinatario && (
+                          <p style={{ marginTop: '0.25rem', fontSize: '0.875rem' }}>
+                            Destinatario: {mov.destinatario}
+                          </p>
+                        )}
+                        {mov.note && (
+                          <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', color: '#6c757d' }}>
+                            {mov.note}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {documento.tracciabile && !documento.protocollo_attivo && !documento.protocollo_numero && (
+                  <div style={{ textAlign: 'center', padding: '2rem 0', color: '#6c757d' }}>
+                    <div style={{ opacity: 0.3, marginBottom: '1rem' }}>
+                      <DocumentiIcon size={48} />
+                    </div>
+                    <p style={{ marginBottom: '1rem' }}>Nessuna protocollazione registrata</p>
+                    <p style={{ fontSize: '0.875rem' }}>Utilizza il pulsante "Protocolla" in alto per registrare un movimento</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Colonna destra - Sidebar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* File */}
+            {documento.file && (
+              <div className="card">
+                <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>File</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label>Nome File</label>
+                    <p style={{ marginTop: '0.25rem', fontSize: '0.875rem', wordBreak: 'break-all' }}>
+                      {documento.file_name || 'file.pdf'}
+                    </p>
+                  </div>
+                  <div className="form-group">
+                    <label>Percorso Archivio</label>
+                    <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#6c757d', wordBreak: 'break-all' }}>
+                      {documento.percorso_archivio || '-'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleDownload}
+                    className="btn-primary"
+                    style={{ width: '100%', backgroundColor: '#28a745', justifyContent: 'center' }}
+                  >
+                    <DownloadIcon size={18} />
+                    <span>Scarica File</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Titolario */}
+            {documento.titolario_voce_detail && (
+              <div className="card">
+                <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>
+                  Classificazione
+                </h2>
+                <div className="form-group">
+                  <label>Voce Titolario</label>
+                  <p style={{ marginTop: '0.25rem' }}>
+                    {documento.titolario_voce_detail.codice} - {documento.titolario_voce_detail.titolo}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Metadati */}
+            <div className="card">
+              <h2 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '1rem' }}>Metadati</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Creato il</label>
+                  <p style={{ marginTop: '0.25rem' }}>
+                    {new Date(documento.creato_il).toLocaleString('it-IT')}
+                  </p>
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem' }}>Aggiornato il</label>
+                  <p style={{ marginTop: '0.25rem' }}>
+                    {new Date(documento.aggiornato_il).toLocaleString('it-IT')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Scadenze Collegate */}
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h2 style={{ fontSize: '1.125rem', fontWeight: 600, margin: 0 }}>
+                  Scadenze Collegate {documento.scadenze && `(${documento.scadenze.length})`}
+                </h2>
+                <button 
+                  onClick={() => navigate(`/scadenze/nuovo?documento_id=${documento.id}&return=/documenti/${documento.id}`)} 
+                  className="btn-primary"
+                >
+                  <AddIcon size={18} />
+                  Crea Scadenza
+                </button>
+              </div>
+
+              {documento.scadenze && documento.scadenze.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {documento.scadenze.map((scadenza) => (
+                    <div
+                      key={scadenza.id}
+                      onClick={() => navigate(`/scadenze/${scadenza.id}`)}
+                      style={{
+                        padding: '1rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.375rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>
+                            {scadenza.titolo}
+                          </h3>
+                          {scadenza.descrizione && (
+                            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                              {scadenza.descrizione.length > 150 
+                                ? `${scadenza.descrizione.substring(0, 150)}...` 
+                                : scadenza.descrizione}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span
+                          className={`badge ${
+                            scadenza.stato === 'attiva' ? 'badge-success' :
+                            scadenza.stato === 'completata' ? 'badge-info' :
+                            scadenza.stato === 'in_scadenza' ? 'badge-warning' :
+                            scadenza.stato === 'scaduta' ? 'badge-danger' :
+                            'badge-secondary'
+                          }`}
+                        >
+                          {scadenza.stato_display}
+                        </span>
+                        <span
+                          className={`badge ${
+                            scadenza.priorita === 'critical' ? 'badge-danger' :
+                            scadenza.priorita === 'high' ? 'badge-warning' :
+                            scadenza.priorita === 'medium' ? 'badge-info' :
+                            'badge-secondary'
+                          }`}
+                        >
+                          {scadenza.priorita_display}
+                        </span>
+                        {scadenza.categoria && (
+                          <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                            {scadenza.categoria}
+                          </span>
+                        )}
+                        {scadenza.data_scadenza && (
+                          <span style={{ fontSize: '0.75rem', color: '#6b7280', marginLeft: 'auto' }}>
+                            📅 {new Date(scadenza.data_scadenza).toLocaleDateString('it-IT')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: '#6b7280', textAlign: 'center', padding: '2rem' }}>
+                  Nessuna scadenza collegata. Clicca su "Crea Scadenza" per crearne una.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

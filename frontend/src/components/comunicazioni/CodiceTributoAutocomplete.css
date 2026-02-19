@@ -1,0 +1,145 @@
+.codice-tributo-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.autocomplete-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.autocomplete-input {
+  width: 100%;
+  padding: 8px 60px 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.autocomplete-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.autocomplete-clear-btn {
+  position: absolute;
+  right: 35px;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.autocomplete-clear-btn:hover {
+  color: #333;
+}
+
+.autocomplete-loading {
+  position: absolute;
+  right: 12px;
+  font-size: 14px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 4px;
+  list-style: none;
+  padding: 0;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-option {
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.autocomplete-option:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-option:hover {
+  background-color: #f5f5f5;
+}
+
+.autocomplete-option.selected {
+  background-color: #e3f2fd;
+}
+
+.option-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.option-codice {
+  font-weight: bold;
+  color: #007bff;
+  font-size: 14px;
+}
+
+.option-sezione {
+  font-size: 11px;
+  text-transform: uppercase;
+  background: #e0e0e0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #555;
+}
+
+.option-descrizione {
+  font-size: 13px;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.option-causale {
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.option-obsoleto {
+  font-size: 11px;
+  color: #d32f2f;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.autocomplete-no-results {
+  padding: 12px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 4px;
+}
