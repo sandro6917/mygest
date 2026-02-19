@@ -65,6 +65,7 @@ jobs:
           DEBUG: 'True'
           SECRET_KEY: 'test-secret-key-for-ci'
           ALLOWED_HOSTS: '*'
+          DISABLE_DB_POOL: 'True'
         run: |
           python manage.py check
         continue-on-error: false
@@ -75,6 +76,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
           SECRET_KEY: 'test-secret-key-for-ci'
+          DISABLE_DB_POOL: 'True'
         run: |
           python manage.py migrate --noinput
       
@@ -84,6 +86,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
           SECRET_KEY: 'test-secret-key-for-ci'
+          DISABLE_DB_POOL: 'True'
         run: |
           pytest --maxfail=5 --tb=short -v
         continue-on-error: true  # Non blocca il deploy se i test falliscono
