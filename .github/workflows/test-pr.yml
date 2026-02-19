@@ -1,0 +1,232 @@
+name: Test Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - develop
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  # ============================================================================
+  # JOB 1: BACKEND TESTS
+  # ============================================================================
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: mygest_test
+          POSTGRES_USER: mygest_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🔍 Lint Backend (Ruff)
+        run: |
+          ruff check . || true
+        continue-on-error: true
+      
+      - name: 🔍 Django System Check
+        env:
+          DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
+          REDIS_URL: redis://localhost:6379/0
+          DEBUG: 'True'
+          SECRET_KEY: 'test-secret-key-for-ci'
+        run: |
+          python manage.py check
+      
+      - name: 🗄️ Check Migrations
+        env:
+          DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
+          REDIS_URL: redis://localhost:6379/0
+          DEBUG: 'True'
+          SECRET_KEY: 'test-secret-key-for-ci'
+        run: |
+          python manage.py makemigrations --check --dry-run
+      
+      - name: 🗄️ Run Migrations
+        env:
+          DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
+          REDIS_URL: redis://localhost:6379/0
+          DEBUG: 'True'
+          SECRET_KEY: 'test-secret-key-for-ci'
+        run: |
+          python manage.py migrate --noinput
+      
+      - name: 🧪 Run Tests with Coverage
+        env:
+          DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
+          REDIS_URL: redis://localhost:6379/0
+          DEBUG: 'True'
+          SECRET_KEY: 'test-secret-key-for-ci'
+        run: |
+          pytest --cov=. --cov-report=xml --cov-report=term -v
+      
+      - name: 📊 Upload Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: backend
+          name: backend-coverage
+        continue-on-error: true
+  
+  # ============================================================================
+  # JOB 2: FRONTEND TESTS
+  # ============================================================================
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: 📦 Install Dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: 🔍 TypeScript Check
+        working-directory: frontend
+        run: npx tsc --noEmit
+      
+      - name: 🔍 Lint Frontend
+        working-directory: frontend
+        run: npm run lint
+      
+      - name: 🏗️ Build Frontend
+        working-directory: frontend
+        run: npm run build
+      
+      - name: 📊 Build Size Report
+        working-directory: frontend
+        run: |
+          echo "## 📦 Build Size" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          du -sh dist >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+  
+  # ============================================================================
+  # JOB 3: SECURITY CHECKS
+  # ============================================================================
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 🔒 Check for Secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+        continue-on-error: true
+      
+      - name: 🔒 Python Security Check
+        run: |
+          pip install safety
+          safety check --json || true
+        continue-on-error: true
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: 🔒 NPM Audit
+        working-directory: frontend
+        run: |
+          npm audit --audit-level=moderate || true
+        continue-on-error: true
+  
+  # ============================================================================
+  # JOB 4: PR SUMMARY
+  # ============================================================================
+  summary:
+    name: PR Summary
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests, security]
+    if: always()
+    
+    steps:
+      - name: 📊 Generate Summary
+        run: |
+          echo "## 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR**: #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.head_ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Author**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.backend-tests.result }}" == "success" ]; then
+            echo "✅ Backend Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Backend Tests: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.frontend-tests.result }}" == "success" ]; then
+            echo "✅ Frontend Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Frontend Tests: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.security.result }}" == "success" ]; then
+            echo "✅ Security Checks: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️  Security Checks: Review Required" >> $GITHUB_STEP_SUMMARY
+          fi

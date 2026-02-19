@@ -1,0 +1,127 @@
+name: Release Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger su tags tipo v1.0.0, v1.2.3, etc.
+
+env:
+  NODE_VERSION: '20'
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  # ============================================================================
+  # JOB 1: CREATE GITHUB RELEASE
+  # ============================================================================
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necessario per changelog
+      
+      - name: 📝 Generate Changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            # First release
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --reverse)
+          else
+            # Changes since last tag
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)")
+          fi
+          
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: 🎉 Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## 🚀 Release ${{ github.ref_name }}
+            
+            ### 📝 Changes
+            ${{ steps.changelog.outputs.CHANGELOG }}
+            
+            ### 📦 Assets
+            - Backend: Django 4.2
+            - Frontend: React 19
+            
+            ### 🔗 Links
+            - [Deploy Guide](https://github.com/${{ github.repository }}/blob/main/DEPLOY_GUIDE.md)
+            - [Changelog](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)
+          draft: false
+          prerelease: false
+  
+  # ============================================================================
+  # JOB 2: BUILD & DEPLOY
+  # ============================================================================
+  deploy:
+    name: Deploy Release
+    runs-on: ubuntu-latest
+    needs: create-release
+    environment: production
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: 🏗️ Build Frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+      
+      - name: 🚀 Deploy to Production
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            echo "🚀 Deploying release ${{ github.ref_name }}..."
+            cd /srv/mygest/app
+            
+            # Checkout specific tag
+            git fetch --all --tags
+            git checkout tags/${{ github.ref_name }}
+            
+            # Run deploy
+            ./scripts/deploy.sh
+            
+            echo "✅ Release ${{ github.ref_name }} deployed!"
+      
+      - name: 🏥 Health Check
+        run: |
+          sleep 5
+          curl -sf --max-time 10 http://${{ secrets.SSH_HOST }}:8000/api/v1/health/
+      
+      - name: 📊 Deployment Summary
+        run: |
+          echo "## 🎉 Release ${{ github.ref_name }} Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Time**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY

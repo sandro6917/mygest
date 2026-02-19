@@ -14,9 +14,24 @@ import os
 import sys
 from pathlib import Path
 from django.core.files.storage import FileSystemStorage
+import environ
+
+# Initialize environment variables
+env = environ.Env(
+    # Set casting and default values
+    DEBUG=(bool, False),
+    SECRET_KEY=(str, 'django-insecure-2c^)jnpbhbx311i--n@px58iczkm90-1^zus@4^z)x^x#e4a-y'),
+    ALLOWED_HOSTS=(list, ['localhost', '127.0.0.1']),
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Read .env file if it exists
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(env_file)
+
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -25,12 +40,13 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2c^)jnpbhbx311i--n@px58iczkm90-1^zus@4^z)x^x#e4a-y'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1"]
+# Parse ALLOWED_HOSTS from environment
+ALLOWED_HOSTS = env('ALLOWED_HOSTS')
 
 
 # Application definition
@@ -43,7 +59,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',  # Token Authentication per Agent Desktop
+    'rest_framework_simplejwt',  # JWT Authentication
+    'corsheaders',  # CORS Headers
+    'django_filters',  # Django Filter per API
     'graphene_django',
+    'compressor',  # Django Compressor per ottimizzazione statica
     'anagrafiche',
     'archivio_fisico',
     'documenti',
@@ -58,10 +79,17 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "comunicazioni",
     "whatsapp",
+    "ai_classifier",  # AI Classificatore Documenti
 ]
+
+# Aggiungi Debug Toolbar solo in sviluppo
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS - Must be at top
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve file statici compressi
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -69,6 +97,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Aggiungi Debug Toolbar middleware solo in sviluppo
+if DEBUG:
+    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
 ROOT_URLCONF = 'mygest.urls'
 
@@ -101,14 +134,60 @@ WSGI_APPLICATION = 'mygest.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'dj_db_conn_pool.backends.postgresql',  # Connection pooling
         'NAME': 'mygest',
         'USER': 'mygest_user',
         'PASSWORD': 'ScegliUnaPasswordSicura',
         'HOST': '127.0.0.1',
         'PORT': '5432',
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': 20,
+            'RECYCLE': 3600,  # Ricicla connessioni dopo 1 ora
+            'PRE_PING': True,  # Verifica connessioni prima dell'uso
+        }
     }
 }
+
+
+# ====================================
+# CACHING CONFIGURATION
+# ====================================
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+            'PARSER_CLASS': 'redis.connection.HiredisParser',
+        },
+        'KEY_PREFIX': 'mygest',
+        'TIMEOUT': 300,  # 5 minuti default
+    },
+    # Cache separata per sessioni
+    'session': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/2'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+        },
+        'KEY_PREFIX': 'mygest_session',
+        'TIMEOUT': 86400,  # 24 ore per sessioni
+    },
+}
+
+# Usa Redis per le sessioni
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'session'
 
 
 # Email configuration
@@ -181,11 +260,49 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
-# NAS / Archivio
+# ====================================
+# STATICFILES & COMPRESSION
+# ====================================
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',  # Django Compressor
+]
+
+# Whitenoise con compressione Brotli
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# Django Compressor settings
+COMPRESS_ENABLED = not DEBUG  # Comprimi in produzione
+COMPRESS_OFFLINE = not DEBUG  # Pre-compressione in produzione
+COMPRESS_CSS_FILTERS = [
+    'compressor.filters.css_default.CssAbsoluteFilter',
+    'compressor.filters.cssmin.rCSSMinFilter',
+]
+COMPRESS_JS_FILTERS = [
+    'compressor.filters.jsmin.JSMinFilter',
+]
+
+# Archivio / Storage configurazione
+# Ambiente di sviluppo (WSL): /mnt/archivio (montaggio NAS)
+# Ambiente produzione (VPS): /srv/mygest/archivio
 ARCHIVIO_BASE_PATH = os.getenv("ARCHIVIO_BASE_PATH", "/mnt/archivio")
+
+# Media URL per servire i file dell'archivio
+MEDIA_URL = '/archivio/'
+# MEDIA_ROOT non utilizzato - tutti i file vanno in ARCHIVIO_BASE_PATH
+# Manteniamo la definizione per compatibilità con eventuali app di terze parti
+MEDIA_ROOT = ARCHIVIO_BASE_PATH
+
+# Storage personalizzato per NAS
 NAS_STORAGE = FileSystemStorage(location=ARCHIVIO_BASE_PATH)
 
 # Importazioni
@@ -226,11 +343,22 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",  # JWT First
+        "rest_framework.authentication.TokenAuthentication",  # Token per Agent Desktop
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.BasicAuthentication",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    # Throttling disabilitato (richiede Redis)
+    # "DEFAULT_THROTTLE_CLASSES": [
+    #     "rest_framework.throttling.AnonRateThrottle",
+    #     "rest_framework.throttling.UserRateThrottle",
+    # ],
+    # "DEFAULT_THROTTLE_RATES": {
+    #     "anon": "100/hour",
+    #     "user": "1000/hour",
+    # },
 }
 
 GRAPHENE = {
@@ -283,3 +411,102 @@ LOGGING = {
         },
     },
 }
+
+
+# ====================================
+# CORS CONFIGURATION (for React SPA)
+# ====================================
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",  # Alternative port
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF Trusted Origins (necessario per POST da frontend)
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+# CSRF Cookie Settings per SPA
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_COOKIE_HTTPONLY = False  # Permette al JavaScript di leggere il cookie
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_USE_SESSIONS = False
+CSRF_COOKIE_SECURE = False  # False in development, True in production con HTTPS
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+
+# ====================================
+# JWT AUTHENTICATION CONFIGURATION
+# ====================================
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': False,  # Disabilitato: richiede Redis
+    'UPDATE_LAST_LOGIN': True,
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    
+    'JTI_CLAIM': 'jti',
+}
+
+
+# ====================================
+# AI CLASSIFIER SETTINGS
+# ====================================
+AI_CLASSIFIER = {
+    'DEFAULT_LLM_PROVIDER': 'openai',
+    'OPENAI_MODEL': 'gpt-4o-mini',
+    'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY', ''),  # Da variabile ambiente
+    'LLM_TEMPERATURE': 0.1,  # Bassa per classificazione deterministica
+    'LLM_MAX_TOKENS': 500,
+    'CONFIDENCE_THRESHOLD': 0.7,
+    'MAX_FILE_SIZE_MB': 50,
+    'ALLOWED_EXTENSIONS': ['.pdf', '.jpg', '.jpeg', '.png', '.tiff', '.docx'],
+}
+
+
+# ====================================
+# IMPORT SETTINGS LOCALI
+# ====================================
+# Importa impostazioni locali/produzione se esistono
+# Questo file NON è su git e deve essere creato manualmente in ogni ambiente
+try:
+    from .settings_local import *  # noqa: F401, F403
+    print("✓ Settings locali caricati da settings_local.py")
+except ImportError:
+    print("⚠ settings_local.py non trovato - usando configurazione di default")
+    print("  Copia settings_local.py.example -> settings_local.py e personalizza")
+    pass

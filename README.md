@@ -1,29 +1,99 @@
-# MyGest Deploy Workflow
+# MyGest - Sistema di Gestione Pratiche
 
-Questa guida descrive come sviluppare in locale e distribuire l'applicazione Django "MyGest" sulla VPS Hostinger.
+[![Deploy](https://github.com/sandro6917/mygest/actions/workflows/deploy-production.yml/badge.svg)](https://github.com/sandro6917/mygest/actions/workflows/deploy-production.yml)
+[![Tests](https://github.com/sandro6917/mygest/actions/workflows/test-pr.yml/badge.svg)](https://github.com/sandro6917/mygest/actions/workflows/test-pr.yml)
 
-## Requisiti
+> 🎉 **Nuova Interfaccia Utente Moderna!** - Aggiornato il 17 Novembre 2025
+> 🤖 **CI/CD Automatizzato!** - Deploy automatico con GitHub Actions
 
-- **Locale (WSL/Linux/macOS)**
-  - Python 3.11
-  - PostgreSQL client tools (`pg_dump`, `pg_restore`)
-  - Git
-  - Accesso SSH/GitHub configurato
-- **VPS**
-  - Ubuntu 22.04 con pacchetti installati (python3.11, nginx, postgresql, redis, git)
-  - Repository clonato in `/srv/mygest/app`
-  - Virtualenv in `/srv/mygest/venv`
-  - File `.env` con configurazione production
-  - Service systemd `gunicorn_mygest`
-  - Script `scripts/deploy.sh`
+## 🚀 Quick Start
 
-## Flusso di lavoro di sviluppo
+```bash
+# Clone repository
+git clone https://github.com/sandro6917/mygest.git
+cd mygest
 
-1. Crea un branch feature:
-   ```bash
-   git checkout -b feature/nome-feature
-   ```
-2. Sviluppa e testa in locale:
+# Setup backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python manage.py migrate
+
+# Setup frontend
+cd frontend
+npm install
+npm run dev
+
+# Open browser: http://localhost:5173
+```
+
+## 📚 Documentazione
+
+### 🔧 Development
+- 📖 [Copilot Instructions](.github/copilot-instructions.md) - Linee guida sviluppo
+- 🧪 [Pre-Deploy Check](scripts/README.md) - Validazione pre-deploy
+
+### 🚀 Deployment
+- 📘 [Deploy Guide](DEPLOY_GUIDE.md) - Guida completa deploy manuale
+- 🤖 [CI/CD Setup](CICD_SETUP_GUIDE.md) - Configurazione GitHub Actions
+- ✅ [CI/CD Checklist](CICD_CHECKLIST.md) - Setup step-by-step
+
+### 👥 User Guide
+- 📖 [Guida Utente](docs/GUIDA_UTENTE_NUOVA_UI.md) - Manuale utente UI
+- 💻 [Guida Sviluppatore](docs/GUIDA_NUOVE_FUNZIONALITA_UI.md) - Nuove funzionalità
+- 📑 [Indice Documentazione](docs/INDICE_DOCUMENTAZIONE_UI.md) - Indice completo
+
+---
+
+## � Features
+
+### Interfaccia Moderna
+- �🌓 **Dark/Light Mode** - Toggle automatico con persistenza
+- 🔔 **Toast Notifications** - Notifiche moderne non invasive  
+- ✅ **Form Intelligenti** - Validazione real-time mentre digiti
+- 🎨 **Icone SVG** - Navigazione più intuitiva con icone moderne
+- ♿ **100% Accessibile** - Conforme WCAG 2.1 Level AA
+- 📱 **Mobile-First** - Ottimizzato per smartphone e tablet
+
+### CI/CD Automation
+- 🤖 **Deploy Automatico** - Su push a `main`
+- 🧪 **Test Automatici** - Su ogni Pull Request
+- 📦 **Release Automation** - Deploy con git tags
+- 🔙 **Rollback Automatico** - Su errori deploy
+- 🏥 **Health Checks** - Monitoring integrato
+
+---
+
+## 📋 Panoramica Progetto
+
+Sistema di gestione pratiche full-stack con Django + React.
+
+## ⚙️ Requisiti
+
+### Locale (Sviluppo)
+- **Python**: 3.10+
+- **Node.js**: 20+
+- **PostgreSQL**: 13+
+- **Redis**: 6+
+- **Git**: 2.30+
+
+### VPS (Produzione)
+- **OS**: Ubuntu 22.04
+- **Python**: 3.10+
+- **PostgreSQL**: 13+
+- **Redis**: 6+
+- **Nginx**: 1.18+
+- **Gunicorn**: Servizio systemd configurato
+
+## 🔄 Workflow di Sviluppo
+
+### 1. Setup Locale
+
+```bash
+# Clone e setup
+git clone https://github.com/sandro6917/mygest.git
+cd mygest
    ```bash
    source venv/bin/activate
    export DJANGO_SETTINGS_MODULE=mygest.settings
@@ -105,6 +175,41 @@ Questa guida descrive come sviluppare in locale e distribuire l'applicazione Dja
 ## Note
 
 - Non inviare mai credenziali nel repository (`.env` e `secrets/` sono ignorati).
-- Aggiorna `ARCHIVIO_BASE_PATH` nel `.env` se sposti l'archivio (default: `/srv/mygest/archivio`).
+- Aggiorna `ARCHIVIO_BASE_PATH` nel `.env` se sposti l'archivio:
+  - **Locale (WSL)**: `/mnt/archivio` (montaggio NAS)
+  - **Produzione (VPS)**: `/srv/mygest/archivio`
+- **Gestione Storage**: Vedi [docs/guida_storage.md](docs/guida_storage.md) per la configurazione completa dello storage e la migrazione dei file
 - Se aggiungi servizi (Celery, WebSocket), crea relative unit systemd e aggiorna lo script di deploy.
 - In caso di rollback, puoi usare `git checkout <tag>` sulla VPS e rilanciare `scripts/deploy.sh`.
+
+## 👩‍💻 Sviluppo Locale e Accesso Remoto
+
+### Avvio rapido in locale
+
+```bash
+# Terminale 1 – Backend Django
+python manage.py runserver
+
+# Terminale 2 – Frontend Vite
+cd frontend
+npm install        # prima volta
+npm run dev
+```
+
+### Esporre l'ambiente via Tailscale
+
+Per permettere ad altri device (o a te stesso da remoto) di usare l'interfaccia React tramite la rete Tailscale:
+
+1. **Backend** – avvia Django su tutte le interfacce, così l'IP Tailscale risponde sulla porta 8000:
+   ```bash
+   python manage.py runserver 0.0.0.0:8000
+   ```
+2. **Frontend** – esponi Vite su tutte le interfacce:
+   ```bash
+   cd frontend
+   npm run dev -- --host 0.0.0.0 --port 5173
+   ```
+3. **Connessione** – da un altro computer in Tailscale apri `http://<IP-tailscale-del-PC>:5173`.
+
+Grazie alla nuova configurazione (`VITE_API_URL=/api/v1` e fallback dinamici in `frontend/src/config.ts`), tutte le richieste API passano dal proxy di Vite, evitando errori di rete durante il login anche quando l'app è raggiunta tramite Tailscale.
+
