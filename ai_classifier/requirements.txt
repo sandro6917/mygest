@@ -1,0 +1,16 @@
+# AI Classifier Dependencies
+# Aggiungi queste al requirements.txt principale
+
+# OCR & PDF Processing
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0
+pillow>=10.0.0
+
+# LLM Integration
+openai>=1.10.0
+
+# File Type Detection
+python-magic>=0.4.27
+
+# Pattern Matching (già presente in requirements.txt standard)
+# regex>=2023.0.0

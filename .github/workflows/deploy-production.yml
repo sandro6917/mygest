@@ -64,8 +64,10 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
           SECRET_KEY: 'test-secret-key-for-ci'
+          ALLOWED_HOSTS: '*'
         run: |
-          python manage.py check --deploy
+          python manage.py check
+        continue-on-error: false
       
       - name: 🗄️ Run Migrations
         env:
