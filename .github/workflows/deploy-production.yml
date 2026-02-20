@@ -163,14 +163,11 @@ jobs:
           
           # Validate key format
           echo "Validating SSH key format..."
-          ssh-keygen -l -f ~/.ssh/deploy_key || {
-            echo "ERROR: Invalid SSH key format"
-            echo "Key starts with: $(head -n1 ~/.ssh/deploy_key)"
-            exit 1
-          }
+          ssh-keygen -l -f ~/.ssh/deploy_key
           
           # Add host to known_hosts
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          echo "Adding ${{ secrets.SSH_HOST }} to known_hosts..."
+          ssh-keyscan -p ${{ secrets.SSH_PORT || 22 }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           
           echo "✅ SSH key setup completed"
       
