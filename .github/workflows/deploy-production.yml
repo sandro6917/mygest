@@ -200,21 +200,45 @@ jobs:
       
       - name: 🏥 Health Check
         run: |
-          echo "Waiting for service to be ready..."
-          sleep 5
-          
-          # Health check con retry
-          for i in {1..5}; do
-            if curl -sf --max-time 10 http://${{ secrets.SSH_HOST }}:8000/api/v1/health/ > /dev/null; then
-              echo "✅ Health check passed!"
-              exit 0
-            fi
-            echo "⏳ Retry $i/5..."
-            sleep 3
-          done
-          
-          echo "❌ Health check failed!"
-          exit 1
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT || 22 }} \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+            
+            echo "🔍 Checking service status..."
+            systemctl status gunicorn_mygest --no-pager || true
+            
+            echo ""
+            echo "🔍 Checking logs (last 20 lines)..."
+            sudo journalctl -u gunicorn_mygest -n 20 --no-pager || true
+            
+            echo ""
+            echo "🔍 Checking if port 8000 is listening..."
+            sudo netstat -tlnp | grep :8000 || sudo ss -tlnp | grep :8000 || echo "Port 8000 not listening"
+            
+            echo ""
+            echo "⏳ Waiting for service to be ready..."
+            sleep 5
+            
+            # Health check con retry
+            for i in {1..5}; do
+              if curl -sf --max-time 10 http://localhost:8000/api/v1/health/ > /dev/null; then
+                echo "✅ Health check passed!"
+                exit 0
+              fi
+              echo "⏳ Retry $i/5..."
+              sleep 3
+            done
+            
+            echo "❌ Health check failed after 5 attempts"
+            echo ""
+            echo "🔍 Final service status:"
+            systemctl status gunicorn_mygest --no-pager || true
+            echo ""
+            echo "🔍 Last 50 log lines:"
+            sudo journalctl -u gunicorn_mygest -n 50 --no-pager || true
+            exit 1
+          ENDSSH
       
       - name: 📊 Deployment Summary
         if: success()
