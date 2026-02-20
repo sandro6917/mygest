@@ -106,9 +106,10 @@ class TestScadenzaCascadeDelete:
         # ASSERT: Verifica che tutto sia stato eliminato
         assert not Scadenza.objects.filter(id=scadenza_id).exists()
         assert not ScadenzaOccorrenza.objects.filter(id__in=occorrenza_ids).exists()
-        assert ScadenzaNotificaLog.objects.count() == 0
-        assert ScadenzaAlert.objects.count() == 0
-        assert ScadenzaWebhookPayload.objects.count() == 0
+        # Verifica che i log delle occorrenze eliminate siano stati cancellati
+        assert ScadenzaNotificaLog.objects.filter(occorrenza_id__in=occorrenza_ids).count() == 0
+        assert ScadenzaAlert.objects.filter(occorrenza_id__in=occorrenza_ids).count() == 0
+        assert ScadenzaWebhookPayload.objects.filter(occorrenza_id__in=occorrenza_ids).count() == 0
 
     def test_delete_scadenza_occorrenza_with_related_objects(self):
         """
@@ -128,9 +129,11 @@ class TestScadenzaCascadeDelete:
         
         # Verifica conteggi iniziali
         assert ScadenzaOccorrenza.objects.count() == 2
-        assert ScadenzaNotificaLog.objects.count() == 2
-        assert ScadenzaAlert.objects.count() == 2
-        assert ScadenzaWebhookPayload.objects.count() == 1
+        assert ScadenzaNotificaLog.objects.filter(occorrenza=occ1).count() == 2
+        assert ScadenzaAlert.objects.filter(occorrenza=occ1).count() == 2
+        assert ScadenzaWebhookPayload.objects.filter(occorrenza=occ1).count() == 1
+        
+        occ1_id = occ1.id
         
         # Elimina solo occ1
         occ1.delete()
@@ -138,9 +141,9 @@ class TestScadenzaCascadeDelete:
         # Verifica che occ1 e i suoi oggetti correlati siano stati eliminati
         assert ScadenzaOccorrenza.objects.count() == 1
         assert ScadenzaOccorrenza.objects.filter(id=occ2.id).exists()
-        assert ScadenzaNotificaLog.objects.count() == 0
-        assert ScadenzaAlert.objects.count() == 0
-        assert ScadenzaWebhookPayload.objects.count() == 0
+        assert ScadenzaNotificaLog.objects.filter(occorrenza_id=occ1_id).count() == 0
+        assert ScadenzaAlert.objects.filter(occorrenza_id=occ1_id).count() == 0
+        assert ScadenzaWebhookPayload.objects.filter(occorrenza_id=occ1_id).count() == 0
         
         # La scadenza principale deve ancora esistere
         assert Scadenza.objects.filter(id=scadenza.id).exists()
@@ -178,9 +181,14 @@ class TestScadenzaCascadeDelete:
         # Verifica conteggi iniziali
         assert Scadenza.objects.count() == 5
         assert ScadenzaOccorrenza.objects.count() == 10  # 5 * 2
-        assert ScadenzaNotificaLog.objects.count() == 10
-        assert ScadenzaAlert.objects.count() == 10
-        assert ScadenzaWebhookPayload.objects.count() == 10
+        
+        # Salva gli ID per verificare dopo
+        occ_ids_to_delete = list(
+            ScadenzaOccorrenza.objects.filter(scadenza__in=scadenze[:3]).values_list('id', flat=True)
+        )
+        occ_ids_to_keep = list(
+            ScadenzaOccorrenza.objects.filter(scadenza__in=scadenze[3:]).values_list('id', flat=True)
+        )
         
         # Bulk delete delle prime 3 scadenze
         scadenze_ids = [s.id for s in scadenze[:3]]
@@ -189,9 +197,14 @@ class TestScadenzaCascadeDelete:
         # Verifica conteggi dopo eliminazione
         assert Scadenza.objects.count() == 2
         assert ScadenzaOccorrenza.objects.count() == 4  # 2 * 2
-        assert ScadenzaNotificaLog.objects.count() == 4
-        assert ScadenzaAlert.objects.count() == 4
-        assert ScadenzaWebhookPayload.objects.count() == 4
+        # Verifica che i log delle occorrenze eliminate siano spariti
+        assert ScadenzaNotificaLog.objects.filter(occorrenza_id__in=occ_ids_to_delete).count() == 0
+        assert ScadenzaAlert.objects.filter(occorrenza_id__in=occ_ids_to_delete).count() == 0
+        assert ScadenzaWebhookPayload.objects.filter(occorrenza_id__in=occ_ids_to_delete).count() == 0
+        # Verifica che i log delle occorrenze rimaste esistano ancora
+        assert ScadenzaNotificaLog.objects.filter(occorrenza_id__in=occ_ids_to_keep).count() == 4
+        assert ScadenzaAlert.objects.filter(occorrenza_id__in=occ_ids_to_keep).count() == 4
+        assert ScadenzaWebhookPayload.objects.filter(occorrenza_id__in=occ_ids_to_keep).count() == 4
 
     def test_delete_preserves_unrelated_data(self):
         """

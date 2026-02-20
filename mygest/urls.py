@@ -29,6 +29,9 @@ urlpatterns = [
     path("help/<slug:slug>/", help_topic, name="help-topic"),
     path("graphql/", login_required(GraphQLView.as_view(graphiql=True))),
     
+    # Home page (for reverse('home') in tests and templates)
+    path("", home, name="home"),
+    
     # React SPA catch-all (must be last!)
     # Matches all routes not matched above and serves React frontend
     re_path(r'^.*$', react_spa, name="react-spa"),
