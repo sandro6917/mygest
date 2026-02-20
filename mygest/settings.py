@@ -438,29 +438,35 @@ LOGGING = {
 # ====================================
 # CORS CONFIGURATION (for React SPA)
 # ====================================
-CORS_ALLOWED_ORIGINS = [
+# CORS Configuration for React SPA
+# ====================================
+CORS_ALLOWED_ORIGINS_LIST = [
     "http://localhost:5173",  # Vite dev server
     "http://localhost:3000",  # Alternative port
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
 ]
 
+# Add production domain from environment
+if not DEBUG:
+    # Aggiungi domini HTTPS di produzione
+    production_domains = env.list('ALLOWED_HOSTS', default=[])
+    for domain in production_domains:
+        if domain and domain not in ['localhost', '127.0.0.1']:
+            CORS_ALLOWED_ORIGINS_LIST.append(f"https://{domain}")
+
+CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS_LIST
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins (necessario per POST da frontend)
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
-]
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS.copy()
 
 # CSRF Cookie Settings per SPA
 CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_COOKIE_HTTPONLY = False  # Permette al JavaScript di leggere il cookie
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_USE_SESSIONS = False
-CSRF_COOKIE_SECURE = False  # False in development, True in production con HTTPS
+CSRF_COOKIE_SECURE = not DEBUG  # True in production con HTTPS
 
 CORS_ALLOW_HEADERS = [
     'accept',
