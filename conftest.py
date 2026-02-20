@@ -15,7 +15,7 @@ User = get_user_model()
 # ====================================
 
 @pytest.fixture(autouse=True)
-def test_settings(settings):
+def test_settings(settings, tmp_path):
     """Configurazione automatica per tutti i test"""
     # Disabilita compressione static files
     settings.COMPRESS_ENABLED = False
@@ -25,6 +25,12 @@ def test_settings(settings):
     # Usa DefaultParser per Redis (non richiede hiredis)
     if 'default' in settings.CACHES:
         settings.CACHES['default']['OPTIONS']['PARSER_CLASS'] = 'redis.connection.DefaultParser'
+    
+    # Usa temp directory per archivio in test (evita Permission denied su /mnt/archivio)
+    test_archivio = tmp_path / "archivio"
+    test_archivio.mkdir(exist_ok=True)
+    settings.ARCHIVIO_BASE_PATH = str(test_archivio)
+    settings.MEDIA_ROOT = str(test_archivio)
     
     return settings
 

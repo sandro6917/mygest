@@ -302,7 +302,13 @@ class Fascicolo(models.Model):
 
 
 class FascicoloCounter(models.Model):
-    cliente = models.ForeignKey(Anagrafica, on_delete=models.CASCADE, related_name="fascicolo_counters")
+    cliente = models.ForeignKey(
+        Anagrafica, 
+        on_delete=models.CASCADE, 
+        related_name="fascicolo_counters",
+        null=True,  # Allow null for test fixtures without cliente
+        blank=True
+    )
     titolario_voce = models.ForeignKey(TitolarioVoce, on_delete=models.CASCADE, related_name="fascicolo_counters")
     anno = models.PositiveIntegerField()
     last_number = models.PositiveIntegerField(default=0)
