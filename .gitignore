@@ -41,3 +41,4 @@ STORAGE_*.pdf
 .idea/
 *.code-workspace
 backups/
+fixtures/sync/dev_export_*.json
