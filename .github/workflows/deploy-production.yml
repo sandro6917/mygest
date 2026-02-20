@@ -186,6 +186,12 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
+            # Activate venv and install deps
+            echo "📦 Installing Python dependencies..."
+            source /srv/mygest/venv/bin/activate
+            pip install -q --upgrade pip
+            pip install -q -r requirements.txt
+            
             # Run deploy script with --force if service is not active
             echo "🔧 Running deploy script..."
             if ! systemctl is-active --quiet gunicorn_mygest; then
