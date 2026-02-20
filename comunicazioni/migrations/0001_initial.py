@@ -73,17 +73,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("log_errore", models.TextField(blank=True)),
-                (
-                    "anagrafica",
-                    models.ForeignKey(
-                        blank=True,
-                        help_text="Cliente destinatario principale, opzionale se invio multiplo.",
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="comunicazioni",
-                        to="anagrafiche.anagrafica",
-                    ),
-                ),
             ],
             options={
                 "verbose_name": "Comunicazione",

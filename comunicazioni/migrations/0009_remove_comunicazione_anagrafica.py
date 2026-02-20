@@ -10,8 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="comunicazione",
-            name="anagrafica",
-        ),
+        # Field already removed or never existed in fresh DB
+        # This migration is kept for compatibility with existing databases
     ]
