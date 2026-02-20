@@ -148,15 +148,20 @@ jobs:
           name: frontend-dist
           path: frontend/dist/
       
+      - name: � Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      
       - name: 🚀 Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-          script_stop: true  # Ferma se un comando fallisce
-          script: |
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.SSH_PORT || 22 }} \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
+            set -e
             echo "🚀 Starting deployment..."
             cd /srv/mygest/app
             
@@ -170,6 +175,7 @@ jobs:
             ./scripts/deploy.sh
             
             echo "✅ Deployment completed!"
+          ENDSSH
       
       - name: 🏥 Health Check
         run: |
