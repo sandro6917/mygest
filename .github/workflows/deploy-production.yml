@@ -189,9 +189,14 @@ jobs:
             git fetch --all
             git reset --hard origin/main
             
-            # Run deploy script
+            # Run deploy script with --force if service is not active
             echo "🔧 Running deploy script..."
-            ./scripts/deploy.sh
+            if ! systemctl is-active --quiet gunicorn_mygest; then
+              echo "⚠️  Service not active, using --force flag"
+              ./scripts/deploy.sh --force
+            else
+              ./scripts/deploy.sh
+            fi
             
             echo "✅ Deployment completed!"
           ENDSSH
