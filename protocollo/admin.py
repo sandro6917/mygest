@@ -14,11 +14,16 @@ class MovimentoProtocolloAdmin(admin.ModelAdmin):
         "cliente__nome",
         "cliente__codice_fiscale",
         "cliente__codice",
+        "destinatario_anagrafica__ragione_sociale",
+        "destinatario_anagrafica__cognome",
+        "destinatario_anagrafica__nome",
+        "destinatario_anagrafica__codice_fiscale",
         "destinatario",
+        "target_label",
     )
     raw_id_fields = ("documento", "fascicolo")
-    autocomplete_fields = ("cliente", "ubicazione")
+    autocomplete_fields = ("cliente", "ubicazione", "destinatario_anagrafica")
 
     def oggetto(self, obj):
-        return obj.documento or obj.fascicolo
+        return obj.documento or obj.fascicolo or obj.target_label or obj.target_object
     oggetto.short_description = "Oggetto"

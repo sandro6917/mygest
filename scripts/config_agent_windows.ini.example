@@ -1,0 +1,10 @@
+[server]
+# URL del server MyGest (accessibile da Windows)
+url = http://192.168.1.100:8000
+
+# Token di autenticazione (ottienilo con: python manage_agent_tokens.py show username)
+token = IL_TUO_TOKEN_QUI
+
+[agent]
+# Intervallo di polling in secondi (consigliato: 30-60 per Windows)
+poll_interval = 30

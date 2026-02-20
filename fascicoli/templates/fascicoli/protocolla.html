@@ -19,9 +19,17 @@
           <label>{% trans "Da chi (IN)" %}</label>
           {{ form.da_chi }}
         </div>
+        <div data-group="in">
+          <label>{% trans "Da chi (Anagrafica)" %}</label>
+          {{ form.da_chi_anagrafica }}
+        </div>
         <div data-group="out">
           <label>{% trans "A chi (OUT)" %}</label>
           {{ form.a_chi }}
+        </div>
+        <div data-group="out">
+          <label>{% trans "A chi (Anagrafica)" %}</label>
+          {{ form.a_chi_anagrafica }}
         </div>
         <div data-group="out">
           <label>{% trans "Rientro previsto" %}</label>

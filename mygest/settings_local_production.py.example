@@ -1,0 +1,257 @@
+"""
+Settings locali/produzione per MyGest con Performance Optimization
+Copia questo file in settings_local.py e personalizza i valori
+IMPORTANTE: settings_local.py NON deve essere committato su git
+"""
+
+import os
+
+# ====================================
+# AMBIENTE E DEBUG
+# ====================================
+
+ENVIRONMENT = 'production'  # 'development', 'staging', 'production'
+DEBUG = False  # SEMPRE False in produzione!
+
+ALLOWED_HOSTS = ['tuodominio.com', 'www.tuodominio.com', '123.45.67.89']
+
+# Genera nuova secret key con:
+# python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+SECRET_KEY = 'GENERA-UNA-CHIAVE-SEGRETA-UNICA-QUI'
+
+# ====================================
+# DATABASE CON CONNECTION POOLING
+# ====================================
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'dj_db_conn_pool.backends.postgresql',
+        'NAME': 'mygest',
+        'USER': 'mygest_user',
+        'PASSWORD': 'PASSWORD_SICURA_DATABASE',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',  # o '6432' se usi pgBouncer
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 10,
+            'MAX_OVERFLOW': 20,
+            'RECYCLE': 3600,
+            'PRE_PING': True,
+        },
+        'CONN_MAX_AGE': 600,  # Riutilizza connessioni per 10 minuti
+    }
+}
+
+# ====================================
+# REDIS CACHE
+# ====================================
+
+REDIS_HOST = '127.0.0.1'
+REDIS_PORT = 6379
+REDIS_PASSWORD = ''  # Aggiungi se Redis è protetto da password
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{":" + REDIS_PASSWORD + "@" if REDIS_PASSWORD else ""}{REDIS_HOST}:{REDIS_PORT}/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'COMPRESSOR': 'django_redis.compressors.zlib.ZlibCompressor',
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 50,
+                'retry_on_timeout': True,
+            },
+        },
+        'KEY_PREFIX': 'mygest',
+        'TIMEOUT': 300,
+    },
+    'session': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{":" + REDIS_PASSWORD + "@" if REDIS_PASSWORD else ""}{REDIS_HOST}:{REDIS_PORT}/2',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'mygest_session',
+        'TIMEOUT': 86400,
+    },
+}
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'session'
+
+# ====================================
+# COMPRESSIONE STATICA (Produzione)
+# ====================================
+
+COMPRESS_ENABLED = True
+COMPRESS_OFFLINE = True
+
+# Whitenoise con Brotli
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# ====================================
+# SICUREZZA HTTPS/SSL (Produzione)
+# ====================================
+
+# Attiva solo se hai configurato SSL/HTTPS
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# HSTS (HTTP Strict Transport Security)
+SECURE_HSTS_SECONDS = 31536000  # 1 anno
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Altri header di sicurezza
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# ====================================
+# EMAIL
+# ====================================
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.tuoserver.it'
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = 'tua-email@dominio.it'
+EMAIL_HOST_PASSWORD = 'PASSWORD_EMAIL'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_TIMEOUT = 30
+
+# IMAP per archiviazione
+EMAIL_IMAP_HOST = 'imap.tuoserver.it'
+EMAIL_IMAP_PORT = 993
+EMAIL_IMAP_USER = EMAIL_HOST_USER
+EMAIL_IMAP_PASSWORD = EMAIL_HOST_PASSWORD
+EMAIL_IMAP_SENT_FOLDER = 'Sent'
+
+# ====================================
+# STORAGE & ARCHIVIO
+# ====================================
+
+# Path archivio in produzione
+ARCHIVIO_BASE_PATH = '/srv/mygest/archivio'
+MEDIA_ROOT = ARCHIVIO_BASE_PATH
+
+# ====================================
+# LOGGING PRODUZIONE
+# ====================================
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': '/srv/mygest/logs/django.log',
+            'maxBytes': 10485760,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': '/srv/mygest/logs/errors.log',
+            'maxBytes': 10485760,
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'mail_admins': {
+            'level': 'ERROR',
+            'class': 'django.utils.log.AdminEmailHandler',
+            'include_html': True,
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'mail_admins'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['error_file', 'mail_admins'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'mygest': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# ====================================
+# AMMINISTRATORI
+# ====================================
+
+ADMINS = [
+    ('Admin Nome', 'admin@tuodominio.com'),
+]
+MANAGERS = ADMINS
+
+# Email notifiche errori
+SERVER_EMAIL = 'server@tuodominio.com'
+
+# ====================================
+# API & INTEGRAZIONI
+# ====================================
+
+# WhatsApp Cloud API
+WHATSAPP_CLOUD_PHONE_NUMBER_ID = os.getenv('WHATSAPP_PHONE_ID', '')
+WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID = os.getenv('WHATSAPP_BUSINESS_ID', '')
+WHATSAPP_CLOUD_ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN', '')
+WHATSAPP_CLOUD_VERIFY_TOKEN = os.getenv('WHATSAPP_VERIFY_TOKEN', '')
+WHATSAPP_CLOUD_APP_SECRET = os.getenv('WHATSAPP_APP_SECRET', '')
+
+# Google Calendar
+GOOGLE_CALENDAR_CREDENTIALS_FILE = '/srv/mygest/secrets/google_credentials.json'
+GOOGLE_CALENDAR_DEFAULT_ID = os.getenv('GOOGLE_CALENDAR_ID', '')
+
+# ====================================
+# PERFORMANCE
+# ====================================
+
+# Session timeout
+SESSION_COOKIE_AGE = 86400  # 24 ore
+SESSION_SAVE_EVERY_REQUEST = False  # Performance: salva solo se modificata
+
+# Disabilita alcune feature in produzione per performance
+# (già configurato in settings.py, ma puoi sovrascrivere)
+# COMPRESS_ENABLED = True
+# COMPRESS_OFFLINE = True
+
+# ====================================
+# SVILUPPO (Commenta in produzione)
+# ====================================
+
+# if DEBUG:
+#     INTERNAL_IPS = ['127.0.0.1', 'localhost']
+#     
+#     # Django Debug Toolbar
+#     INSTALLED_APPS += ['debug_toolbar']
+#     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')

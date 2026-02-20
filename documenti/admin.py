@@ -12,6 +12,7 @@ from reportlab.lib.units import mm
 from reportlab.lib.pagesizes import A4
 
 from .models import DocumentiTipo, Documento, AttributoDefinizione, AttributoValore
+from .models_deletion import FileDeletionRequest
 from protocollo.models import ProtocolloCounter, MovimentoProtocollo
 from fascicoli.models import Fascicolo
 from archivio_fisico.models import UnitaFisica
@@ -120,10 +121,39 @@ class AttributoValoreAdmin(admin.ModelAdmin):
 
 @admin.register(DocumentiTipo)
 class DocumentiTipoAdmin(admin.ModelAdmin):
-    list_display = ("codice", "nome", "attivo")
+    from .help_forms import HelpDataAdminForm, HelpDataFieldset
+    
+    form = HelpDataAdminForm
+    list_display = ("codice", "nome", "attivo", "has_help_data")
     list_filter = ("attivo",)
     search_fields = ("codice", "nome")
     inlines = [AttributoDefinizioneInline]
+    
+    fieldsets = HelpDataFieldset.get_fieldsets()
+    
+    def has_help_data(self, obj):
+        """Indica se il tipo ha help_data configurato."""
+        return bool(obj.help_data and len(obj.help_data) > 0)
+    has_help_data.boolean = True
+    has_help_data.short_description = "Help configurato"
+    
+    def save_model(self, request, obj, form, change):
+        """Override per loggare la rigenerazione delle sezioni tecniche."""
+        super().save_model(request, obj, form, change)
+        
+        # Messaggio informativo
+        if change:
+            self.message_user(
+                request,
+                "Help salvato con successo. Le sezioni tecniche sono state rigenerate automaticamente.",
+                level='success'
+            )
+    
+    class Media:
+        css = {
+            'all': ('admin/css/help_admin.css',)
+        }
+        js = ('admin/js/help_admin.js',)
 
 # -----------------------------
 #  Admin documenti
@@ -161,12 +191,12 @@ class DocumentoAdmin(admin.ModelAdmin):
         "tipo__codice",
         "tipo__nome",
     )
-    autocomplete_fields = ("cliente", "fascicolo", "titolario_voce", "tipo")
+    autocomplete_fields = ("cliente", "fascicolo", "titolario_voce", "tipo", "ubicazione")
     readonly_fields = ("codice", "percorso_archivio", "creato_il", "aggiornato_il")
 
     fieldsets = (
-        (None, {"fields": ("codice", "descrizione", "tipo", "stato", "tracciabile")}),
-        ("Classificazione", {"fields": ("cliente", "fascicolo", "titolario_voce", "data_documento")}),
+        (None, {"fields": ("codice", "descrizione", "tipo", "stato", "digitale", "tracciabile")}),
+        ("Classificazione", {"fields": ("cliente", "fascicolo", "titolario_voce", "data_documento", "ubicazione")}),
         ("File", {"fields": ("file", "percorso_archivio")}),
         ("Altro", {"fields": ("tags", "note", "creato_il", "aggiornato_il")}),
     )
@@ -422,3 +452,68 @@ class DocumentoAdmin(admin.ModelAdmin):
         p.showPage()
         p.save()
         return response
+
+
+# -----------------------------
+#  Admin FileDeletionRequest
+# -----------------------------
+@admin.register(FileDeletionRequest)
+class FileDeletionRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'documento_link', 'source_path_short', 'status',
+        'requested_by', 'created_at', 'processed_at'
+    ]
+    list_filter = ['status', 'created_at', 'processed_at']
+    search_fields = ['documento__codice', 'source_path']
+    readonly_fields = [
+        'documento', 'source_path', 'requested_by', 'created_at',
+        'processed_at', 'file_size'
+    ]
+    list_per_page = 50
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Informazioni', {
+            'fields': ('documento', 'source_path', 'requested_by', 'file_size')
+        }),
+        ('Stato', {
+            'fields': ('status', 'error_message')
+        }),
+        ('Timestamp', {
+            'fields': ('created_at', 'processed_at')
+        }),
+    )
+    
+    def documento_link(self, obj):
+        from django.urls import reverse
+        from django.utils.html import format_html
+        if obj.documento:
+            url = reverse('admin:documenti_documento_change', args=[obj.documento.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.documento.codice)
+        return '-'
+    documento_link.short_description = 'Documento'
+    
+    def source_path_short(self, obj):
+        if len(obj.source_path) > 50:
+            return obj.source_path[:47] + '...'
+        return obj.source_path
+    source_path_short.short_description = 'Percorso'
+    
+    def has_add_permission(self, request):
+        # Le richieste vengono create via API
+        return False
+    
+    actions = ['mark_as_cancelled']
+    
+    @admin.action(description='Annulla richieste selezionate')
+    def mark_as_cancelled(self, request, queryset):
+        updated = 0
+        for req in queryset.filter(status=FileDeletionRequest.Status.PENDING):
+            req.cancel()
+            updated += 1
+        
+        self.message_user(
+            request,
+            f'{updated} richieste annullate',
+            messages.SUCCESS
+        )

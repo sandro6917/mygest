@@ -1,0 +1,150 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .anagrafiche-selection {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin: 10px 0;
+        background: #f9f9f9;
+    }
+    .anagrafiche-selection label {
+        display: block;
+        padding: 5px;
+        margin: 2px 0;
+    }
+    .anagrafiche-selection label:hover {
+        background: #e8f5e9;
+    }
+    .anagrafiche-selection input[type="checkbox"] {
+        margin-right: 8px;
+    }
+    .bulk-info {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 12px;
+        margin: 15px 0;
+    }
+    .select-all-controls {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    .form-actions {
+        margin-top: 20px;
+        padding: 15px;
+        background: #f5f5f5;
+        border-top: 1px solid #ddd;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Seleziona/Deseleziona tutti
+        var selectAllBtn = document.getElementById('select-all');
+        var deselectAllBtn = document.getElementById('deselect-all');
+        var checkboxes = document.querySelectorAll('.anagrafiche-selection input[type="checkbox"]');
+        
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkboxes.forEach(function(cb) { cb.checked = true; });
+                updateCounter();
+            });
+        }
+        
+        if (deselectAllBtn) {
+            deselectAllBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                checkboxes.forEach(function(cb) { cb.checked = false; });
+                updateCounter();
+            });
+        }
+        
+        // Contatore selezione
+        function updateCounter() {
+            var count = document.querySelectorAll('.anagrafiche-selection input[type="checkbox"]:checked').length;
+            var counter = document.getElementById('selection-counter');
+            if (counter) {
+                counter.textContent = count;
+            }
+        }
+        
+        checkboxes.forEach(function(cb) {
+            cb.addEventListener('change', updateCounter);
+        });
+        
+        updateCounter();
+    });
+</script>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:titolario_titolariovoce_changelist' %}">{% trans 'Voci Titolario' %}</a>
+    &rsaquo; {% trans 'Bulk Creation' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div class="bulk-info">
+    <h3>📋 Voce Parent: {{ voce_parent.codice }} - {{ voce_parent.titolo }}</h3>
+    <p><strong>Anagrafiche disponibili:</strong> {{ anagrafiche_count }}</p>
+    <p>Seleziona le anagrafiche per cui creare voci titolario intestate.</p>
+</div>
+
+<form method="post" action="">
+    {% csrf_token %}
+    
+    {# Mantieni i parametri della action originale #}
+    <input type="hidden" name="action" value="{{ action_name }}">
+    {% for obj in queryset %}
+    <input type="hidden" name="_selected_action" value="{{ obj.pk }}">
+    {% endfor %}
+    
+    <div class="form-row">
+        <div>
+            <label>
+                {{ form.crea_sottovoci }}
+                {{ form.crea_sottovoci.label }}
+            </label>
+            <p class="help">{{ form.crea_sottovoci.help_text }}</p>
+        </div>
+    </div>
+    
+    <div class="select-all-controls">
+        <strong>Selezione rapida:</strong>
+        <button type="button" id="select-all" class="button">✓ Seleziona tutte</button>
+        <button type="button" id="deselect-all" class="button">✗ Deseleziona tutte</button>
+        <span style="float: right;">
+            <strong>Selezionate: <span id="selection-counter">0</span></strong>
+        </span>
+    </div>
+    
+    <div class="form-row">
+        <div>
+            <label><strong>{{ form.anagrafiche.label }}:</strong></label>
+            {% if form.anagrafiche.errors %}
+                <p class="errornote">{{ form.anagrafiche.errors }}</p>
+            {% endif %}
+            <div class="anagrafiche-selection">
+                {{ form.anagrafiche }}
+            </div>
+            <p class="help">{{ form.anagrafiche.help_text }}</p>
+        </div>
+    </div>
+    
+    <div class="form-actions">
+        <input type="submit" name="apply" value="{% trans 'Crea voci selezionate' %}" class="default" />
+        <a href="{% url 'admin:titolario_titolariovoce_changelist' %}" class="button cancel-link">{% trans 'Annulla' %}</a>
+    </div>
+</form>
+
+{% endblock %}

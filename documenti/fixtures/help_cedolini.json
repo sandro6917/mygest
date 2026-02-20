@@ -1,0 +1,695 @@
+[
+  {
+    "model": "documenti.documentitipo",
+    "pk": null,
+    "fields": {
+      "codice": "CED",
+      "nome": "Cedolino Paga",
+      "estensioni_permesse": "pdf",
+      "pattern_codice": "{ATTR:dipendente.codice}-{ANNO}-{SEQ:03d}",
+      "nome_file_pattern": "{attr:dipendente.codice}_{anno}_{attr:mese:02d}_{attr:mensilita}.pdf",
+      "attivo": true,
+      "help_ordine": 10,
+      "help_data": {
+        "descrizione_breve": "Documento mensile contenente la retribuzione del dipendente, emesso dal consulente del lavoro o dal datore di lavoro.",
+        
+        "quando_usare": {
+          "casi_uso": [
+            "Importazione cedolini mensili dipendenti da consulente del lavoro",
+            "Archiviazione cedolini ricevuti via email o piattaforma web",
+            "Storico retribuzioni per anno fiscale e pratiche pensionistiche",
+            "Documentazione per verifiche ispettive o contenziosi"
+          ],
+          "non_usare_per": [
+            "Buste paga straordinarie o una tantum (usa tipo BST)",
+            "Rimborsi spese dipendenti (usa tipo RIM)",
+            "Documentazione contrattuale (usa tipo CONTR)"
+          ]
+        },
+        
+        "campi_obbligatori": {
+          "sempre": ["cliente", "data_documento", "anno", "titolario_voce"],
+          "condizionali": {
+            "dipendente": "Obbligatorio - deve corrispondere alla voce titolario intestata",
+            "mese": "Obbligatorio - numero da 1 a 12",
+            "mensilita": "Obbligatorio - tipo mensilità (Ordinaria, 13a, 14a, Arretrati)",
+            "file": "Opzionale in fase di creazione, richiesto per protocollazione"
+          }
+        },
+        
+        "attributi_dinamici": {
+          "disponibili": [
+            {
+              "codice": "dipendente",
+              "nome": "Dipendente",
+              "tipo": "ForeignKey",
+              "modello": "anagrafiche.Anagrafica",
+              "descrizione": "Dipendente a cui si riferisce il cedolino. Deve corrispondere all'anagrafica della voce titolario intestata.",
+              "obbligatorio": true,
+              "esempio": "Rossi Mario (ROSMAR01)"
+            },
+            {
+              "codice": "mese",
+              "nome": "Mese",
+              "tipo": "IntegerField",
+              "descrizione": "Mese di riferimento del cedolino (1=Gennaio, 12=Dicembre)",
+              "obbligatorio": true,
+              "validazione": "Numero intero tra 1 e 12",
+              "esempio": "1 per Gennaio"
+            },
+            {
+              "codice": "mensilita",
+              "nome": "Mensilità",
+              "tipo": "CharField",
+              "descrizione": "Tipo di mensilità: Ordinaria per stipendio mensile normale, 13a/14a per mensilità aggiuntive, Arretrati per conguagli",
+              "choices": ["Ordinaria", "13a", "14a", "Arretrati"],
+              "default": "Ordinaria",
+              "obbligatorio": true,
+              "esempio": "Ordinaria"
+            }
+          ],
+          "pattern_code_examples": [
+            {
+              "pattern": "{ATTR:dipendente.codice}-{ANNO}-{SEQ:03d}",
+              "risultato": "ROSMAR01-2025-001",
+              "spiegazione": "Codice dipendente + Anno + Numero sequenziale (consigliato)"
+            },
+            {
+              "pattern": "CED-{CLI}-{ATTR:mese:02d}-{ANNO}-{SEQ:02d}",
+              "risultato": "CED-LAFORT01-01-2025-01",
+              "spiegazione": "Prefisso + Cliente + Mese + Anno + Sequenza"
+            },
+            {
+              "pattern": "{ATTR:dipendente.codice}-{ANNO}{ATTR:mese:02d}",
+              "risultato": "ROSMAR01-202501",
+              "spiegazione": "Codice dipendente + Anno/Mese compatto (senza sequenza)"
+            }
+          ]
+        },
+        
+        "guida_compilazione": {
+          "step": [
+            {
+              "numero": 1,
+              "titolo": "Seleziona Cliente (Azienda)",
+              "descrizione": "Scegli l'azienda datrice di lavoro per cui stai archiviando i cedolini. Questo campo determina dove verranno archiviati i documenti.",
+              "campo": "cliente",
+              "tipo": "autocomplete",
+              "esempio": "La Fortezza SRL (LAFORT01)"
+            },
+            {
+              "numero": 2,
+              "titolo": "Seleziona Voce Titolario Intestata",
+              "descrizione": "Scegli la voce titolario intestata al dipendente specifico. La struttura tipica è: 'DIP - Dipendenti > ROSMAR01 - Rossi Mario'. Se crei il documento dalla pagina del fascicolo, questo campo viene ereditato automaticamente.",
+              "campo": "titolario_voce",
+              "tipo": "autocomplete_tree",
+              "attenzione": "La voce titolario deve essere intestata al dipendente corretto. Controlla che il codice corrisponda (es. ROSMAR01).",
+              "esempio": "DIP - Dipendenti > ROSMAR01 - Rossi Mario"
+            },
+            {
+              "numero": 3,
+              "titolo": "Compila Data Documento",
+              "descrizione": "Inserisci la data di emissione del cedolino (di solito l'ultimo giorno del mese o il giorno di pagamento).",
+              "campo": "data_documento",
+              "tipo": "date",
+              "suggerimento": "Se non specificata, viene usata la data di oggi",
+              "esempio": "31/01/2025"
+            },
+            {
+              "numero": 4,
+              "titolo": "Seleziona Dipendente",
+              "descrizione": "Seleziona l'anagrafica del dipendente. ATTENZIONE: deve corrispondere alla voce titolario intestata selezionata al punto 2.",
+              "campo": "dipendente",
+              "tipo": "autocomplete",
+              "validazione": "Il sistema verifica che il dipendente corrisponda alla voce titolario",
+              "esempio": "Rossi Mario"
+            },
+            {
+              "numero": 5,
+              "titolo": "Inserisci Mese",
+              "descrizione": "Inserisci il mese di riferimento del cedolino come numero (1=Gennaio, 2=Febbraio, ..., 12=Dicembre).",
+              "campo": "mese",
+              "tipo": "number",
+              "validazione": "Numero intero tra 1 e 12",
+              "esempio": "1"
+            },
+            {
+              "numero": 6,
+              "titolo": "Seleziona Tipo Mensilità",
+              "descrizione": "Scegli il tipo di mensilità: 'Ordinaria' per lo stipendio mensile normale, '13a' o '14a' per le mensilità aggiuntive, 'Arretrati' per conguagli di mesi precedenti.",
+              "campo": "mensilita",
+              "tipo": "select",
+              "default": "Ordinaria",
+              "choices": ["Ordinaria", "13a", "14a", "Arretrati"],
+              "esempio": "Ordinaria"
+            },
+            {
+              "numero": 7,
+              "titolo": "Carica File PDF",
+              "descrizione": "Fai upload del file PDF del cedolino. Il file verrà automaticamente rinominato secondo il pattern configurato e archiviato nella directory corretta.",
+              "campo": "file",
+              "tipo": "file",
+              "formati_accettati": [".pdf"],
+              "dimensione_max": "10 MB",
+              "suggerimento": "Puoi lasciare vuoto questo campo e caricare il file in un secondo momento",
+              "esempio": "cedolino_gennaio_rossi.pdf"
+            }
+          ],
+          "shortcut": {
+            "titolo": "Importazione Multipla da ZIP",
+            "descrizione": "Se devi caricare molti cedolini dello stesso mese, usa la funzione 'Importa Cedolini da ZIP'. Ti permette di caricare un file ZIP contenente tutti i PDF e il sistema li processerà automaticamente, estraendo le informazioni dal nome file.",
+            "link": "/documenti/importa-cedolini",
+            "vantaggi": [
+              "Caricamento batch di tutti i cedolini del mese in una volta",
+              "Parsing automatico nome file per estrarre dipendente/mese/anno",
+              "Rilevamento duplicati automatico con opzioni skip/replace/add",
+              "Validazione automatica e report errori"
+            ]
+          }
+        },
+        
+        "pattern_codice": {
+          "default": "{ATTR:dipendente.codice}-{ANNO}-{SEQ:03d}",
+          "spiegazione": "Il codice documento viene generato automaticamente combinando il codice del dipendente, l'anno e un numero sequenziale progressivo. Questo garantisce codici unici e facilmente riconoscibili.",
+          "esempi": [
+            {
+              "input": {
+                "dipendente": "ROSMAR01 - Rossi Mario",
+                "anno": 2025,
+                "sequenza": 1
+              },
+              "output": "ROSMAR01-2025-001",
+              "descrizione": "Primo cedolino 2025 di Rossi Mario"
+            },
+            {
+              "input": {
+                "dipendente": "BIAELE01 - Bianchi Elena",
+                "anno": 2025,
+                "sequenza": 12
+              },
+              "output": "BIAELE01-2025-012",
+              "descrizione": "Dodicesimo cedolino 2025 di Bianchi Elena (probabile dicembre)"
+            }
+          ],
+          "placeholder_disponibili": {
+            "{CLI}": "Codice cliente/azienda (es. LAFORT01)",
+            "{TIT}": "Pattern codice della voce titolario (es. DIP)",
+            "{ANNO}": "Anno documento a 4 cifre (es. 2025)",
+            "{SEQ:03d}": "Numero sequenziale con padding a 3 cifre (es. 001, 012, 143)",
+            "{ATTR:dipendente.codice}": "Codice dell'anagrafica dipendente (es. ROSMAR01)",
+            "{ATTR:mese:02d}": "Mese con padding a 2 cifre (es. 01, 12)",
+            "{ATTR:mensilita}": "Tipo mensilità (es. Ordinaria, 13a)"
+          },
+          "personalizzazione": "Il pattern può essere modificato dall'amministratore nella configurazione del tipo documento. Contatta l'amministratore di sistema se necessiti di un formato diverso."
+        },
+        
+        "archiviazione": {
+          "percorso_tipo": "/archivio/{CODICE_CLIENTE}/{GERARCHIA_TITOLARIO}/{ANNO}/",
+          "esempio": "/srv/archivio/LAFORT01/DIP - Dipendenti/ROSMAR01 - Rossi Mario/2025/",
+          "nome_file_pattern": "{attr:dipendente.codice}_{anno}_{attr:mese:02d}_{attr:mensilita}.pdf",
+          "esempio_file": "ROSMAR01_2025_01_Ordinaria.pdf",
+          "esempio_completo": "/srv/archivio/LAFORT01/DIP - Dipendenti/ROSMAR01 - Rossi Mario/2025/ROSMAR01_2025_01_Ordinaria.pdf",
+          "note": [
+            "📂 Il percorso archivio viene creato automaticamente se non esiste",
+            "📂 La struttura directory si basa sulla gerarchia del titolario (Cliente > Dipendenti > Dipendente Specifico > Anno)",
+            "📂 Il nome file viene generato dal pattern configurato sostituendo gli attributi dinamici",
+            "📂 I file vengono prima caricati in una directory temporanea (tmp/) e poi spostati alla posizione definitiva al salvataggio",
+            "⚠️ Documenti digitali (PDF) NON hanno ubicazione fisica nell'archivio cartaceo"
+          ],
+          "organizzazione": "Tutti i cedolini dello stesso dipendente e anno vengono raggruppati nella stessa directory, facilitando consultazione e backup."
+        },
+        
+        "relazione_fascicoli": {
+          "descrizione": "I cedolini possono essere collegati a fascicoli per organizzarli logicamente. Un fascicolo è un contenitore che raggruppa documenti correlati (es. tutti i documenti di un dipendente o di un anno specifico).",
+          "vantaggi_collegamento": [
+            "📁 Organizzazione logica: tutti i cedolini di un dipendente in un unico fascicolo",
+            "🔍 Ricerca facilitata: trova rapidamente tutti i documenti collegati",
+            "📊 Visione d'insieme: consulta lo storico completo del dipendente",
+            "🔗 Navigazione rapida: passa dal fascicolo ai documenti e viceversa",
+            "📂 Archiviazione coerente: documenti e fascicolo nella stessa directory (se stesso titolario)"
+          ],
+          "come_collegare": {
+            "metodo_1": {
+              "titolo": "Creazione da Fascicolo (Consigliato)",
+              "descrizione": "Il modo più semplice per creare cedolini collegati a un fascicolo è partire dalla pagina di dettaglio del fascicolo.",
+              "passaggi": [
+                "1. Vai alla pagina del fascicolo del dipendente (es. /fascicoli/123)",
+                "2. Clicca sul pulsante 'Nuovo Documento' nella sezione documenti collegati",
+                "3. Il sistema precompila automaticamente: Cliente, Titolario, Fascicolo",
+                "4. Compila i campi rimanenti (dipendente, mese, mensilità, file)",
+                "5. Salva: il documento sarà automaticamente collegato al fascicolo"
+              ],
+              "benefici": [
+                "✓ Cliente e Titolario ereditati automaticamente",
+                "✓ Fascicolo già selezionato",
+                "✓ Meno campi da compilare manualmente",
+                "✓ Zero possibilità di errore nel collegamento"
+              ]
+            },
+            "metodo_2": {
+              "titolo": "Selezione Manuale in Creazione Documento",
+              "descrizione": "Puoi anche creare il documento dalla pagina documenti e collegarlo manualmente a un fascicolo esistente.",
+              "passaggi": [
+                "1. Vai su /documenti/nuovo",
+                "2. Seleziona tipo documento 'CED - Cedolino Paga'",
+                "3. Compila Cliente e Titolario",
+                "4. Nel campo 'Fascicolo' (opzionale), cerca e seleziona il fascicolo desiderato",
+                "5. Compila i campi rimanenti",
+                "6. Salva: il documento sarà collegato al fascicolo selezionato"
+              ],
+              "attenzioni": [
+                "⚠️ Il fascicolo deve appartenere allo stesso cliente del documento",
+                "⚠️ Se selezioni un fascicolo, il titolario viene ereditato automaticamente",
+                "⚠️ Puoi cambiare il titolario dopo, ma apparirà un warning se diverso dal fascicolo"
+              ]
+            },
+            "metodo_3": {
+              "titolo": "Collegamento Successivo",
+              "descrizione": "Puoi collegare un documento esistente a un fascicolo anche dopo averlo creato.",
+              "passaggi": [
+                "1. Apri il documento da collegare",
+                "2. Clicca su 'Modifica'",
+                "3. Nel campo 'Fascicolo', seleziona il fascicolo desiderato",
+                "4. Salva le modifiche"
+              ],
+              "limitazioni": [
+                "⚠️ Non modificabile dopo protocollazione",
+                "⚠️ Il fascicolo deve avere stesso cliente del documento"
+              ]
+            }
+          },
+          "regole_business": {
+            "titolo": "Regole di Collegamento Fascicolo-Documento",
+            "regole": [
+              {
+                "regola": "Cliente comune obbligatorio",
+                "spiegazione": "Documento e fascicolo DEVONO avere lo stesso cliente. Non puoi collegare un cedolino di La Fortezza SRL a un fascicolo di Rossi SRL.",
+                "esempio_ok": "Documento cliente LAFORT01 + Fascicolo cliente LAFORT01 ✓",
+                "esempio_ko": "Documento cliente LAFORT01 + Fascicolo cliente ROSSI99 ✗"
+              },
+              {
+                "regola": "Ereditarietà titolario",
+                "spiegazione": "Se colleghi un documento a un fascicolo, il titolario del documento viene automaticamente ereditato dal fascicolo (a meno che non lo modifichi esplicitamente).",
+                "comportamento": "Campo titolario precompilato con valore del fascicolo, modificabile con pulsante 'Cambia'",
+                "warning": "Se modifichi il titolario diverso dal fascicolo, appare un avviso arancione"
+              },
+              {
+                "regola": "Percorso archiviazione condiviso",
+                "spiegazione": "Se documento e fascicolo hanno lo stesso titolario, condivideranno la stessa directory di archiviazione. Tutti i file saranno nella stessa cartella.",
+                "esempio": "Fascicolo: /srv/archivio/LAFORT01/DIP - Dipendenti/ROSMAR01/2025/\nDocumento: /srv/archivio/LAFORT01/DIP - Dipendenti/ROSMAR01/2025/ROSMAR01-2025-001.pdf"
+              },
+              {
+                "regola": "Documenti digitali e fascicoli",
+                "spiegazione": "I cedolini sono documenti DIGITALI (PDF), quindi NON hanno ubicazione fisica. Anche se collegati a un fascicolo con ubicazione fisica, l'ubicazione del documento resta NULL.",
+                "importante": "L'ubicazione fisica riguarda solo l'eventuale copia cartacea stampata, non il PDF digitale"
+              }
+            ]
+          },
+          "casi_uso_tipici": {
+            "caso_1": {
+              "scenario": "Fascicolo Annuale Dipendente",
+              "descrizione": "Crei un fascicolo per ogni dipendente ogni anno (es. 'Cedolini 2025 - Rossi Mario') e ci colleghi tutti i 12 cedolini mensili + 13a/14a.",
+              "vantaggi": "Consulti rapidamente tutti i cedolini dell'anno, stampi copertina fascicolo con lista documenti",
+              "esempio_struttura": "Fascicolo: FASC-ROSMAR01-2025-001\n├─ Cedolino Gennaio: ROSMAR01-2025-001\n├─ Cedolino Febbraio: ROSMAR01-2025-002\n├─ ...\n├─ Cedolino Dicembre: ROSMAR01-2025-012\n└─ 13a Mensilità: ROSMAR01-2025-013"
+            },
+            "caso_2": {
+              "scenario": "Fascicolo Permanente Dipendente",
+              "descrizione": "Crei un unico fascicolo per dipendente (es. 'Rossi Mario - Documentazione') e ci colleghi TUTTI i documenti del dipendente nel tempo (cedolini, contratti, CUD, etc.).",
+              "vantaggi": "Storia completa del rapporto di lavoro in un solo fascicolo",
+              "attenzione": "Può diventare molto grande con anni di documenti"
+            },
+            "caso_3": {
+              "scenario": "Nessun Fascicolo",
+              "descrizione": "Lasci il campo fascicolo vuoto. I cedolini vengono comunque archiviati correttamente per titolario.",
+              "quando_usare": "Gestione semplice senza necessità di raggruppamento logico, pochi dipendenti",
+              "limitazione": "Meno organizzazione, più difficile consultare lo storico"
+            }
+          },
+          "domande_frequenti": [
+            {
+              "domanda": "Devo sempre collegare i cedolini a un fascicolo?",
+              "risposta": "No, è opzionale. I cedolini vengono archiviati correttamente anche senza fascicolo. Il fascicolo è utile per organizzazione logica e consultazione rapida."
+            },
+            {
+              "domanda": "Posso collegare più documenti allo stesso fascicolo?",
+              "risposta": "Sì, assolutamente! Anzi, è proprio lo scopo del fascicolo: raggruppare più documenti correlati (es. tutti i 12 cedolini mensili di un anno)."
+            },
+            {
+              "domanda": "Posso scollegare un documento da un fascicolo?",
+              "risposta": "Sì, in fase di modifica (prima della protocollazione) puoi rimuovere il collegamento cancellando il valore del campo fascicolo."
+            },
+            {
+              "domanda": "Cosa succede se elimino il fascicolo? I documenti collegati vengono cancellati?",
+              "risposta": "No! I documenti rimangono intatti. Il sistema rimuove solo il collegamento, i documenti continuano ad esistere autonomamente."
+            },
+            {
+              "domanda": "Posso cambiare il titolario di un documento collegato a un fascicolo?",
+              "risposta": "Sì, puoi farlo cliccando su 'Cambia' nel campo titolario. Ti apparirà un warning arancione che il titolario è diverso dal fascicolo. Il documento verrà archiviato in una directory diversa."
+            },
+            {
+              "domanda": "Se creo il cedolino da un fascicolo con titolario sbagliato?",
+              "risposta": "Clicca sul pulsante 'Cambia' accanto al campo titolario per selezionare quello corretto. Il sistema ti avviserà della differenza."
+            }
+          ],
+          "best_practices": [
+            "💡 Crea fascicoli PRIMA di caricare i cedolini (es. a inizio anno)",
+            "💡 Usa naming consistente: 'Cedolini ANNO - NOME COGNOME' (es. 'Cedolini 2025 - Rossi Mario')",
+            "💡 Collega sempre i cedolini dello stesso anno/dipendente allo stesso fascicolo",
+            "💡 Quando importi cedolini da ZIP, crea prima i fascicoli e poi importa selezionando il fascicolo target",
+            "💡 Stampa periodicamente copertine fascicoli con lista documenti per backup cartaceo"
+          ]
+        },
+        
+        "workflow": {
+          "stati_possibili": ["Bozza", "Protocollato", "Archiviato"],
+          "stato_iniziale": "Bozza",
+          "azioni_disponibili": [
+            {
+              "azione": "Salva come Bozza",
+              "quando": "Durante la compilazione, prima di finalizzare",
+              "effetto": "Il documento viene salvato ma rimane modificabile. Il codice viene generato.",
+              "permessi": "Tutti gli utenti autorizzati"
+            },
+            {
+              "azione": "Protocolla",
+              "quando": "Documento completo e validato (con file allegato)",
+              "effetto": "Assegna numero protocollo progressivo, registra entrata protocollo, documento diventa immutabile",
+              "permessi": "Utenti con permesso 'protocolla_documento'",
+              "requisiti": ["File PDF allegato", "Tutti i campi obbligatori compilati"]
+            },
+            {
+              "azione": "Archivia",
+              "quando": "Documento protocollato e non più necessario consultazione frequente",
+              "effetto": "Cambia stato in 'Archiviato', documento rimane consultabile ma evidenziato come storico",
+              "permessi": "Amministratori"
+            },
+            {
+              "azione": "Elimina",
+              "quando": "Documento errato o duplicato, solo se in stato Bozza",
+              "effetto": "Rimozione permanente documento e file associato",
+              "permessi": "Solo per documenti in bozza non protocollati",
+              "attenzione": "Azione irreversibile!"
+            }
+          ],
+          "transizioni": {
+            "Bozza -> Protocollato": "Protocollazione completata con successo",
+            "Protocollato -> Archiviato": "Archiviazione per storicizzazione",
+            "Bozza -> Eliminato": "Cancellazione documento non protocollato"
+          }
+        },
+        
+        "protocollazione": {
+          "descrizione": "La protocollazione è la registrazione ufficiale del documento nel registro di protocollo aziendale. Per i cedolini, la protocollazione certifica la data di ricezione/elaborazione del documento e lo rende immutabile, garantendo l'autenticità e la non modificabilità.",
+          "quando_protocollare": [
+            "Quando il cedolino è stato verificato e validato dal consulente del lavoro",
+            "Prima di consegnare il cedolino al dipendente (fisicamente o via email)",
+            "Dopo aver controllato che tutti i dati (importi, ritenute, attributi) siano corretti",
+            "Quando il file PDF allegato è completo e conforme",
+            "Prima di archiviare definitivamente il documento (requisito obbligatorio per l'archiviazione)"
+          ],
+          "processo": {
+            "step": [
+              "1. Verifica che il documento sia completo: file PDF allegato, tutti i campi obbligatori compilati, dipendente corretto",
+              "2. Controlla che non esistano duplicati (stesso dipendente + mese + anno + mensilità)",
+              "3. Clicca sul pulsante 'Protocolla' nella pagina di dettaglio del documento",
+              "4. Il sistema verifica automaticamente i requisiti (file presente, campi obbligatori, permessi utente)",
+              "5. Viene assegnato un numero di protocollo progressivo univoco (formato: PROT-YYYY-NNNNN)",
+              "6. Viene registrata l'entrata nel registro protocollo con data/ora e utente che ha eseguito l'operazione",
+              "7. Il documento diventa IMMUTABILE: non è più possibile modificare alcun campo o sostituire il file",
+              "8. Lo stato del documento passa da 'Bozza' a 'Protocollato'",
+              "9. Il sistema invia notifica (se configurata) al dipendente interessato"
+            ]
+          },
+          "numero_protocollo": {
+            "formato": "PROT-{ANNO}-{PROGRESSIVO}",
+            "esempio": "PROT-2025-00123",
+            "spiegazione": "Anno corrente (4 cifre) + numero progressivo annuale (5 cifre con zeri iniziali). Il progressivo riparte da 00001 ogni anno e viene assegnato automaticamente dal sistema in ordine cronologico."
+          },
+          "registro": {
+            "descrizione": "Il registro di protocollo è un elenco cronologico di tutti i documenti protocollati. Per ogni movimento viene registrato:",
+            "informazioni_registrate": [
+              "Numero protocollo assegnato",
+              "Data e ora esatta di protocollazione",
+              "Utente che ha eseguito la protocollazione",
+              "Tipo di movimento (Entrata/Uscita - per i cedolini è sempre Entrata)",
+              "Codice e titolo del documento",
+              "Cliente/Dipendente associato",
+              "Riferimenti al file allegato (path, dimensione, hash SHA256)",
+              "Eventuale ubicazione fisica (se documento cartaceo - non applicabile ai cedolini digitali)"
+            ]
+          },
+          "vincoli": [
+            "NON è possibile protocollare un documento senza file PDF allegato",
+            "NON è possibile protocollare se mancano campi obbligatori (dipendente, mese, anno)",
+            "NON è possibile modificare un documento già protocollato (diventa read-only)",
+            "NON è possibile eliminare un documento protocollato (solo gli amministratori possono fare operazioni straordinarie)",
+            "NON è possibile cambiare il numero di protocollo una volta assegnato",
+            "Ogni documento può essere protocollato UNA SOLA VOLTA",
+            "Il sistema non consente protocollazione di documenti duplicati (stesso dipendente/mese/anno/mensilità già protocollato)"
+          ],
+          "note": [
+            "La protocollazione è IRREVERSIBILE: pianifica bene prima di procedere",
+            "Verifica sempre i dati prima di protocollare, perché non potrai più correggerli",
+            "Se devi correggere un cedolino già protocollato, dovrai annullare il protocollo (operazione straordinaria riservata agli admin) e crearne uno nuovo",
+            "I cedolini NON protocollati non possono essere archiviati fisicamente né considerati definitivi",
+            "La protocollazione è un requisito legale per documenti con valore fiscale/legale",
+            "Puoi consultare il registro protocollo completo in Archivio -> Registro Protocollo"
+          ]
+        },
+        
+        "tracciabilita": {
+          "descrizione": "Il sistema di tracciabilità registra automaticamente ogni operazione eseguita sul documento, creando uno storico completo e immutabile (audit trail). Questo garantisce trasparenza, conformità normativa e possibilità di analisi forensi in caso di contestazioni.",
+          "cosa_viene_tracciato": [
+            "Creazione del documento (data, ora, utente)",
+            "Ogni modifica ai campi (quale campo, vecchio valore, nuovo valore, quando, chi)",
+            "Upload/sostituzione file allegato (nome file, dimensione, hash SHA256, data, utente)",
+            "Protocollazione (numero protocollo assegnato, data, utente)",
+            "Cambio stato (da Bozza a Protocollato, da Protocollato a Archiviato)",
+            "Operazioni di archivio fisico (versamento, prelievo, scarto - se applicabile)",
+            "Accessi al documento (visualizzazioni, download file)",
+            "Tentativi di modifica non autorizzati",
+            "Collegamento/scollegamento fascicoli",
+            "Operazioni straordinarie (annullamento protocollo, eliminazione forzata)"
+          ],
+          "eventi_tracciati": [
+            {
+              "evento": "Creazione",
+              "descrizione": "Primo salvataggio del documento nel sistema",
+              "informazioni_registrate": ["Data/ora", "Utente", "Valori iniziali campi obbligatori", "IP address"]
+            },
+            {
+              "evento": "Modifica Campo",
+              "descrizione": "Cambio valore di un campo del documento (solo in stato Bozza)",
+              "informazioni_registrate": ["Data/ora", "Utente", "Nome campo modificato", "Valore precedente", "Nuovo valore", "IP address"]
+            },
+            {
+              "evento": "Upload File",
+              "descrizione": "Caricamento o sostituzione del file PDF allegato",
+              "informazioni_registrate": ["Data/ora", "Utente", "Nome file", "Dimensione bytes", "Hash SHA256", "MIME type", "IP address"]
+            },
+            {
+              "evento": "Protocollazione",
+              "descrizione": "Registrazione ufficiale nel protocollo",
+              "informazioni_registrate": ["Data/ora", "Utente", "Numero protocollo assegnato", "Tipo movimento (Entrata)", "IP address", "Snapshot completo stato documento"]
+            },
+            {
+              "evento": "Cambio Stato",
+              "descrizione": "Transizione tra stati del workflow",
+              "informazioni_registrate": ["Data/ora", "Utente", "Stato precedente", "Nuovo stato", "Motivazione (se richiesta)", "IP address"]
+            },
+            {
+              "evento": "Accesso Documento",
+              "descrizione": "Visualizzazione pagina dettaglio documento",
+              "informazioni_registrate": ["Data/ora", "Utente", "Tipo accesso (visualizzazione/download)", "IP address", "User agent"]
+            },
+            {
+              "evento": "Download File",
+              "descrizione": "Download del file PDF allegato",
+              "informazioni_registrate": ["Data/ora", "Utente", "Nome file scaricato", "IP address", "User agent"]
+            },
+            {
+              "evento": "Collegamento Fascicolo",
+              "descrizione": "Associazione documento a un fascicolo",
+              "informazioni_registrate": ["Data/ora", "Utente", "Codice fascicolo", "Titolo fascicolo", "IP address"]
+            },
+            {
+              "evento": "Operazione Straordinaria",
+              "descrizione": "Operazioni eccezionali (annullamento protocollo, eliminazione forzata)",
+              "informazioni_registrate": ["Data/ora", "Utente", "Tipo operazione", "Motivazione obbligatoria", "Autorizzazione admin", "IP address", "Snapshot stato pre-operazione"]
+            }
+          ],
+          "consultazione_storico": {
+            "dove": "Pagina dettaglio documento -> Tab 'Storico' oppure Timeline eventi nella sidebar destra",
+            "come": "Gli eventi sono elencati in ordine cronologico inverso (più recenti prima). Ogni evento mostra: icona tipo evento, data/ora, utente, descrizione azione, dettagli modifiche (expand)",
+            "informazioni_visualizzate": [
+              "Data e ora esatta dell'evento (formato: gg/mm/aaaa hh:mm:ss)",
+              "Nome completo utente che ha eseguito l'operazione",
+              "Tipo di evento con icona colorata distintiva",
+              "Descrizione testuale dell'azione eseguita",
+              "Dettagli tecnici (campi modificati, vecchi/nuovi valori) - espandibili cliccando sull'evento",
+              "IP address da cui è stata effettuata l'operazione",
+              "Durata operazione (se applicabile, es. tempo upload file)"
+            ]
+          },
+          "utilita": [
+            "Conformità normativa: prova documentale di tutte le operazioni per audit fiscali/legali",
+            "Debugging: capire chi/quando/perché è stato modificato un dato (es. 'chi ha cambiato l'importo?')",
+            "Sicurezza: rilevare accessi non autorizzati o tentativi di manomissione",
+            "Responsabilità: assegnare chiaramente la responsabilità di ogni azione a un utente specifico",
+            "Analisi tempi: monitorare quanto tempo passa tra creazione e protocollazione",
+            "Formazione: studiare i pattern di utilizzo per migliorare i processi",
+            "Dispute resolution: risolvere contestazioni con prove oggettive delle operazioni"
+          ],
+          "vincoli": [
+            "Lo storico è IMMUTABILE: nessuno (nemmeno gli admin) può modificare o cancellare eventi passati",
+            "Gli eventi vengono registrati AUTOMATICAMENTE: non è possibile creare eventi manualmente",
+            "Retention periodo minimo: 10 anni (requisito fiscale per documenti lavorativi)",
+            "Gli eventi di 'Accesso Documento' e 'Download File' sono soggetti a privacy: visibili solo a utenti autorizzati o all'utente stesso",
+            "Per operazioni straordinarie la motivazione è OBBLIGATORIA e viene validata (min 20 caratteri)",
+            "Il sistema impedisce operazioni se la tracciabilità non può essere garantita (es. DB in sola lettura)"
+          ]
+        },
+        
+        "note_speciali": {
+          "attenzioni": [
+            "⚠️ Il dipendente selezionato DEVE corrispondere esattamente alla voce titolario intestata (stesso codice anagrafica)",
+            "⚠️ Non è possibile modificare dipendente, mese o anno dopo la protocollazione",
+            "⚠️ I cedolini duplicati (stesso dipendente + mese + anno + mensilità) vengono rilevati automaticamente durante l'importazione",
+            "⚠️ Documenti digitali NON devono avere ubicazione fisica assegnata",
+            "⚠️ Il file PDF deve essere leggibile e non protetto da password"
+          ],
+          "suggerimenti": [
+            "💡 Usa l'importazione ZIP per caricare tutti i cedolini del mese in una volta sola",
+            "💡 Nomina i file PDF con formato consistente: {CodDip}_{Anno}_{Mese}.pdf (es. ROSMAR01_2025_01.pdf)",
+            "💡 Imposta una scadenza ricorrente mensile per ricordarti di importare i cedolini dal consulente",
+            "💡 Collega i cedolini al fascicolo del dipendente per raggrupparli logicamente",
+            "💡 Verifica periodicamente che tutti i dipendenti abbiano ricevuto il cedolino ogni mese",
+            "💡 Effettua backup regolari della directory archivio per proteggere i dati sensibili"
+          ],
+          "vincoli_business": [
+            "✓ Documenti digitali (PDF) non possono avere ubicazione fisica",
+            "✓ Il titolario deve essere una voce intestata ad anagrafica (dipendente specifico)",
+            "✓ Non è possibile protocollare senza file PDF allegato",
+            "✓ Ogni dipendente può avere max 1 cedolino per mese/anno/mensilità",
+            "✓ Il codice documento viene auto-generato e non è modificabile"
+          ],
+          "privacy": [
+            "🔒 I cedolini contengono dati personali sensibili (stipendio, dati fiscali)",
+            "🔒 Limitare l'accesso solo al personale autorizzato (HR, amministrazione)",
+            "🔒 Non condividere cedolini via email non sicura",
+            "🔒 Rispettare il GDPR per la conservazione (max 10 anni di solito)",
+            "🔒 Implementare backup criptati per protezione dati"
+          ]
+        },
+        
+        "faq": [
+          {
+            "domanda": "Posso modificare il dipendente dopo aver salvato il documento?",
+            "risposta": "Sì, ma solo prima della protocollazione. Una volta protocollato, il documento diventa immutabile e non può essere modificato. Se hai sbagliato dipendente, elimina il documento (se in bozza) e ricrealo correttamente."
+          },
+          {
+            "domanda": "Come gestisco la 13a o 14a mensilità?",
+            "risposta": "Seleziona '13a' o '14a' nel campo Mensilità. Il sistema creerà un documento separato con lo stesso dipendente e anno. Di solito la 13a si archivia a dicembre e la 14a (se presente) a giugno/luglio."
+          },
+          {
+            "domanda": "Cosa succede se carico un cedolino duplicato durante l'importazione ZIP?",
+            "risposta": "Il sistema rileva automaticamente duplicati confrontando dipendente, mese, anno e mensilità. Ti verrà chiesto se vuoi: a) Saltare (lascia il vecchio), b) Sostituire (elimina vecchio e crea nuovo), c) Aggiungere comunque (crea duplicato con codice diverso)."
+          },
+          {
+            "domanda": "Quanto tempo devo conservare i cedolini?",
+            "risposta": "La normativa italiana richiede conservazione per almeno 5 anni ai fini fiscali. Per pratiche pensionistiche è consigliabile conservare per tutta la durata del rapporto di lavoro + 10 anni. Consulta il tuo consulente del lavoro per dettagli specifici."
+          },
+          {
+            "domanda": "Posso caricare cedolini senza file PDF?",
+            "risposta": "Sì, puoi salvare il documento in bozza senza file. Tuttavia, NON potrai protocollare il documento finché non alleghi il PDF. Utile se vuoi preparare la struttura e caricare i file in seguito."
+          },
+          {
+            "domanda": "Come faccio a sapere qual è il numero sequenziale corretto?",
+            "risposta": "Non devi preoccupartene! Il sistema calcola automaticamente il numero sequenziale progressivo in base all'anno e al dipendente. Ogni dipendente ha la sua numerazione separata che parte da 001 ogni anno."
+          },
+          {
+            "domanda": "Posso cambiare il formato del codice documento?",
+            "risposta": "Il pattern codice è configurato a livello di tipo documento dall'amministratore di sistema. Se necessiti un formato diverso (es. includere il mese nel codice), contatta l'amministratore per modificare il pattern_codice del tipo CED."
+          },
+          {
+            "domanda": "Dove finiscono fisicamente i file PDF caricati?",
+            "risposta": "I file vengono archiviati nel NAS sotto: /srv/archivio/{CLIENTE}/{TITOLARIO}/{ANNO}/. Esempio: /srv/archivio/LAFORT01/DIP - Dipendenti/ROSMAR01 - Rossi Mario/2025/ROSMAR01_2025_01_Ordinaria.pdf"
+          }
+        ],
+        
+        "risorse_correlate": {
+          "guide_correlate": [
+            {
+              "titolo": "Importazione Cedolini da ZIP",
+              "url": "/help/importa-cedolini-zip",
+              "descrizione": "Guida completa all'importazione batch di cedolini da file ZIP"
+            },
+            {
+              "titolo": "Gestione Anagrafiche Dipendenti",
+              "url": "/help/anagrafiche-dipendenti",
+              "descrizione": "Come creare e gestire le anagrafiche dei dipendenti"
+            },
+            {
+              "titolo": "Voci Titolario Intestate",
+              "url": "/help/titolario-voci-intestate",
+              "descrizione": "Spiegazione del sistema di voci titolario intestate ad anagrafiche"
+            },
+            {
+              "titolo": "Protocollazione Documenti",
+              "url": "/help/protocollo",
+              "descrizione": "Come funziona il sistema di protocollazione"
+            }
+          ],
+          "tipi_documento_correlati": [
+            {
+              "codice": "BST",
+              "nome": "Busta Paga Straordinaria",
+              "descrizione": "Per pagamenti una tantum o straordinari"
+            },
+            {
+              "codice": "CUD",
+              "nome": "Certificazione Unica Dipendente",
+              "descrizione": "Per archiviare i CUD annuali"
+            },
+            {
+              "codice": "RIM",
+              "nome": "Rimborso Spese",
+              "descrizione": "Per rimborsi spese ai dipendenti"
+            },
+            {
+              "codice": "CONTR",
+              "nome": "Contratto di Lavoro",
+              "descrizione": "Per contratti di assunzione e variazioni"
+            }
+          ],
+          "link_esterni": [
+            {
+              "titolo": "Normativa conservazione cedolini",
+              "url": "https://www.lavoro.gov.it",
+              "descrizione": "Riferimenti normativi Ministero del Lavoro"
+            }
+          ]
+        },
+        
+        "changelog": [
+          {
+            "versione": "1.1.0",
+            "data": "2026-01-29",
+            "modifiche": [
+              "Aggiunto supporto importazione ZIP con rilevamento duplicati",
+              "Aggiunto campo mensilità per gestire 13a/14a",
+              "Migliorato pattern nome file con attributi dinamici"
+            ]
+          },
+          {
+            "versione": "1.0.0",
+            "data": "2025-11-15",
+            "modifiche": [
+              "Versione iniziale tipo documento Cedolino"
+            ]
+          }
+        ]
+      }
+    }
+  }
+]

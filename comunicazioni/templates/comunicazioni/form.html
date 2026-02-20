@@ -62,3 +62,178 @@
   </form>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+console.log('=== INIZIO SCRIPT COMUNICAZIONI ===');
+
+// Test immediato
+console.log('jQuery caricato:', typeof $ !== 'undefined');
+console.log('Select2 caricato:', typeof $.fn !== 'undefined' && typeof $.fn.select2 !== 'undefined');
+
+$(document).ready(function() {
+  console.log('Document ready - inizializzazione Select2');
+  
+  // Trova i campi
+  var contattiField = $('#id_contatti_destinatari');
+  var listeField = $('#id_liste_destinatari');
+  
+  console.log('Campo contatti esistente:', contattiField.length > 0);
+  console.log('Campo liste esistente:', listeField.length > 0);
+  
+  if (contattiField.length === 0) {
+    console.error('ATTENZIONE: Campo #id_contatti_destinatari NON TROVATO nel DOM');
+    console.log('Campi select disponibili:', $('select').map(function() { return this.id; }).get());
+  }
+  
+  // Inizializza Select2 per contatti
+  if (contattiField.length > 0) {
+    console.log('Inizializzazione Select2 per contatti...');
+    
+    try {
+      contattiField.select2({
+        width: '100%',
+        placeholder: 'Cerca per email, nominativo o cliente',
+        allowClear: true,
+        ajax: {
+          url: '{% url "comunicazioni:api-contatti-autocomplete" %}',
+          dataType: 'json',
+          delay: 250,
+          data: function(params) {
+            console.log('>>> Richiesta AJAX per contatti, termine:', params.term);
+            return {
+              q: params.term || '',
+              page: params.page || 1
+            };
+          },
+          processResults: function(data) {
+            console.log('<<< Risposta AJAX ricevuta:', data);
+            return {
+              results: data.results || []
+            };
+          },
+          error: function(xhr, status, error) {
+            console.error('ERRORE AJAX:', status, error);
+          },
+          cache: true
+        },
+        minimumInputLength: 0,
+        language: {
+          inputTooShort: function() { return 'Inizia a digitare...'; },
+          noResults: function() { return 'Nessun contatto trovato'; },
+          searching: function() { return 'Ricerca in corso...'; }
+        }
+      });
+      
+      console.log('✓ Select2 contatti inizializzato correttamente');
+      
+      // Event listeners per debug
+      contattiField.on('select2:open', function() {
+        console.log('Select2 contatti: dropdown aperto');
+      });
+      
+      contattiField.on('select2:select', function(e) {
+        console.log('Select2 contatti: elemento selezionato', e.params.data);
+      });
+      
+    } catch(err) {
+      console.error('ERRORE durante inizializzazione Select2 contatti:', err);
+    }
+  }
+  
+  // Inizializza Select2 per liste
+  if (listeField.length > 0) {
+    console.log('Inizializzazione Select2 per liste...');
+    
+    try {
+      listeField.select2({
+        width: '100%',
+        placeholder: 'Seleziona liste di distribuzione',
+        allowClear: true,
+        ajax: {
+          url: '{% url "comunicazioni:api-liste-autocomplete" %}',
+          dataType: 'json',
+          delay: 250,
+          data: function(params) {
+            console.log('>>> Richiesta AJAX per liste, termine:', params.term);
+            return {
+              q: params.term || '',
+              page: params.page || 1
+            };
+          },
+          processResults: function(data) {
+            console.log('<<< Risposta AJAX liste ricevuta:', data);
+            return {
+              results: data.results || []
+            };
+          },
+          error: function(xhr, status, error) {
+            console.error('ERRORE AJAX liste:', status, error);
+          },
+          cache: true
+        },
+        minimumInputLength: 0,
+        language: {
+          inputTooShort: function() { return 'Inizia a digitare...'; },
+          noResults: function() { return 'Nessuna lista trovata'; },
+          searching: function() { return 'Ricerca in corso...'; }
+        }
+      });
+      
+      console.log('✓ Select2 liste inizializzato correttamente');
+      
+    } catch(err) {
+      console.error('ERRORE durante inizializzazione Select2 liste:', err);
+    }
+  }
+  
+  console.log('=== FINE INIZIALIZZAZIONE ===');
+  
+  // Inizializza Select2 per i campi con widget anagrafica
+  console.log('Inizializzazione Select2 per campi anagrafica...');
+  console.log('Cerco campi con data-widget="anagrafica"...');
+  
+  var anagraficaFields = $('select[data-widget="anagrafica"]');
+  console.log('Campi anagrafica trovati:', anagraficaFields.length);
+  
+  if (anagraficaFields.length === 0) {
+    console.warn('NESSUN campo con data-widget="anagrafica" trovato!');
+    console.log('Campi dinamici presenti (id_ctx__*):', $('[id^="id_ctx__"]').map(function() { 
+      return this.id + ' [' + this.tagName + ']'; 
+    }).get());
+  }
+  
+  anagraficaFields.each(function() {
+    var $field = $(this);
+    var fieldId = $field.attr('id');
+    var fieldName = $field.attr('name');
+    var dataWidget = $field.attr('data-widget');
+    var optionCount = $field.find('option').length;
+    
+    console.log('Trovato campo anagrafica:');
+    console.log('  - ID:', fieldId);
+    console.log('  - Name:', fieldName);
+    console.log('  - data-widget:', dataWidget);
+    console.log('  - Numero opzioni:', optionCount);
+    console.log('  - Tag name:', this.tagName);
+    
+    try {
+      $field.select2({
+        width: '100%',
+        placeholder: 'Seleziona o cerca un\'anagrafica...',
+        allowClear: !$field.prop('required'),
+        language: {
+          noResults: function() { return 'Nessuna anagrafica trovata'; },
+          searching: function() { return 'Ricerca in corso...'; }
+        }
+      });
+      console.log('  ✓ Select2 applicato a', fieldId);
+    } catch(err) {
+      console.error('  ✗ ERRORE applicazione Select2 a', fieldId, ':', err);
+    }
+  });
+  
+  console.log('=== FINE INIZIALIZZAZIONE COMPLETA ===');
+});
+</script>
+{% endblock %}

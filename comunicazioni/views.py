@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import socket
+from email.utils import make_msgid
 from smtplib import SMTPException, SMTPServerDisconnected
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives, get_connection
+from django.core.mail import EmailMultiAlternatives, get_connection, send_mail
 from django.db.models import Q
 from django.forms.utils import ErrorDict, ErrorList
 from django.http import JsonResponse
@@ -19,10 +20,17 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 from django.views.decorators.http import require_POST, require_http_methods, require_GET
 
-from anagrafiche.models import Anagrafica, EmailContatto, MailingList
+from anagrafiche.models import (
+    Anagrafica,
+    EmailContatto,
+    MailingList,
+    MailingListMembership,
+    MailingListIndirizzo,
+    MailingListUnsubscribeToken,
+)
 
 from .email_archiver import EmailAppendError, append_to_sent_folder
-from .forms import ComunicazioneForm, AllegatoComunicazioneForm
+from .forms import ComunicazioneForm, AllegatoComunicazioneForm, MailingListPreferenceForm
 from .models import Comunicazione, AllegatoComunicazione
 from .models_template import FirmaComunicazione, TemplateComunicazione
 from .services import protocolla_comunicazione as protocolla_comunicazione_service
@@ -152,7 +160,7 @@ def _build_form_with_template_application(request, instance: Comunicazione | Non
 @login_required
 def lista_comunicazioni(request):
     comunicazioni = (
-        Comunicazione.objects.select_related("anagrafica", "documento_protocollo", "protocollo_movimento")
+        Comunicazione.objects.select_related("documento_protocollo", "protocollo_movimento")
         .prefetch_related(
             "allegati__documento",
             "contatti_destinatari__anagrafica",
@@ -216,7 +224,7 @@ def modifica_comunicazione(request, pk):
 @login_required
 def dettaglio_comunicazione(request, pk):
     comunicazione = get_object_or_404(
-        Comunicazione.objects.select_related("anagrafica", "documento_protocollo", "protocollo_movimento")
+        Comunicazione.objects.select_related("documento_protocollo", "protocollo_movimento")
         .prefetch_related(
             "allegati__documento",
             "contatti_destinatari__anagrafica",
@@ -232,7 +240,7 @@ def dettaglio_comunicazione(request, pk):
 @require_POST
 def aggiungi_allegato(request, pk):
     comunicazione = get_object_or_404(
-        Comunicazione.objects.select_related("anagrafica", "documento_protocollo", "protocollo_movimento")
+        Comunicazione.objects.select_related("documento_protocollo", "protocollo_movimento")
         .prefetch_related(
             "allegati__documento",
             "contatti_destinatari__anagrafica",
@@ -271,7 +279,7 @@ def rimuovi_allegato(request, pk, allegato_pk):
 @login_required
 def invia_comunicazione(request, pk):
     comunicazione = get_object_or_404(
-        Comunicazione.objects.select_related("anagrafica", "documento_protocollo", "protocollo_movimento")
+        Comunicazione.objects.select_related("documento_protocollo", "protocollo_movimento")
         .prefetch_related(
             "allegati__documento",
             "contatti_destinatari__anagrafica",
@@ -288,11 +296,14 @@ def invia_comunicazione(request, pk):
             connection_kwargs["timeout"] = email_timeout
         connection = get_connection(**connection_kwargs)
         corpo_testo = comunicazione.corpo or strip_tags(comunicazione.corpo_html or "")
+        from_email = comunicazione.mittente or settings.DEFAULT_FROM_EMAIL
+        message_id = make_msgid(domain=from_email.split("@")[-1] if "@" in from_email else None)
         email = EmailMultiAlternatives(
             subject=comunicazione.oggetto,
             body=corpo_testo,
-            from_email=comunicazione.mittente or settings.DEFAULT_FROM_EMAIL,
+            from_email=from_email,
             to=comunicazione.get_destinatari_lista(),
+            headers={"Message-ID": message_id},
             connection=connection,
         )
         if comunicazione.corpo_html:
@@ -308,8 +319,12 @@ def invia_comunicazione(request, pk):
         try:
             connection.open()
             connection.send_messages([email])
+            email_message = email.message()
+            message_id_header = email_message.get("Message-ID")
+            if message_id_header:
+                message_id = message_id_header
             try:
-                append_to_sent_folder(email.message())
+                append_to_sent_folder(email_message)
             except EmailAppendError as archive_exc:
                 messages.warning(
                     request,
@@ -317,7 +332,8 @@ def invia_comunicazione(request, pk):
                 )
             comunicazione.stato = "inviata"
             comunicazione.data_invio = timezone.now()
-            comunicazione.save(update_fields=["stato", "data_invio"])
+            comunicazione.email_message_id = message_id
+            comunicazione.save(update_fields=["stato", "data_invio", "email_message_id"])
             messages.success(request, "Comunicazione inviata con successo.")
         except (ConnectionRefusedError, SMTPServerDisconnected, socket.timeout) as exc:
             if getattr(settings, "EMAIL_FAILOVER_TO_CONSOLE", settings.DEBUG):
@@ -326,7 +342,8 @@ def invia_comunicazione(request, pk):
                     email.send()
                     comunicazione.stato = "inviata"
                     comunicazione.data_invio = timezone.now()
-                    comunicazione.save(update_fields=["stato", "data_invio"])
+                    comunicazione.email_message_id = message_id
+                    comunicazione.save(update_fields=["stato", "data_invio", "email_message_id"])
                     messages.warning(
                         request,
                         "Invio SMTP non disponibile: messaggio scritto sul backend console (vedi log del server).",
@@ -365,44 +382,10 @@ def invia_comunicazione(request, pk):
 @require_http_methods(["GET", "POST"])
 def protocolla_comunicazione(request, pk):
     comunicazione = get_object_or_404(
-        Comunicazione.objects.select_related("anagrafica", "documento_protocollo", "protocollo_movimento")
+        Comunicazione.objects.select_related("documento_protocollo", "protocollo_movimento")
         .prefetch_related("allegati__documento"),
         pk=pk,
     )
-
-
-@login_required
-@require_GET
-def autocomplete_contatti(request):
-    query = (request.GET.get("q") or "").strip()
-    qs = EmailContatto.objects.filter(attivo=True)
-    if query:
-        qs = qs.filter(Q(email__icontains=query) | Q(nominativo__icontains=query))
-    results = [
-        {
-            "id": contact.pk,
-            "text": f"{contact.nominativo or contact.email} <{contact.email}>",
-        }
-        for contact in qs.select_related("anagrafica")[:20]
-    ]
-    return JsonResponse({"results": results})
-
-
-@login_required
-@require_GET
-def autocomplete_liste(request):
-    query = (request.GET.get("q") or "").strip()
-    qs = MailingList.objects.filter(attiva=True)
-    if query:
-        qs = qs.filter(Q(nome__icontains=query) | Q(slug__icontains=query))
-    results = [
-        {
-            "id": lista.pk,
-            "text": f"{lista.nome} ({lista.contatti.count()} contatti)",
-        }
-        for lista in qs[:20]
-    ]
-    return JsonResponse({"results": results})
 
     if comunicazione.is_protocollata:
         messages.info(request, "La comunicazione è già stata protocollata.")
@@ -425,6 +408,9 @@ def autocomplete_liste(request):
         if form.is_valid():
             cd = form.cleaned_data
             destinatario = (cd.get("da_chi") if cd["direzione"] == "IN" else cd.get("a_chi")) or ""
+            destinatario_anagrafica = (
+                cd.get("da_chi_anagrafica") if cd["direzione"] == "IN" else cd.get("a_chi_anagrafica")
+            )
             try:
                 movimento = protocolla_comunicazione_service(
                     comunicazione,
@@ -432,6 +418,7 @@ def autocomplete_liste(request):
                     quando=cd["quando"],
                     operatore=request.user,
                     destinatario=destinatario,
+                    destinatario_anagrafica=destinatario_anagrafica,
                     ubicazione=cd.get("ubicazione"),
                     data_rientro_prevista=cd.get("data_rientro_prevista"),
                     causale=cd.get("causale") or comunicazione.oggetto,
@@ -459,3 +446,130 @@ def autocomplete_liste(request):
             "cancel_url": comunicazione.get_absolute_url(),
         },
     )
+
+
+@login_required
+@require_GET
+def autocomplete_contatti(request):
+    query = (request.GET.get("q") or "").strip()
+    qs = EmailContatto.objects.filter(attivo=True).select_related("anagrafica")
+    if query:
+        # Ricerca su email, nominativo, denominazione cliente (nome, cognome, ragione_sociale)
+        qs = qs.filter(
+            Q(email__icontains=query) 
+            | Q(nominativo__icontains=query)
+            | Q(anagrafica__nome__icontains=query)
+            | Q(anagrafica__cognome__icontains=query)
+            | Q(anagrafica__ragione_sociale__icontains=query)
+        )
+    results = [
+        {
+            "id": contact.pk,
+            "text": f"{contact.nominativo or contact.email} <{contact.email}> - {contact.anagrafica.display_name()}",
+        }
+        for contact in qs[:20]
+    ]
+    return JsonResponse({"results": results})
+
+
+@login_required
+@require_GET
+def autocomplete_liste(request):
+    query = (request.GET.get("q") or "").strip()
+    qs = MailingList.objects.filter(attiva=True)
+    if query:
+        qs = qs.filter(Q(nome__icontains=query) | Q(slug__icontains=query))
+    results = [
+        {
+            "id": lista.pk,
+            "text": f"{lista.nome} ({lista.contatti.count()} contatti)",
+        }
+        for lista in qs[:20]
+    ]
+    return JsonResponse({"results": results})
+
+
+def _get_client_ip(request) -> str | None:
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        if parts:
+            return parts[0]
+    return request.META.get("REMOTE_ADDR")
+
+
+@require_http_methods(["GET", "POST"])
+def mailinglist_preferences(request):
+    form = MailingListPreferenceForm(request.POST or None)
+    token_sent = False
+    if request.method == "POST" and form.is_valid():
+        lista, raw_token = form.build_unsubscribe_token()
+        unsubscribe_url = request.build_absolute_uri(
+            reverse("comunicazioni:unsubscribe-confirm", args=[raw_token])
+        )
+        subject = f"Gestione preferenze - {lista.nome}"
+        body = (
+            "Hai richiesto di gestire l'iscrizione alla mailing list \"{lista}\".\n"
+            "Per completare la disiscrizione clicca o copia il seguente link:\n{url}\n\n"
+            "Se non hai effettuato tu la richiesta, ignora questa email."
+        ).format(lista=lista.nome, url=unsubscribe_url)
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [form.cleaned_data["email"]],
+        )
+        token_sent = True
+        form = MailingListPreferenceForm()
+    return render(
+        request,
+        "comunicazioni/preferences_form.html",
+        {"form": form, "token_sent": token_sent},
+    )
+
+
+@require_http_methods(["GET", "POST"])
+def unsubscribe_confirm(request, token: str):
+    token_obj = get_object_or_404(MailingListUnsubscribeToken, token=token)
+    if token_obj.is_used:
+        return render(
+            request,
+            "comunicazioni/unsubscribe_result.html",
+            {"status": "already_used", "token": token_obj},
+        )
+
+    if request.method == "POST":
+        _apply_unsubscribe(token_obj)
+        token_obj.mark_used(_get_client_ip(request))
+        return render(
+            request,
+            "comunicazioni/unsubscribe_result.html",
+            {"status": "success", "token": token_obj},
+        )
+
+    return render(
+        request,
+        "comunicazioni/unsubscribe_confirm.html",
+        {"token": token_obj},
+    )
+
+
+def _apply_unsubscribe(token_obj: MailingListUnsubscribeToken) -> None:
+    now = timezone.now()
+    lista = token_obj.mailing_list
+    if token_obj.contatto:
+        contatto = token_obj.contatto
+        if contatto.marketing_consent:
+            contatto.marketing_consent = False
+            contatto.marketing_consent_source = "unsubscribe-link"
+            contatto.save(update_fields=["marketing_consent", "marketing_consent_source"])
+        MailingListMembership.objects.filter(
+            mailing_list=lista,
+            contatto=contatto,
+            disiscritto_il__isnull=True,
+        ).update(disiscritto_il=now, disiscritto_note="Disiscrizione tramite link")
+    if token_obj.indirizzo_extra:
+        indirizzo = token_obj.indirizzo_extra
+        indirizzo.marketing_consent = False
+        indirizzo.disiscritto_il = now
+        indirizzo.save(update_fields=["marketing_consent", "disiscritto_il"])

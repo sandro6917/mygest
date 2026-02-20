@@ -1,0 +1,20 @@
+# Dipendenze aggiuntive per miglioramenti File Storage e Sicurezza
+# 
+# ISTRUZIONI INSTALLAZIONE:
+# pip install -r requirements-security.txt
+#
+# Per sistemi Debian/Ubuntu, installare anche pacchetti sistema:
+# sudo apt-get install libmagic1 python3-magic clamav clamav-daemon
+
+# Validazione MIME type (magic bytes)
+python-magic==0.4.27
+
+# Scansione antivirus ClamAV
+clamd==1.0.2
+
+# (Opzionale) Se si usa Celery per scansioni asincrone
+# celery==5.3.4
+# redis==5.0.1  # Per broker Redis
+
+# (Opzionale) Per gestione .env avanzata
+python-decouple==3.8

@@ -30,6 +30,8 @@ class ScadenzaForm(forms.ModelForm):
             "periodicita",
             "periodicita_intervallo",
             "periodicita_config",
+            "num_occorrenze",
+            "data_scadenza",
             "google_calendar_calendar_id",
         ]
         widgets = {
@@ -38,6 +40,7 @@ class ScadenzaForm(forms.ModelForm):
             "periodicita_config": forms.Textarea(
                 attrs={"rows": 3, "placeholder": '{"weekday": [0, 2], "dates": []}'}
             ),
+            "data_scadenza": forms.DateInput(attrs={"type": "date"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -173,6 +176,7 @@ class ScadenzaOccorrenzaForm(forms.ModelForm):
             "descrizione",
             "inizio",
             "fine",
+            "giornaliera",
             "metodo_alert",
             "offset_alert_minuti",
             "alert_config",
@@ -207,6 +211,7 @@ ScadenzaOccorrenzaFormSet = inlineformset_factory(
         "descrizione",
         "inizio",
         "fine",
+        "giornaliera",
         "metodo_alert",
         "offset_alert_minuti",
         "alert_config",

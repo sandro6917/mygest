@@ -1,0 +1,253 @@
+/* ===================================
+   TEMA DARK/LIGHT MODE
+=================================== */
+
+/* Variabili tema light (default) */
+:root {
+  /* Colori principali */
+  --blue: #0d47a1;
+  --azul: #1976d2;
+  --blue-hover: #125ea7;
+  
+  /* Backgrounds */
+  --bg-primary: #e3f2fd;
+  --bg-card: #ffffff;
+  --bg-navbar: var(--blue);
+  --bg-input: #ffffff;
+  --bg-input-disabled: #f3f6fb;
+  --bg-actions: #d9e4f2;
+  
+  /* Testi */
+  --text-primary: #1f2d3d;
+  --text-secondary: #6b7c93;
+  --text-muted: #8aa0bd;
+  --text-on-primary: #ffffff;
+  
+  /* Bordi */
+  --border: #dbe5f3;
+  --border-soft: #e5e5e5;
+  --border-input: #c9d7ee;
+  
+  /* Altro */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 2px 6px rgba(0,0,0,.08);
+  --container-max: 1100px;
+  --space: 16px;
+  --navbar-h: 56px;
+  
+  /* Transizione tema */
+  --theme-transition: background-color 0.3s ease, 
+                      color 0.3s ease, 
+                      border-color 0.3s ease;
+}
+
+/* Variabili tema dark */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-primary: #0f172a;
+  --bg-card: #1e293b;
+  --bg-navbar: #0f172a;
+  --bg-input: #334155;
+  --bg-input-disabled: #1e293b;
+  --bg-actions: #334155;
+  
+  /* Testi */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-on-primary: #f1f5f9;
+  
+  /* Bordi */
+  --border: #334155;
+  --border-soft: #475569;
+  --border-input: #475569;
+  
+  /* Ombre più marcate per dark mode */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+  --shadow-md: 0 4px 8px rgba(0,0,0,.4);
+  
+  /* Colori primari leggermente più chiari per contrasto */
+  --azul: #3b82f6;
+  --blue-hover: #2563eb;
+}
+
+/* Applicazione transizioni smooth */
+*,
+*::before,
+*::after {
+  transition: var(--theme-transition);
+}
+
+/* Toggle theme button */
+.theme-toggle {
+  position: relative;
+  background: transparent;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 0;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--bg-input);
+  border-color: var(--azul);
+  transform: rotate(180deg);
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Icone tema */
+.theme-icon-sun,
+.theme-icon-moon {
+  position: absolute;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+[data-theme="light"] .theme-icon-moon,
+[data-theme="dark"] .theme-icon-sun {
+  opacity: 0;
+  transform: rotate(-90deg) scale(0);
+}
+
+[data-theme="light"] .theme-icon-sun,
+[data-theme="dark"] .theme-icon-moon {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+/* Inversione colori per alcuni elementi in dark mode */
+[data-theme="dark"] img:not(.no-invert) {
+  filter: brightness(0.9) contrast(1.1);
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .box {
+  box-shadow: var(--shadow-sm);
+  border-color: var(--border);
+}
+
+/* Miglioramento contrasto input in dark mode */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-color: var(--border-input);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+}
+
+/* Navbar in dark mode */
+[data-theme="dark"] .navbar {
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,.5);
+}
+
+/* Code blocks in dark mode */
+[data-theme="dark"] code,
+[data-theme="dark"] pre {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* Link color adjustment for dark mode */
+[data-theme="dark"] a.link {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] a.link:hover {
+  color: #93c5fd;
+}
+
+/* Bootstrap alerts in dark mode */
+[data-theme="dark"] .alert {
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .alert-info {
+  background: #1e3a5f;
+  color: #90cdf4;
+  border-color: #2c5282;
+}
+
+[data-theme="dark"] .alert-success {
+  background: #1e4620;
+  color: #9ae6b4;
+  border-color: #276749;
+}
+
+[data-theme="dark"] .alert-warning {
+  background: #5a3e1a;
+  color: #fbd38d;
+  border-color: #744210;
+}
+
+[data-theme="dark"] .alert-danger {
+  background: #5a1a1a;
+  color: #fc8181;
+  border-color: #742a2a;
+}
+
+/* Scroll bar styling for dark mode */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 12px;
+  background: var(--bg-primary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 6px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Print: force light mode */
+@media print {
+  [data-theme="dark"] {
+    --bg-primary: #ffffff;
+    --bg-card: #ffffff;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --border: #cccccc;
+  }
+}
+
+/* Prefers color scheme (rispetta preferenza OS) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    /* Auto-attiva dark mode se OS in dark mode e utente non ha scelto light */
+    --bg-primary: #0f172a;
+    --bg-card: #1e293b;
+    --bg-navbar: #0f172a;
+    --bg-input: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border: #334155;
+  }
+}

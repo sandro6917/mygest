@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DocumentoTipo HelpData Schema",
+  "description": "Schema di validazione per il campo help_data di DocumentiTipo",
+  "type": "object",
+  "properties": {
+    "descrizione_breve": {
+      "type": "string",
+      "description": "Descrizione sintetica del tipo documento"
+    },
+    "quando_usare": {
+      "type": "object",
+      "properties": {
+        "casi_uso": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "non_usare_per": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "campi_obbligatori": {
+      "type": "object",
+      "properties": {
+        "sempre": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "condizionali": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["sempre"]
+    },
+    "attributi_dinamici": {
+      "type": "object",
+      "properties": {
+        "disponibili": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "codice": {
+                "type": "string"
+              },
+              "nome": {
+                "type": "string"
+              },
+              "tipo": {
+                "type": "string"
+              },
+              "descrizione": {
+                "type": "string"
+              },
+              "obbligatorio": {
+                "type": "boolean"
+              },
+              "esempio": {
+                "type": "string"
+              }
+            },
+            "required": ["codice", "nome", "tipo", "descrizione", "obbligatorio"]
+          }
+        },
+        "pattern_code_examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {
+                "type": "string"
+              },
+              "risultato": {
+                "type": "string"
+              },
+              "spiegazione": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "guida_compilazione": {
+      "type": "object",
+      "properties": {
+        "step": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "numero": {
+                "type": "integer"
+              },
+              "titolo": {
+                "type": "string"
+              },
+              "descrizione": {
+                "type": "string"
+              },
+              "campo": {
+                "type": "string"
+              },
+              "esempio": {
+                "type": "string"
+              }
+            },
+            "required": ["numero", "titolo", "descrizione"]
+          }
+        }
+      }
+    },
+    "pattern_codice": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "string"
+        },
+        "spiegazione": {
+          "type": "string"
+        },
+        "esempi": {
+          "type": "array"
+        },
+        "placeholder_disponibili": {
+          "type": "object"
+        }
+      },
+      "required": ["default", "spiegazione"]
+    },
+    "archiviazione": {
+      "type": "object",
+      "properties": {
+        "percorso_tipo": {
+          "type": "string"
+        },
+        "esempio": {
+          "type": "string"
+        },
+        "esempio_completo": {
+          "type": "string"
+        },
+        "note": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["percorso_tipo", "esempio"]
+    },
+    "relazione_fascicoli": {
+      "type": "object",
+      "properties": {
+        "descrizione": {
+          "type": "string"
+        },
+        "best_practices": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "stati_possibili": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stato_iniziale": {
+          "type": "string"
+        },
+        "azioni_disponibili": {
+          "type": "array"
+        }
+      },
+      "required": ["stati_possibili"]
+    },
+    "note_speciali": {
+      "type": "object",
+      "properties": {
+        "attenzioni": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "suggerimenti": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vincoli_business": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "faq": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "domanda": {
+            "type": "string"
+          },
+          "risposta": {
+            "type": "string"
+          }
+        },
+        "required": ["domanda", "risposta"]
+      }
+    },
+    "risorse_correlate": {
+      "type": "object",
+      "properties": {
+        "guide_correlate": {
+          "type": "array"
+        },
+        "tipi_documento_correlati": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

@@ -1,20 +1,166 @@
 {% extends "base.html" %}
 {% block content %}
   <h1>Importazione Anagrafiche da CSV</h1>
-  <p>
-    Scarica un <a href="{% url 'anagrafiche:facsimile_csv' %}">fac-simile CSV</a> da compilare.<br>
-    <small>Campi obbligatori: tipo, codice_fiscale</small>
-  </p>
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Importa</button>
-  </form>
+  
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Istruzioni</h5>
+      <p>
+        Scarica un <a href="{% url 'anagrafiche:facsimile_csv' %}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-download"></i> Fac-simile CSV
+        </a> da compilare.
+      </p>
+      <div class="alert alert-info">
+        <strong>Campi obbligatori:</strong>
+        <ul class="mb-0">
+          <li><strong>tipo</strong>: PF (Persona Fisica) o PG (Persona Giuridica)</li>
+          <li><strong>codice_fiscale</strong>: codice fiscale (16 caratteri per PF, 11 per PG)</li>
+          <li>Per <strong>PF</strong>: nome e cognome</li>
+          <li>Per <strong>PG</strong>: ragione_sociale</li>
+        </ul>
+      </div>
+      <div class="alert alert-warning">
+        <strong>Note:</strong>
+        <ul class="mb-0">
+          <li>Il file deve essere in formato CSV con separatore <code>;</code> (punto e virgola)</li>
+          <li>Encoding: UTF-8 o Latin-1</li>
+          <li>Non verranno importate righe con codice fiscale, P.IVA o PEC già esistenti nel database</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Carica il file CSV</h5>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-upload"></i> Importa Anagrafiche
+        </button>
+      </form>
+    </div>
+  </div>
+
   {% if messages %}
-    <ul>
+    <div class="messages">
       {% for message in messages %}
-        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
       {% endfor %}
-    </ul>
+    </div>
   {% endif %}
+
+  {% if report %}
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-clipboard-data"></i> Report di Importazione
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row text-center mb-4">
+          <div class="col-md-4">
+            <div class="card border-secondary">
+              <div class="card-body">
+                <h3 class="display-4">{{ report.totale }}</h3>
+                <p class="text-muted mb-0">Righe totali</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-success">
+              <div class="card-body">
+                <h3 class="display-4 text-success">{{ report.num_importate }}</h3>
+                <p class="text-muted mb-0">Importate</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-warning">
+              <div class="card-body">
+                <h3 class="display-4 text-warning">{{ report.num_scartate }}</h3>
+                <p class="text-muted mb-0">Scartate</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if report.importate %}
+          <h5 class="text-success mt-4">
+            <i class="bi bi-check-circle"></i> Anagrafiche importate con successo ({{ report.num_importate }})
+          </h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+              <thead class="table-success">
+                <tr>
+                  <th>Riga CSV</th>
+                  <th>Nome/Ragione Sociale</th>
+                  <th>Codice Fiscale</th>
+                  <th>Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in report.importate %}
+                  <tr>
+                    <td>{{ item.riga }}</td>
+                    <td>{{ item.nome }}</td>
+                    <td><code>{{ item.codice_fiscale }}</code></td>
+                    <td>
+                      <a href="{% url 'anagrafiche:detail' item.id %}" 
+                         class="btn btn-sm btn-outline-primary" 
+                         title="Visualizza anagrafica">
+                        <i class="bi bi-eye"></i> Dettagli
+                      </a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+
+        {% if report.scartate %}
+          <h5 class="text-warning mt-4">
+            <i class="bi bi-exclamation-triangle"></i> Righe scartate ({{ report.num_scartate }})
+          </h5>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped">
+              <thead class="table-warning">
+                <tr>
+                  <th>Riga CSV</th>
+                  <th>Dati</th>
+                  <th>Motivi dello scarto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in report.scartate %}
+                  <tr>
+                    <td>{{ item.riga }}</td>
+                    <td>{{ item.dati|truncatewords:10 }}</td>
+                    <td>
+                      <ul class="mb-0 list-unstyled text-danger">
+                        {% for motivo in item.motivi %}
+                          <li><i class="bi bi-x-circle"></i> {{ motivo }}</li>
+                        {% endfor %}
+                      </ul>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="mt-4">
+    <a href="{% url 'anagrafiche:home' %}" class="btn btn-secondary">
+      <i class="bi bi-arrow-left"></i> Torna alle Anagrafiche
+    </a>
+  </div>
 {% endblock %}

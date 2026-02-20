@@ -25,6 +25,47 @@ def _truncate(text: str, max_chars: int) -> str:
         return text[: max_chars - 1] + "…"
     return text or ""
 
+def render_etichetta_dymo(unita, *, include_qr: bool = None, mostra_path: bool = None,
+                          base_url: Optional[str] = None) -> HttpResponse:
+    """
+    Genera etichetta PDF per Dymo LabelWriter 450
+    Usa il sistema stampe.services.render_modulo_pdf() per rendering completo da database
+    I parametri include_qr e mostra_path sono IGNORATI - configurazione in StampaCampo
+    """
+    from stampe.services import render_modulo_pdf, get_modulo_or_404
+    
+    try:
+        # Recupera modulo dal database
+        modulo = get_modulo_or_404(
+            app_label='archivio_fisico',
+            model='unitafisica',
+            slug='Etichetta_archivio'
+        )
+        
+        # Rendering completo tramite sistema stampe
+        pdf_bytes = render_modulo_pdf(unita, modulo)
+        
+        resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+        resp["Content-Disposition"] = 'inline; filename="etichetta_dymo.pdf"'
+        return resp
+        
+    except Exception as e:
+        # Fallback: errore
+        from io import BytesIO
+        buf = BytesIO()
+        c = canvas.Canvas(buf, pagesize=(89 * mm, 36 * mm))
+        c.setFont("Helvetica", 10)
+        c.drawString(5 * mm, 18 * mm, f"ERRORE: {str(e)}")
+        c.showPage()
+        c.save()
+        
+        pdf = buf.getvalue()
+        buf.close()
+        
+        resp = HttpResponse(pdf, content_type="application/pdf")
+        resp["Content-Disposition"] = 'inline; filename="etichetta_error.pdf"'
+        return resp
+
 def render_etichette_unita(unita_list: Iterable, *, include_qr: bool = True, mostra_path: bool = True,
                            cols: int = 3, rows: int = 8, bordi: bool = False,
                            base_url: Optional[str] = None) -> HttpResponse:

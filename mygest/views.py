@@ -1,8 +1,10 @@
 from __future__ import annotations
+import os
 from django.db.models import Q
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, NoReverseMatch
+from django.conf import settings
 
 from mygest.breadcrumbs import set_breadcrumbs
 
@@ -101,6 +103,24 @@ def _detail_url(obj) -> str:
         return f"/admin/{app}/{model}/{obj.pk}/change/"
 
 def home(request):
+    """
+    Serve React SPA in production.
+    In development (DEBUG=True), shows Django debug page with recent entries.
+    """
+    if not settings.DEBUG:
+        # Production: serve React frontend
+        frontend_index = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'index.html')
+        if os.path.exists(frontend_index):
+            with open(frontend_index, 'r', encoding='utf-8') as f:
+                return HttpResponse(f.read(), content_type='text/html')
+        else:
+            return HttpResponse(
+                '<h1>Frontend not built</h1>'
+                '<p>Run: cd frontend && npm install && npm run build</p>',
+                status=503
+            )
+    
+    # Development: show Django debug page
     pratiche_qs = _order(Pratica.objects.all())[:10]
     documenti_qs = _order(Documento.objects.all())[:10]
     fascicoli_qs = _order(Fascicolo.objects.all())[:10]

@@ -5,9 +5,14 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 from django.utils.text import slugify
+from django.utils import timezone
 from datetime import date
 from django.urls import reverse
 import re
+import uuid
+
+# Import modello ComuneItaliano
+from .models_comuni import ComuneItaliano
 
 # ------------------------------
 # VALIDATORI
@@ -126,6 +131,9 @@ class Anagrafica(models.Model):
     email = models.EmailField(blank=True)
     telefono = models.CharField(max_length=30, blank=True)
     indirizzo = models.CharField(max_length=255, blank=True)
+
+    # Denominazione abbreviata
+    denominazione_abbreviata = models.TextField(null=True, blank=True, help_text="Denominazione abbreviata (primi 15 caratteri senza spazi)")
 
     note = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -263,18 +271,30 @@ class Indirizzo(models.Model):
         choices=TipoIndirizzo.choices,
     )
 
-    # Componenti dell’indirizzo
+    # Componenti dell'indirizzo
     toponimo = models.CharField("Toponimo (via, viale, piazza…)", max_length=50, blank=True)
     indirizzo = models.CharField("Indirizzo", max_length=255)
     numero_civico = models.CharField("Numero civico", max_length=20, blank=True)
     frazione = models.CharField("Frazione", max_length=100, blank=True)
+    
+    # Collegamento a tabella comuni italiani
+    comune_italiano = models.ForeignKey(
+        ComuneItaliano,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="indirizzi",
+        verbose_name="Comune italiano",
+        help_text="Se selezionato, CAP/Comune/Provincia vengono compilati automaticamente"
+    )
+    
     cap = models.CharField(  # validazione spostata in clean() per gestire estero
         "CAP",
         max_length=5,
         blank=True,
     )
     comune = models.CharField("Comune", max_length=120)
-    provincia = models.CharField("Provincia", max_length=2, blank=True, help_text="Sigla (es. MI)")
+    provincia = models.CharField("Provincia", max_length=3, blank=True, help_text="Sigla (es. MI)")
     nazione = models.CharField("Nazione", max_length=2, default="IT", help_text="ISO 3166-1 alpha-2 (es. IT)")
 
     principale = models.BooleanField("Principale", default=False)
@@ -292,18 +312,23 @@ class Indirizzo(models.Model):
             models.Index(fields=["comune", "provincia"]),
         ]
         constraints = [
-            # Consente al massimo un indirizzo principale per TIPO all'interno di una stessa anagrafica
+            # MODIFICATO: Un solo indirizzo principale per ANAGRAFICA (non per tipo)
             models.UniqueConstraint(
-                fields=["anagrafica", "tipo_indirizzo"],
+                fields=["anagrafica"],
                 condition=models.Q(principale=True),
-                name="uniq_indirizzo_principale_per_tipo",
+                name="uniq_indirizzo_principale_per_anagrafica",
             ),
         ]
 
     def clean(self):
         errors = {}
 
-        # Normalizza per validazione
+        # Se è collegato a un comune italiano, i campi sono sincronizzati automaticamente
+        # quindi non serve validarli
+        if self.comune_italiano_id:
+            return
+
+        # Normalizza per validazione (solo se non c'è comune_italiano)
         naz = (self.nazione or "").strip().upper() or "IT"
         cap = (self.cap or "").strip()
         prov = (self.provincia or "").strip().upper()
@@ -314,8 +339,8 @@ class Indirizzo(models.Model):
                 errors["comune"] = _("Comune obbligatorio per indirizzi italiani.")
             if not cap or not cap.isdigit() or len(cap) != 5:
                 errors["cap"] = _("Il CAP italiano deve avere 5 cifre.")
-            if not prov or len(prov) != 2 or not prov.isalpha():
-                errors["provincia"] = _("La provincia italiana deve essere una sigla di 2 lettere.")
+            if not prov or len(prov) not in (2, 3) or not prov.isalpha():
+                errors["provincia"] = _("La provincia italiana deve essere una sigla di 2-3 lettere.")
         else:
             # Estero: CAP e provincia opzionali; se forniti, li accettiamo senza formato rigido
             pass
@@ -324,6 +349,15 @@ class Indirizzo(models.Model):
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        # Sincronizzazione automatica da comune_italiano
+        if self.comune_italiano_id:
+            # Se è collegato a un comune italiano, sincronizza automaticamente i campi
+            comune = self.comune_italiano
+            self.cap = comune.cap
+            self.comune = comune.nome
+            self.provincia = comune.provincia
+            self.nazione = "IT"
+        
         # Normalizzazione campi
         self.toponimo = (self.toponimo or "").strip()
         self.indirizzo = (self.indirizzo or "").strip()
@@ -335,11 +369,11 @@ class Indirizzo(models.Model):
         self.nazione = (self.nazione or "IT").strip().upper()
 
         with transaction.atomic():
-            # Se imposto questo come principale, disattivo gli altri dello stesso tipo per la stessa anagrafica
+            # MODIFICATO: Se imposto questo come principale, disattivo TUTTI gli altri della stessa anagrafica
+            # (non solo quelli dello stesso tipo, perché può esserci un solo principale per anagrafica)
             if self.principale and self.anagrafica_id:
                 qs = type(self).objects.filter(
                     anagrafica_id=self.anagrafica_id,
-                    tipo_indirizzo=self.tipo_indirizzo,
                     principale=True,
                 )
                 if self.pk:
@@ -557,6 +591,9 @@ class EmailContatto(models.Model):
     note = models.CharField(max_length=255, blank=True)
     is_preferito = models.BooleanField(default=False, help_text=_("Segna il contatto come prioritario."))
     attivo = models.BooleanField(default=True)
+    marketing_consent = models.BooleanField(default=False, help_text=_("Il contatto ha autorizzato invii marketing."))
+    marketing_consent_acquired_at = models.DateTimeField(null=True, blank=True)
+    marketing_consent_source = models.CharField(max_length=120, blank=True, help_text=_("Es. modulo web, contratto, operatore."))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -571,15 +608,58 @@ class EmailContatto(models.Model):
             )
         ]
 
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            # Se imposto questo come preferito, disattivo gli altri dello stesso TIPO per la stessa anagrafica
+            # Logica: 1 solo preferito per tipo GEN, 1 solo preferito per tipo PEC, etc.
+            if self.is_preferito and self.anagrafica_id:
+                qs = type(self).objects.filter(
+                    anagrafica_id=self.anagrafica_id,
+                    tipo=self.tipo,
+                    is_preferito=True,
+                )
+                if self.pk:
+                    qs = qs.exclude(pk=self.pk)
+                qs.update(is_preferito=False)
+
+            if self.marketing_consent and not self.marketing_consent_acquired_at:
+                self.marketing_consent_acquired_at = timezone.now()
+            if not self.marketing_consent:
+                self.marketing_consent_source = self.marketing_consent_source or ""
+
+            super().save(*args, **kwargs)
+
     def __str__(self) -> str:
         label = self.nominativo or self.email
         return f"{label} ({self.get_tipo_display()})"
 
+    @property
+    def has_marketing_consent(self) -> bool:
+        return self.marketing_consent
+
 
 class MailingList(models.Model):
+    class Finalita(models.TextChoices):
+        SERVIZIO = "SERVIZIO", _("Comunicazioni di servizio / obbligatorie")
+        MARKETING = "MARKETING", _("Marketing e aggiornamenti volontari")
+
     nome = models.CharField(max_length=120, unique=True)
     slug = models.SlugField(max_length=140, unique=True)
     descrizione = models.TextField(blank=True)
+    finalita = models.CharField(
+        max_length=20,
+        choices=Finalita.choices,
+        default=Finalita.SERVIZIO,
+        help_text=_("Determina se la lista richiede consenso marketing esplicito."),
+    )
+    informativa_privacy_url = models.URLField(
+        blank=True,
+        help_text=_("Link all'informativa privacy specifica mostrata in fase di consenso."),
+    )
+    note_consenso = models.TextField(
+        blank=True,
+        help_text=_("Annotazioni operative sul consenso (es. campagna, clausole)."),
+    )
     proprietario = models.ForeignKey(
         Anagrafica,
         on_delete=models.SET_NULL,
@@ -602,6 +682,27 @@ class MailingList(models.Model):
         verbose_name_plural = _("Mailing list")
         ordering = ["nome"]
 
+    @property
+    def richiede_consenso_marketing(self) -> bool:
+        return self.finalita == self.Finalita.MARKETING
+
+    def issue_unsubscribe_token(
+        self,
+        *,
+        contatto: EmailContatto | None = None,
+        indirizzo: "MailingListIndirizzo" | None = None,
+        email: str | None = None,
+    ) -> "MailingListUnsubscribeToken":
+        resolved_email = email or (contatto.email if contatto else None) or (indirizzo.email if indirizzo else None)
+        if not resolved_email:
+            raise ValueError("Impossibile generare token senza email")
+        return MailingListUnsubscribeToken.objects.create(
+            mailing_list=self,
+            contatto=contatto,
+            indirizzo_extra=indirizzo,
+            email=resolved_email,
+        )
+
     def save(self, *args, **kwargs):
         if not self.slug:
             base = slugify(self.nome) or "lista"
@@ -621,6 +722,8 @@ class MailingListMembership(models.Model):
     mailing_list = models.ForeignKey(MailingList, on_delete=models.CASCADE, related_name="membership")
     contatto = models.ForeignKey(EmailContatto, on_delete=models.CASCADE, related_name="membership")
     ruolo = models.CharField(max_length=40, blank=True, help_text=_("Ruolo del contatto nella lista (es. CC, referente)."))
+    disiscritto_il = models.DateTimeField(null=True, blank=True)
+    disiscritto_note = models.CharField(max_length=255, blank=True)
 
     class Meta:
         verbose_name = _("Iscrizione mailing list")
@@ -630,11 +733,19 @@ class MailingListMembership(models.Model):
     def __str__(self) -> str:
         return f"{self.mailing_list} -> {self.contatto}"
 
+    @property
+    def is_attiva(self) -> bool:
+        return self.disiscritto_il is None
+
 
 class MailingListIndirizzo(models.Model):
     mailing_list = models.ForeignKey(MailingList, on_delete=models.CASCADE, related_name="indirizzi_extra")
     email = models.EmailField()
     nominativo = models.CharField(max_length=120, blank=True)
+    marketing_consent = models.BooleanField(default=False)
+    marketing_consent_acquired_at = models.DateTimeField(null=True, blank=True)
+    marketing_consent_source = models.CharField(max_length=120, blank=True)
+    disiscritto_il = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = _("Indirizzo mailing list")
@@ -644,3 +755,53 @@ class MailingListIndirizzo(models.Model):
     def __str__(self) -> str:
         label = self.nominativo or self.email
         return f"{label} ({self.mailing_list})"
+
+    def save(self, *args, **kwargs):
+        if self.marketing_consent and not self.marketing_consent_acquired_at:
+            self.marketing_consent_acquired_at = timezone.now()
+        super().save(*args, **kwargs)
+
+    @property
+    def has_marketing_consent(self) -> bool:
+        return self.marketing_consent and self.disiscritto_il is None
+
+
+class MailingListUnsubscribeToken(models.Model):
+    mailing_list = models.ForeignKey(MailingList, on_delete=models.CASCADE, related_name="unsubscribe_tokens")
+    contatto = models.ForeignKey(
+        EmailContatto,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="unsubscribe_tokens",
+    )
+    indirizzo_extra = models.ForeignKey(
+        MailingListIndirizzo,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="unsubscribe_tokens",
+    )
+    email = models.EmailField()
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    used_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Token disiscrizione mailing list")
+        verbose_name_plural = _("Token disiscrizione mailing list")
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Token {self.token} -> {self.email}"
+
+    @property
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+    def mark_used(self, ip_address: str | None = None) -> None:
+        self.used_at = timezone.now()
+        if ip_address:
+            self.used_ip = ip_address
+        self.save(update_fields=["used_at", "used_ip"])

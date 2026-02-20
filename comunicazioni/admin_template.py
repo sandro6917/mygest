@@ -12,10 +12,12 @@ class TemplateContextFieldInline(admin.TabularInline):
         "key",
         "label",
         "field_type",
+        "widget",
         "required",
         "default_value",
         "choices",
         "source_path",
+        "format_string",
         "help_text",
     )
     ordering = ("ordering", "id")

@@ -92,7 +92,7 @@
             <tr>
               <th>{% trans "Titolo" %}</th>
               <th>{% trans "Data/Ora" %}</th>
-              <th>{% trans "Metodo" %}</th>
+              <th>{% trans "Alert Configurati" %}</th>
               <th>{% trans "Stato" %}</th>
               <th>{% trans "Azioni" %}</th>
             </tr>
@@ -100,10 +100,60 @@
           <tbody>
             {% for occ in occorrenze %}
               <tr>
-                <td>{{ occ.titolo|default:scadenza.titolo }}</td>
-                <td>{{ occ.inizio|date:"d/m/Y H:i" }}</td>
-                <td>{{ occ.get_metodo_alert_display }}</td>
-                <td>{{ occ.get_stato_display }}</td>
+                <td>
+                  <div style="font-weight:600;">{{ occ.titolo|default:scadenza.titolo }}</div>
+                  {% if occ.descrizione %}
+                    <div class="muted" style="font-size:12px; margin-top:4px;">{{ occ.descrizione|truncatewords:15 }}</div>
+                  {% endif %}
+                </td>
+                <td>
+                  <div style="font-weight:600;">{{ occ.inizio|date:"d/m/Y H:i" }}</div>
+                  {% if occ.fine %}
+                    <div class="muted" style="font-size:12px;">→ {{ occ.fine|date:"d/m/Y H:i" }}</div>
+                  {% endif %}
+                  {% if occ.giornaliera %}
+                    <span class="badge" style="background:#e5e7eb; color:#374151; margin-top:4px;">🗓️ {% trans "Giornaliero" %}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% with alerts=occ.alerts.all %}
+                    {% if alerts %}
+                      <div style="font-size:13px;">
+                        {% for alert in alerts %}
+                          <div style="margin-bottom:4px;">
+                            {% if alert.stato == 'sent' %}
+                              <span style="color:#10b981;">✓</span>
+                            {% elif alert.stato == 'failed' %}
+                              <span style="color:#ef4444;">✗</span>
+                            {% else %}
+                              <span style="color:#f59e0b;">⏰</span>
+                            {% endif %}
+                            <strong>{{ alert.offset_alert }}</strong> {{ alert.get_offset_alert_periodo_display }}
+                            {% trans "prima" %} 
+                            <span class="badge" style="background:#f3f4f6; color:#374151; font-size:10px;">
+                              {{ alert.get_metodo_alert_display }}
+                            </span>
+                            {% if alert.alert_programmata_il %}
+                              <div class="muted" style="font-size:11px; margin-left:20px;">
+                                {{ alert.alert_programmata_il|date:"d/m/Y H:i" }}
+                              </div>
+                            {% endif %}
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <span class="muted">{% trans "Nessun alert" %}</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+                <td>
+                  <span class="badge" style="
+                    {% if occ.stato == 'completed' %}background:#10b981; color:white;
+                    {% elif occ.stato == 'alerted' %}background:#3b82f6; color:white;
+                    {% else %}background:#f3f4f6; color:#374151;
+                    {% endif %}
+                  ">{{ occ.get_stato_display }}</span>
+                </td>
                 <td>
                   <form method="post" action="{% url 'scadenze:trigger_alert' occ.pk %}" style="display:inline">
                     {% csrf_token %}
@@ -113,11 +163,13 @@
               </tr>
               {% if occ.log_eventi.all %}
                 <tr>
-                  <td colspan="5">
-                    <div class="muted">
-                      {% trans "Log" %}:
+                  <td colspan="5" style="background:#f9fafb; padding:10px 15px;">
+                    <div class="muted" style="font-size:12px;">
+                      <strong>{% trans "Log" %}:</strong>
                       {% for log in occ.log_eventi.all %}
-                        <span class="tag">{{ log.get_evento_display }} ({{ log.registrato_il|date:"d/m/Y H:i" }})</span>
+                        <span class="badge" style="background:{% if log.esito %}#10b981{% else %}#ef4444{% endif %}; color:white; margin:2px;">
+                          {{ log.get_evento_display }} ({{ log.registrato_il|date:"d/m/Y H:i" }})
+                        </span>
                       {% endfor %}
                     </div>
                   </td>
@@ -132,4 +184,40 @@
     </div>
   </section>
 </div>
+
+<style>
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #f9fafb;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.table tbody tr:hover {
+  background: #fafafa;
+}
+</style>
 {% endblock %}

@@ -1,46 +1,33 @@
 {% extends "base_home.html" %}
+{% load scadenze_tags %}
 {% block title %}Home - Gestione pratiche{% endblock %}
-{% block content %}
-<style>
-  .home-layout { display: grid; grid-template-columns: 20% 60% 20%; gap: 12px; align-items: start; }
-  .home-col-2-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  @media (max-width: 1024px) {
-    .home-layout { grid-template-columns: 1fr; }
-    .home-col-2-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 700px) {
-    .home-col-2-grid { grid-template-columns: 1fr; }
-  }
-</style>
 
-<div class="home-layout">
-  <aside class="home-col-1">
-    <section class="card">
-      <h2>Stampe veloci</h2>
-      <div class="body">
-        <ul class="list">
-          <li>
-            <a class="link" href="http://127.0.0.1:8000/etichette/lista/titolario/titolariovoce/?lista=TIT" target="_blank" rel="noopener">
-              Voci del titolario
-            </a>
-          </li>
-        </ul>
-      </div>
-    </section>
-  </aside>
+{% block home_col1 %}
+<section class="card">
+  <h2>Stampe veloci</h2>
+  <div class="body">
+    <ul class="list">
+      <li>
+        <a class="link" href="http://127.0.0.1:8000/etichette/lista/titolario/titolariovoce/?lista=TIT" target="_blank" rel="noopener">
+          Voci del titolario
+        </a>
+      </li>
+    </ul>
+  </div>
+</section>
+{% endblock %}
 
-  <main class="home-col-2">
-    {% block home_col2 %}
-    <section class="card">
-      <h2>Ultime 10 pratiche</h2>
-      <div class="body">
-        <ul>
-          {% for obj, url in pratiche %}
-            <li><a href="{{ url }}">{{ obj }}</a></li>
-          {% empty %}<li>Nessuna pratica.</li>{% endfor %}
-        </ul>
-      </div>
-    </section>
+{% block home_col2 %}
+<section class="card">
+  <h2>Ultime 10 pratiche</h2>
+  <div class="body">
+    <ul>
+      {% for obj, url in pratiche %}
+        <li><a href="{{ url }}">{{ obj }}</a></li>
+      {% empty %}<li>Nessuna pratica.</li>{% endfor %}
+    </ul>
+  </div>
+</section>
 
     <section class="card">
       <h2>Ultimi 10 documenti</h2>
@@ -71,40 +58,14 @@
           {% for obj, url in anagrafiche %}
             <li><a href="{{ url }}">{{ obj }}</a></li>
           {% empty %}<li>Nessuna anagrafica.</li>{% endfor %}
-        </ul>
-      </div>
-      <div class="actions">
-        <a href="{% url 'anagrafiche:anagrafica_create' %}" class="btn action-btn">+ Nuova anagrafica</a>
-      </div>
-    </section>
-    {% endblock %}
-  </main>
+    </ul>
+  </div>
+  <div class="actions">
+    <a href="{% url 'anagrafiche:anagrafica_create' %}" class="btn action-btn">+ Nuova anagrafica</a>
+  </div>
+</section>
+{% endblock %}
 
-  <aside class="home-col-3">
-    {% block home_col3 %}
-    <section class="card">
-      <h2>Scadenze attive</h2>
-      <div class="body">
-        {% if scadenze %}
-          <ul class="list">
-            {% for occ, url in scadenze %}
-              {% with pratica=occ.scadenza.pratiche.all|first %}
-                <li>
-                  {{ occ.inizio|date:"d/m/Y H:i" }} —
-                  <a class="link" href="{{ url }}">{{ occ.scadenza.titolo }}</a>
-                  {% if pratica %}
-                    <small class="muted">· {{ pratica.codice|default:pratica }}</small>
-                  {% endif %}
-                </li>
-              {% endwith %}
-            {% endfor %}
-          </ul>
-        {% else %}
-          <p class="muted">Nessuna scadenza.</p>
-        {% endif %}
-      </div>
-    </section>
-    {% endblock %}
-  </aside>
-</div>
+{% block home_col3 %}
+{% scadenze_dashboard_widget %}
 {% endblock %}

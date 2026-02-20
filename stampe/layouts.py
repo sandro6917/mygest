@@ -191,15 +191,102 @@ def layout_documento(instance, c, width, height):
     c.setFont("Helvetica-Oblique", 8)
     c.drawRightString(width - margin, 4 * mm, f"ID #{instance.pk}")
 
-# Fascicolo (placeholder, adatta ai tuoi campi)
+# Fascicolo - Copertina
 def layout_fascicolo(instance, c, width, height):
-    margin = 3 * mm; y = height - margin
-    c.setFont("Helvetica-Bold", 12)
-    titolo = getattr(instance, "titolo", None) or "Fascicolo"
-    c.drawString(margin, y, str(titolo)[:48]); y -= 6*mm
-    c.setFont("Helvetica", 9)
+    """Layout copertina fascicolo con tutte le informazioni principali"""
+    margin = 15 * mm
+    y = height - margin
+    max_width = width - 2 * margin
+    
+    # Titolo principale
+    c.setFont("Helvetica-Bold", 16)
+    titolo = getattr(instance, "titolo", "") or "Fascicolo"
+    c.drawString(margin, y, str(titolo)[:60])
+    y -= 10 * mm
+    
+    # Codice fascicolo
+    c.setFont("Helvetica-Bold", 14)
     codice = getattr(instance, "codice", "") or f"ID #{instance.pk}"
-    c.drawString(margin, y, f"Cod: {codice}"[:60])
+    c.drawString(margin, y, f"Codice: {codice}")
+    y -= 10 * mm
+    
+    # Linea separatrice
+    c.setLineWidth(0.5)
+    c.line(margin, y, width - margin, y)
+    y -= 8 * mm
+    
+    # Anno e stato
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin, y, "Anno:")
+    c.setFont("Helvetica", 10)
+    anno = getattr(instance, "anno", "")
+    c.drawString(margin + 30 * mm, y, str(anno))
+    
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin + 80 * mm, y, "Stato:")
+    c.setFont("Helvetica", 10)
+    stato_display = getattr(instance, "stato_display", getattr(instance, "stato", ""))
+    c.drawString(margin + 110 * mm, y, str(stato_display))
+    y -= 7 * mm
+    
+    # Cliente
+    if hasattr(instance, "cliente") and instance.cliente:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin, y, "Cliente:")
+        c.setFont("Helvetica", 10)
+        cliente_nome = ""
+        if hasattr(instance.cliente, "anagrafica"):
+            cliente_nome = str(instance.cliente.anagrafica.display_name())
+        else:
+            cliente_nome = str(instance.cliente)
+        c.drawString(margin + 30 * mm, y, cliente_nome[:70])
+        y -= 7 * mm
+    
+    # Titolario
+    if hasattr(instance, "titolario_voce") and instance.titolario_voce:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin, y, "Titolario:")
+        c.setFont("Helvetica", 10)
+        titolario_str = f"{instance.titolario_voce.codice} - {instance.titolario_voce.titolo}"
+        c.drawString(margin + 30 * mm, y, titolario_str[:70])
+        y -= 7 * mm
+    
+    # Ubicazione
+    if hasattr(instance, "ubicazione") and instance.ubicazione:
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin, y, "Ubicazione:")
+        c.setFont("Helvetica", 10)
+        ubicazione_str = getattr(instance, "ubicazione_full_path", str(instance.ubicazione))
+        c.drawString(margin + 30 * mm, y, str(ubicazione_str)[:70])
+        y -= 7 * mm
+    
+    # Retention
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margin, y, "Conservazione:")
+    c.setFont("Helvetica", 10)
+    retention = getattr(instance, "retention_anni", "")
+    c.drawString(margin + 30 * mm, y, f"{retention} anni")
+    y -= 10 * mm
+    
+    # Note (se presenti)
+    note = getattr(instance, "note", "")
+    if note:
+        y -= 5 * mm
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(margin, y, "Note:")
+        y -= 5 * mm
+        c.setFont("Helvetica", 9)
+        # Dividi le note in righe
+        lines = note.split('\n')
+        for line in lines[:5]:  # Max 5 righe
+            if y < margin + 20 * mm:
+                break
+            c.drawString(margin, y, line[:90])
+            y -= 5 * mm
+    
+    # Footer con ID
+    c.setFont("Helvetica-Oblique", 8)
+    c.drawRightString(width - margin, margin - 5 * mm, f"Fascicolo ID #{instance.pk}")
 
 # Pratica (placeholder)
 def layout_pratica(instance, c, width, height):

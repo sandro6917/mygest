@@ -9,6 +9,11 @@ from graphene_django.views import GraphQLView
 urlpatterns = [
     path("", home, name="home"),
     path('admin/', admin.site.urls),
+    
+    # API v1 endpoints (for React SPA)
+    path("api/v1/", include("api.v1.urls")),
+    
+    # Traditional Django URLs
     path("accounts/", include("django.contrib.auth.urls")),
     path("anagrafiche/", include("anagrafiche.urls", namespace="anagrafiche")),
     path("documenti/", include(("documenti.urls", "documenti"), namespace="documenti")),
@@ -28,3 +33,12 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.ARCHIVIO_BASE_PATH)
+    
+    # Django Debug Toolbar
+    try:
+        import debug_toolbar
+        urlpatterns = [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ] + urlpatterns
+    except ImportError:
+        pass

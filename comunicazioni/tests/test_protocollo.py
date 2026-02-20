@@ -41,7 +41,6 @@ class ProtocollaComunicazioneServiceTests(TestCase):
             corpo="Test comunicazione",
             mittente="protocollo@example.com",
             destinatari="destinatario@example.com",
-            anagrafica=self.anagrafica,
             documento_protocollo=self.documento,
         )
 
@@ -68,7 +67,6 @@ class ProtocollaComunicazioneServiceTests(TestCase):
             corpo="",
             mittente="protocollo@example.com",
             destinatari="destinatario@example.com",
-            anagrafica=self.anagrafica,
         )
 
         with self.assertRaises(ValidationError):

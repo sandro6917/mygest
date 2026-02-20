@@ -86,8 +86,8 @@ class UnitaListViewTests(TestCase):
 			tipo=UnitaFisica.Tipo.STANZA,
 			parent=ufficio,
 		)
-		self.assertEqual(prima.codice, "STZ1")
-		self.assertEqual(seconda.codice, "STZ2")
+		self.assertEqual(prima.codice, "STZ001")
+		self.assertEqual(seconda.codice, "STZ002")
 
 	def _create_anagrafica_e_cliente(self):
 		anagrafica = Anagrafica.objects.create(

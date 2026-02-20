@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Calendario Visuale" %}{% endblock %}
+
+{% block extra_head %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+.calendar-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.calendar-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.calendar-filters {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-group label {
+  font-weight: 600;
+  color: #374151;
+  margin-right: 8px;
+}
+
+.filter-group select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+#calendar {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.fc-event {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+.fc-event-title {
+  font-weight: 600;
+}
+
+.legend {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.legend h3 {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.legend-items {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.legend-label {
+  font-size: 14px;
+  color: #374151;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="calendar-header">
+    <h1>📅 {% trans "Calendario Visuale" %}</h1>
+    <p style="margin:0; opacity:0.95;">{% trans "Vista interattiva delle scadenze e occorrenze" %}</p>
+    <div style="margin-top:15px;">
+      <a class="btn btn-light btn-sm" href="{% url 'scadenze:home' %}" style="margin-right:8px;">{% trans "Torna alle scadenze" %}</a>
+      <a class="btn btn-light btn-sm" href="{% url 'scadenze:scadenziario' %}" style="margin-right:8px;">{% trans "Vista lista" %}</a>
+      <a class="btn btn-light btn-sm" href="{% url 'scadenze:create' %}">{% trans "Nuova scadenza" %}</a>
+    </div>
+  </div>
+
+  <!-- Filtri -->
+  <div class="calendar-filters">
+    <div class="filter-group">
+      <div>
+        <label for="filtro-stato">{% trans "Stato" %}:</label>
+        <select id="filtro-stato">
+          <option value="">{% trans "Tutti" %}</option>
+          {% for value,label in stato_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div>
+        <label for="filtro-priorita">{% trans "Priorità" %}:</label>
+        <select id="filtro-priorita">
+          <option value="">{% trans "Tutte" %}</option>
+          {% for value,label in priorita_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <button id="applica-filtri" class="btn btn-primary btn-sm">{% trans "Applica filtri" %}</button>
+      <button id="reset-filtri" class="btn btn-secondary btn-sm">{% trans "Reset" %}</button>
+    </div>
+  </div>
+
+  <!-- Calendario -->
+  <div id="calendar"></div>
+
+  <!-- Legenda -->
+  <div class="legend">
+    <h3>{% trans "Legenda Priorità" %}</h3>
+    <div class="legend-items">
+      <div class="legend-item">
+        <div class="legend-color" style="background:#dc2626;"></div>
+        <span class="legend-label">🔴 {% trans "Critica" %}</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#f59e0b;"></div>
+        <span class="legend-label">🟠 {% trans "Alta" %}</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#3b82f6;"></div>
+        <span class="legend-label">🔵 {% trans "Media" %}</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#6b7280;"></div>
+        <span class="legend-label">⚪ {% trans "Bassa" %}</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/it.global.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const calendarEl = document.getElementById('calendar');
+  
+  // Inizializza FullCalendar
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'it',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+    },
+    buttonText: {
+      today: 'Oggi',
+      month: 'Mese',
+      week: 'Settimana',
+      day: 'Giorno',
+      list: 'Lista'
+    },
+    height: 'auto',
+    navLinks: true,
+    editable: false,
+    dayMaxEvents: true,
+    events: function(info, successCallback, failureCallback) {
+      // Carica eventi via AJAX con filtri
+      const statoFilter = document.getElementById('filtro-stato').value;
+      const prioritaFilter = document.getElementById('filtro-priorita').value;
+      
+      const url = new URL('{% url "scadenze:calendario_events_json" %}', window.location.origin);
+      url.searchParams.set('start', info.startStr);
+      url.searchParams.set('end', info.endStr);
+      if (statoFilter) url.searchParams.set('stato', statoFilter);
+      if (prioritaFilter) url.searchParams.set('priorita', prioritaFilter);
+      
+      fetch(url)
+        .then(response => response.json())
+        .then(data => successCallback(data))
+        .catch(error => {
+          console.error('Errore caricamento eventi:', error);
+          failureCallback(error);
+        });
+    },
+    eventClick: function(info) {
+      // Click su evento: redirect a dettaglio scadenza
+      info.jsEvent.preventDefault();
+      if (info.event.url) {
+        window.location.href = info.event.url;
+      }
+    },
+    eventDidMount: function(info) {
+      // Tooltip con dettagli
+      const props = info.event.extendedProps;
+      info.el.title = `${props.scadenza_titolo}\n` +
+                      `Priorità: ${props.priorita}\n` +
+                      `Stato: ${props.stato}\n` +
+                      `Alert: ${props.num_alerts}\n` +
+                      (props.descrizione ? `\n${props.descrizione}` : '');
+    }
+  });
+  
+  calendar.render();
+  
+  // Gestione filtri
+  document.getElementById('applica-filtri').addEventListener('click', function() {
+    calendar.refetchEvents();
+  });
+  
+  document.getElementById('reset-filtri').addEventListener('click', function() {
+    document.getElementById('filtro-stato').value = '';
+    document.getElementById('filtro-priorita').value = '';
+    calendar.refetchEvents();
+  });
+  
+  // Applica filtri anche su cambio select
+  document.getElementById('filtro-stato').addEventListener('change', function() {
+    calendar.refetchEvents();
+  });
+  
+  document.getElementById('filtro-priorita').addEventListener('change', function() {
+    calendar.refetchEvents();
+  });
+});
+</script>
+{% endblock %}

@@ -63,6 +63,15 @@ class Fascicolo(models.Model):
         "self", null=True, blank=True, on_delete=models.PROTECT, related_name="sottofascicoli"
     )
 
+    # Fascicoli collegati (relazione many-to-many)
+    fascicoli_collegati = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        blank=True,
+        related_name="collegato_da",
+        help_text=_("Altri fascicoli collegati a questo fascicolo")
+    )
+
     # Dati anagrafici / classificazione
     cliente = models.ForeignKey("anagrafiche.Cliente", null=True, blank=True, on_delete=models.SET_NULL)
     titolario_voce = models.ForeignKey(TitolarioVoce, on_delete=models.PROTECT, related_name="fascicoli")
@@ -202,7 +211,20 @@ class Fascicolo(models.Model):
                     pattern = self.titolario_voce.pattern_codice or "{CLI}-{TIT}-{ANNO}-{SEQ:03d}"
                     cli = self._cliente_code(self.cliente)
                     tit = self.titolario_voce.codice
-                    self.codice = pattern.format(CLI=cli, TIT=tit, ANNO=self.anno, SEQ=seq)
+                    
+                    # Gestisci placeholder {ANA} per voci intestate ad anagrafiche
+                    ana = ""
+                    if self.titolario_voce.anagrafica:
+                        ana = self.titolario_voce.anagrafica.codice
+                    
+                    # Supporta tutti i placeholder: {CLI}, {TIT}, {ANNO}, {SEQ}, {ANA}
+                    self.codice = pattern.format(
+                        CLI=cli, 
+                        TIT=tit, 
+                        ANNO=self.anno, 
+                        SEQ=seq,
+                        ANA=ana
+                    )
 
             # Validazione completa
             self.full_clean()
@@ -252,17 +274,21 @@ class Fascicolo(models.Model):
             raise ValidationError(errors)
 
     def protocolla_entrata(self, *, quando=None, operatore=None, da_chi: str = "",
+                           destinatario_anagrafica=None,
                            ubicazione: Optional["UnitaFisica"] = None, causale: str = "", note: str = ""):
         from protocollo.models import MovimentoProtocollo
         return MovimentoProtocollo.registra_entrata(fascicolo=self, quando=quando, operatore=operatore,
-                                                    da_chi=da_chi, ubicazione=ubicazione, causale=causale, note=note)
+                                                    da_chi=da_chi, destinatario_anagrafica=destinatario_anagrafica,
+                                                    ubicazione=ubicazione, causale=causale, note=note)
 
     def protocolla_uscita(self, *, quando=None, operatore=None, a_chi: str = "",
                           data_rientro_prevista=None, causale: str = "", note: str = "",
-                          ubicazione: Optional["UnitaFisica"] = None):
+                          ubicazione: Optional["UnitaFisica"] = None,
+                          destinatario_anagrafica=None):
         from protocollo.models import MovimentoProtocollo
         return MovimentoProtocollo.registra_uscita(fascicolo=self, quando=quando, operatore=operatore,
-                                                   a_chi=a_chi, data_rientro_prevista=data_rientro_prevista,
+                                                   a_chi=a_chi, destinatario_anagrafica=destinatario_anagrafica,
+                                                   data_rientro_prevista=data_rientro_prevista,
                                                    causale=causale, note=note, ubicazione=ubicazione)
 
     def __str__(self) -> str:

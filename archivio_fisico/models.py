@@ -12,6 +12,10 @@ from django.utils.text import slugify
 # --- Movimentazione fisica di fascicoli/documenti protocollati ---
 from django.conf import settings
 from anagrafiche.models import Anagrafica, Cliente
+from mygest.storages import NASPathStorage
+
+# Storage per archivio fisico
+nas_storage = NASPathStorage()
 
 
 # Operazione di movimentazione fisica (entrata/uscita/interna)
@@ -32,7 +36,8 @@ class OperazioneArchivio(models.Model):
     )
     note = models.TextField(blank=True)
     verbale_scan = models.FileField(
-        upload_to="archivio/operazioni",
+        storage=nas_storage,
+        upload_to="archivio_fisico/operazioni",
         null=True,
         blank=True,
         max_length=500,
@@ -140,7 +145,7 @@ class UnitaFisica(models.Model):
         Tipo.ANTA: {Tipo.RIPIANO},
         Tipo.SCAFFALE: {Tipo.RIPIANO},
         Tipo.RIPIANO: {Tipo.CONTENITORE},
-        Tipo.CONTENITORE: {Tipo.CARTELLINA},
+        Tipo.CONTENITORE: {Tipo.CARTELLINA, Tipo.CONTENITORE},
         Tipo.CARTELLINA: set(),
     }
 
@@ -149,6 +154,14 @@ class UnitaFisica(models.Model):
     codice = models.CharField(max_length=60, unique=True, editable=False)
     nome = models.CharField(max_length=120)
     tipo = models.CharField(max_length=20, choices=Tipo.choices)
+    cliente = models.ForeignKey(
+        "anagrafiche.Cliente",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="unita_fisiche",
+        help_text="Cliente associato all'unità fisica (opzionale)"
+    )
     parent = models.ForeignKey("self", null=True, blank=True, related_name="figli", on_delete=models.PROTECT)
     ordine = models.PositiveIntegerField(default=0)
     attivo = models.BooleanField(default=True)
@@ -169,7 +182,9 @@ class UnitaFisica(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.tipo_label()} {self.nome}"
+        parent_nome = self.parent.nome if self.parent else ""
+        parent_codice = self.parent.codice if self.parent else ""
+        return f"{parent_codice} {parent_nome} {self.codice} {self.nome}".strip()
 
     def tipo_label(self) -> str:
         return self.get_tipo_display()
@@ -223,7 +238,7 @@ class UnitaFisica(models.Model):
             self.progressivo_codice = assigned_progressivo
             changed.add("progressivo_codice")
 
-        new_codice = f"{self.prefisso_codice}{self.progressivo_codice}"
+        new_codice = f"{self.prefisso_codice}{self.progressivo_codice:03d}"
         if new_codice != self.codice:
             self.codice = new_codice
             changed.add("codice")
@@ -250,7 +265,49 @@ class UnitaFisica(models.Model):
                 raise ValidationError({"parent": "Relazione ciclica non consentita."})
             cur = cur.parent
 
+    def _get_codice_cliente_suffix(self) -> str:
+        """Ritorna il suffisso con il codice anagrafica del cliente (es. ' - CHISAN01')"""
+        if self.cliente and self.cliente.anagrafica and self.cliente.anagrafica.codice:
+            return f" - {self.cliente.anagrafica.codice}"
+        return ""
+
+    def _remove_cliente_suffix(self, nome: str) -> str:
+        """Rimuove qualsiasi suffisso di tipo ' - CODICE' dal nome"""
+        import re
+        # Pattern: " - " seguito da codice alfanumerico alla fine della stringa
+        # Rimuove tutti i pattern " - XXX" alla fine (gestisce anche casi multipli)
+        cleaned = re.sub(r'\s+-\s+[A-Z0-9]+$', '', nome)
+        # Rimuovi ricorsivamente se ci sono più suffissi
+        while cleaned != nome:
+            nome = cleaned
+            cleaned = re.sub(r'\s+-\s+[A-Z0-9]+$', '', nome)
+        return cleaned
+
+    def _apply_cliente_suffix(self) -> bool:
+        """
+        Applica/aggiorna il suffisso con il codice cliente al nome.
+        Ritorna True se il nome è stato modificato.
+        """
+        # Rimuovi eventuali suffissi esistenti
+        nome_base = self._remove_cliente_suffix(self.nome)
+        
+        # Ottieni il nuovo suffisso
+        nuovo_suffisso = self._get_codice_cliente_suffix()
+        
+        # Costruisci il nome completo
+        nome_completo = nome_base + nuovo_suffisso
+        
+        # Se il nome è cambiato, aggiornalo
+        if nome_completo != self.nome:
+            self.nome = nome_completo
+            return True
+        
+        return False
+
     def save(self, *args, **kwargs):
+        # Applica/aggiorna il suffisso con il codice cliente
+        nome_changed = self._apply_cliente_suffix()
+        
         changed_codici = self._ensure_codici()
         self.full_clean(exclude=["full_path", "progressivo"])
         self.full_path = self.build_full_path()
@@ -260,6 +317,8 @@ class UnitaFisica(models.Model):
             update_fields = set(update_fields)
             update_fields.update({"full_path", "progressivo", "updated_at"})
             update_fields.update(changed_codici)
+            if nome_changed:
+                update_fields.add("nome")
             kwargs["update_fields"] = list(update_fields)
         super().save(*args, **kwargs)
         # aggiorna path dei figli se cambia qualcosa
@@ -356,6 +415,7 @@ class VerbaleConsegnaTemplate(models.Model):
     slug = models.SlugField(max_length=120, unique=True)
     descrizione = models.TextField(blank=True)
     file_template = models.FileField(
+        storage=nas_storage,
         upload_to="archivio_fisico/verbali/",
         validators=[FileExtensionValidator(["docx"])],
         max_length=500,

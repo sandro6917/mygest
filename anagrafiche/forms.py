@@ -15,13 +15,14 @@ class SearchAnagraficaForm(forms.Form):
 class AnagraficaForm(forms.ModelForm):
     class Meta:
         model = Anagrafica
-        fields = ["tipo", "ragione_sociale", "nome", "cognome", "codice_fiscale", "partita_iva", "pec", "email", "telefono", "indirizzo", "note"]
+        fields = ["tipo", "ragione_sociale", "nome", "cognome", "codice_fiscale", "partita_iva", "denominazione_abbreviata", "pec", "email", "telefono", "indirizzo", "note"]
         widgets = {
             "ragione_sociale": forms.TextInput(attrs={"autocomplete": "organization"}),
             "nome": forms.TextInput(attrs={"autocomplete": "given-name"}),
             "cognome": forms.TextInput(attrs={"autocomplete": "family-name"}),
             "codice_fiscale": forms.TextInput(attrs={"autocomplete": "off"}),
             "partita_iva": forms.TextInput(attrs={"autocomplete": "off"}),
+            "denominazione_abbreviata": forms.TextInput(attrs={"autocomplete": "off", "maxlength": "15", "placeholder": "Max 15 caratteri senza spazi"}),
             "pec": forms.EmailInput(attrs={"autocomplete": "email"}),
             "email": forms.EmailInput(attrs={"autocomplete": "email"}),
             "telefono": forms.TextInput(attrs={"autocomplete": "tel"}),
@@ -93,3 +94,10 @@ IndirizzoFormSet = inlineformset_factory(
     extra=0,
     can_delete=True,
 )
+
+class ImportAnagraficaForm(forms.Form):
+    file = forms.FileField(
+        label="File CSV",
+        help_text="Formato: CSV con separatore ';' (punto e virgola). Encoding UTF-8 o Latin-1.",
+        widget=forms.FileInput(attrs={"accept": ".csv"})
+    )

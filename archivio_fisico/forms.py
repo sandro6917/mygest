@@ -4,6 +4,7 @@ from itertools import chain
 
 from django import forms
 from django.db.models import OuterRef, Q, Subquery
+from documenti.validators import validate_uploaded_file
 
 try:  # Django >= 5 rimuove il simbolo da django.forms.fields
     from django.forms.fields import BLANK_CHOICE_DASH  # type: ignore[attr-defined]
@@ -38,6 +39,20 @@ class OperazioneArchivioForm(forms.ModelForm):
             "verbale_scan",
             "note",
         ]
+    
+    def clean_verbale_scan(self):
+        """Valida il file verbale caricato"""
+        file = self.cleaned_data.get('verbale_scan')
+        if file:
+            # Validazione completa del verbale
+            validate_uploaded_file(
+                file,
+                check_size=True,
+                check_extension=True,
+                check_content=True,
+                antivirus=True
+            )
+        return file
 
 
 class FlexibleChoiceField(forms.ChoiceField):

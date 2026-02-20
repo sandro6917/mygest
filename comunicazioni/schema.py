@@ -45,7 +45,6 @@ class ComunicazioneType(DjangoObjectType):
             "corpo",
             "mittente",
             "destinatari",
-            "anagrafica",
             "contatti_destinatari",
             "liste_destinatari",
             "stato",
@@ -72,7 +71,6 @@ class ComunicazioneInput(graphene.InputObjectType):
     corpo = graphene.String()
     mittente = graphene.String()
     destinatari = graphene.String()
-    anagrafica = graphene.Int()
     contatti_destinatari = graphene.List(graphene.Int)
     liste_destinatari = graphene.List(graphene.Int)
     documento_protocollo = graphene.Int()
@@ -133,7 +131,7 @@ class Query(graphene.ObjectType):
     def resolve_comunicazione(self, info, id):
         try:
             return (
-                Comunicazione.objects.select_related("anagrafica")
+                Comunicazione.objects.select_related()
                 .prefetch_related("contatti_destinatari", "liste_destinatari")
                 .get(pk=id)
             )
@@ -141,7 +139,7 @@ class Query(graphene.ObjectType):
             return None
 
     def resolve_tutte_le_comunicazioni(self, info):
-        return Comunicazione.objects.select_related("anagrafica").prefetch_related("contatti_destinatari", "liste_destinatari").all()
+        return Comunicazione.objects.select_related().prefetch_related("contatti_destinatari", "liste_destinatari").all()
 
     def resolve_contatti(self, info):
         return EmailContatto.objects.filter(attivo=True)

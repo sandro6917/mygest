@@ -1,0 +1,5 @@
+codice,sezione,descrizione,causale,periodicita,note,attivo,data_inizio_validita,data_fine_validita
+Web,erario,www.tuttocamere.it,,,,True,,
+Sponsor,erario,,,Sponsor,,True,,
+ISTAT,erario,,,ISTAT,,True,,
+ITALIA.IT,erario,,,ITALIA.IT,,True,,

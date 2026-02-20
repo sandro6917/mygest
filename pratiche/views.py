@@ -8,6 +8,7 @@ from .models import Pratica, PraticheTipo, PraticaNota, PraticaRelazione
 from .forms import PraticaForm, PraticaNotaForm
 from django.views.decorators.http import require_POST
 from fascicoli.models import Fascicolo
+from anagrafiche.models import Cliente
 from datetime import timedelta
 
 from django.urls import reverse
@@ -166,14 +167,55 @@ def pratica_dettaglio(request, pk: int):
         pk=pk,
     )
 
+    # Filtri per documenti
+    q_doc = (request.GET.get("q_doc") or "").strip()
+    tipo_doc = (request.GET.get("tipo_doc") or "").strip()
+    cliente_doc = (request.GET.get("cliente_doc") or "").strip()
+    data_da = (request.GET.get("data_da") or "").strip()
+    data_a = (request.GET.get("data_a") or "").strip()
+
     try:
         from documenti.models import Documento
+        from datetime import datetime
 
         documenti = (
             Documento.objects.filter(fascicolo__pratiche=pratica)
             .select_related("cliente", "tipo", "fascicolo")
-            .order_by("-id")
         )
+        
+        # Filtro fulltext su codice + descrizione + fascicolo
+        if q_doc:
+            documenti = documenti.filter(
+                Q(codice__icontains=q_doc) |
+                Q(descrizione__icontains=q_doc) |
+                Q(fascicolo__codice__icontains=q_doc) |
+                Q(fascicolo__titolo__icontains=q_doc)
+            )
+        
+        # Filtro per tipo documento
+        if tipo_doc:
+            documenti = documenti.filter(tipo_id=tipo_doc)
+        
+        # Filtro per cliente
+        if cliente_doc:
+            documenti = documenti.filter(cliente_id=cliente_doc)
+        
+        # Filtro per range date
+        if data_da:
+            try:
+                data_da_parsed = datetime.strptime(data_da, "%Y-%m-%d").date()
+                documenti = documenti.filter(data_documento__gte=data_da_parsed)
+            except ValueError:
+                pass  # Ignora date non valide
+        
+        if data_a:
+            try:
+                data_a_parsed = datetime.strptime(data_a, "%Y-%m-%d").date()
+                documenti = documenti.filter(data_documento__lte=data_a_parsed)
+            except ValueError:
+                pass  # Ignora date non valide
+        
+        documenti = documenti.order_by("-id")
     except Exception:
         documenti = []
 
@@ -212,6 +254,24 @@ def pratica_dettaglio(request, pk: int):
             .order_by("-id")[:25]
         )
 
+    # Recupera tipi di documento e clienti per i filtri autocomplete
+    try:
+        from documenti.models import DocumentiTipo
+        tipi_documento = DocumentiTipo.objects.all().order_by("codice")
+        
+        # Recupera i clienti dai documenti collegati alla pratica
+        clienti_documento = (
+            Cliente.objects.filter(
+                documenti__fascicolo__pratiche=pratica
+            )
+            .distinct()
+            .select_related("anagrafica")
+            .order_by("anagrafica__ragione_sociale", "anagrafica__cognome")
+        )
+    except Exception:
+        tipi_documento = []
+        clienti_documento = []
+
     ctx = {
         "pratica": pratica,
         "fascicoli": pratica.fascicoli.all(),
@@ -224,6 +284,13 @@ def pratica_dettaglio(request, pk: int):
         "fascicoli_risultati": fascicoli_risultati,
         "q_pratica": q_pratica,
         "pratiche_risultati": pratiche_risultati,
+        "q_doc": q_doc,
+        "tipo_doc": tipo_doc,
+        "cliente_doc": cliente_doc,
+        "data_da": data_da,
+        "data_a": data_a,
+        "tipi_documento": tipi_documento,
+        "clienti_documento": clienti_documento,
     }
     pratica_label = pratica.oggetto or pratica.codice or f"Pratica #{pratica.pk}"
     set_breadcrumbs(

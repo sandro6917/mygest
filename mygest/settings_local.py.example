@@ -1,0 +1,194 @@
+"""
+Settings locali/produzione - NON COMMITTARE SU GIT
+
+Questo file contiene le configurazioni specifiche per l'ambiente (dev/prod).
+IMPORTANTE: Questo file NON viene trasferito durante il deploy.
+Deve essere creato manualmente sul server di produzione.
+
+Viene importato automaticamente da settings.py alla fine.
+"""
+
+import os
+from pathlib import Path
+
+# BASE_DIR già definito in settings.py
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ====================================
+# AMBIENTE
+# ====================================
+
+# Definisci l'ambiente corrente: 'development', 'staging', 'production'
+ENVIRONMENT = 'development'  # CAMBIARE IN PRODUZIONE
+
+# ====================================
+# DEBUG E SICUREZZA
+# ====================================
+
+# ATTENZIONE: Impostare a False in produzione!
+DEBUG = True
+
+# In produzione, specificare i domini consentiti
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# Secret key - CAMBIARE IN PRODUZIONE con una chiave sicura
+# Generare con: python -c 'from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())'
+SECRET_KEY = 'django-insecure-2c^)jnpbhbx311i--n@px58iczkm90-1^zus@4^z)x^x#e4a-y'
+
+# ====================================
+# DATABASE
+# ====================================
+
+# Se usi DATABASE_URL, decommentare:
+# import dj_database_url
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default='postgresql://user:password@localhost:5432/mygest'
+#     )
+# }
+
+# Oppure configurazione manuale:
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mygest',
+        'USER': 'mygest_user',
+        'PASSWORD': 'mygest_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+
+# ====================================
+# FILE STORAGE E ARCHIVIO
+# ====================================
+
+# Path base archivio documentale
+# Sviluppo WSL: /mnt/archivio
+# Produzione VPS: /srv/mygest/archivio
+# Locale: BASE_DIR / "media" / "archivio"
+ARCHIVIO_BASE_PATH = os.getenv(
+    "ARCHIVIO_BASE_PATH",
+    "/mnt/archivio"  # <-- CAMBIARE IN PRODUZIONE
+)
+
+# Directory temporanea upload (relativa a ARCHIVIO_BASE_PATH o MEDIA_ROOT)
+UPLOAD_TEMP_DIR = "tmp"
+
+# Directory sorgente per importazioni (lista di path)
+IMPORTAZIONI_SOURCE_DIRS = [
+    "/home/sandro/documenti",  # <-- CAMBIARE IN PRODUZIONE
+    os.path.join(ARCHIVIO_BASE_PATH, "importazioni"),
+]
+
+# Media URL
+MEDIA_URL = '/archivio/'
+MEDIA_ROOT = ARCHIVIO_BASE_PATH
+
+# ====================================
+# UPLOAD FILE - LIMITI E SICUREZZA
+# ====================================
+
+# Dimensione massima file singolo (in bytes)
+# 50 MB = 52428800
+FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
+
+# Dimensione massima totale richiesta
+# 100 MB = 104857600
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600
+
+# Estensioni file permesse (whitelist)
+ALLOWED_FILE_EXTENSIONS = [
+    'pdf', 'docx', 'doc', 'xlsx', 'xls', 'odt', 'ods',
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff',
+    'txt', 'csv', 'zip', 'rar', '7z',
+    'eml', 'msg',
+    'p7m', 'p7s',
+]
+
+# Estensioni file proibite (blacklist)
+FORBIDDEN_FILE_EXTENSIONS = [
+    'exe', 'bat', 'cmd', 'com', 'pif', 'scr',
+    'sh', 'bash', 'run',
+    'js', 'vbs', 'vbe', 'jar',
+    'msi', 'dll', 'sys',
+]
+
+# MIME types permessi
+ALLOWED_MIME_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/tiff',
+    'text/plain',
+    'application/zip',
+    'message/rfc822',
+]
+
+# ====================================
+# ANTIVIRUS - ClamAV
+# ====================================
+
+# Abilita/disabilita scansione antivirus
+ANTIVIRUS_ENABLED = True
+
+# Se True, blocca upload se ClamAV non disponibile
+# Consigliato: False in sviluppo, True in produzione
+ANTIVIRUS_REQUIRED = False
+
+# Socket Unix per ClamAV (default Debian/Ubuntu)
+CLAMAV_SOCKET = '/var/run/clamav/clamd.ctl'
+
+# Connessione TCP alternativa (se socket non disponibile)
+CLAMAV_HOST = 'localhost'
+CLAMAV_PORT = 3310
+
+# ====================================
+# EMAIL
+# ====================================
+
+# Configurazione email (opzionale)
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'noreply@example.com'
+# EMAIL_HOST_PASSWORD = 'password'
+
+# ====================================
+# GOOGLE CALENDAR (opzionale)
+# ====================================
+
+# GOOGLE_CALENDAR_CREDENTIALS_FILE = str(BASE_DIR / "secrets" / "google_credentials.json")
+# GOOGLE_CALENDAR_DEFAULT_ID = "calendar-id@group.calendar.google.com"
+
+# ====================================
+# WHATSAPP CLOUD API (opzionale)
+# ====================================
+
+# WHATSAPP_CLOUD_API_VERSION = "v20.0"
+# WHATSAPP_CLOUD_BASE_URL = "https://graph.facebook.com"
+# WHATSAPP_CLOUD_PHONE_NUMBER_ID = ""
+# WHATSAPP_CLOUD_BUSINESS_ACCOUNT_ID = ""
+# WHATSAPP_CLOUD_ACCESS_TOKEN = ""
+# WHATSAPP_CLOUD_VERIFY_TOKEN = ""
+# WHATSAPP_CLOUD_APP_SECRET = ""
+# WHATSAPP_CLOUD_TIMEOUT = 10
+
+# ====================================
+# LOGGING PERSONALIZZATO (opzionale)
+# ====================================
+
+# Puoi sovrascrivere completamente LOGGING se necessario
+# LOGGING = { ... }
+
+# ====================================
+# ALTRE CONFIGURAZIONI CUSTOM
+# ====================================
+
+# Aggiungi qui altre configurazioni specifiche per questo ambiente

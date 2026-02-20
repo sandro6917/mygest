@@ -3,10 +3,27 @@ import os
 import re
 import unicodedata
 import datetime  # fix: usi datetime.date/datetime.timedelta in basso
+import logging
 from django.utils.text import slugify
 from django.apps import apps  # evita import dei modelli a livello modulo
 
+logger = logging.getLogger(__name__)
 _token_rx = re.compile(r"\{([^\}]+)\}")
+
+def _sanitize_filename_part(value: str) -> str:
+    """
+    Sanitizza una parte del nome file rimuovendo caratteri non validi.
+    Sostituisce: / \ : * ? " < > | con trattino (-)
+    """
+    if not value:
+        return ""
+    # Caratteri non validi nei nomi file per filesystem comuni (Windows, Linux, macOS)
+    invalid_chars = r'[/\\:*?"<>|]'
+    sanitized = re.sub(invalid_chars, '-', str(value))
+    # Rimuovi spazi multipli e trattini multipli
+    sanitized = re.sub(r'\s+', ' ', sanitized)
+    sanitized = re.sub(r'-+', '-', sanitized)
+    return sanitized.strip()
 
 def _parse_iso_date(val: str) -> Optional[datetime.date]:
     # Supporta "YYYY-MM-DD" o ISO datetime
@@ -32,11 +49,33 @@ def _format_value(value: Any, fmt: Optional[str]) -> str:
         # fallback: ignora il fmt su tipi non data
     return str(value)
 
+
+def _resolve_attr_path(root: Any, path: str) -> Any:
+    """Naviga una dotted path (es. "anagrafica.denominazione")."""
+    if root is None:
+        return None
+    if not path:
+        return root
+    value = root
+    for attr in path.split("."):
+        attr = attr.strip()
+        if not attr:
+            continue
+        if value is None:
+            return None
+        value = getattr(value, attr, None)
+        if callable(value):
+            try:
+                value = value()
+            except TypeError:
+                return None
+    return value
+
 def _attrs_map(doc: Any) -> Dict[str, Any]:
     """Mappa codice attributo -> valore (grezzo JSON) per il documento."""
     AttributoDefinizione = apps.get_model("documenti", "AttributoDefinizione")
     AttributoValore = apps.get_model("documenti", "AttributoValore")
-    defs = AttributoDefinizione.objects.filter(tipo_documento=doc.tipo).only("id", "codice", "tipo_dato")
+    defs = AttributoDefinizione.objects.filter(tipo_documento=doc.tipo).only("id", "codice", "tipo_dato", "widget")
     by_id = {d.id: d for d in defs}
     out: Dict[str, Any] = {}
     for av in AttributoValore.objects.filter(documento=doc, definizione_id__in=by_id.keys()).only("definizione_id", "valore"):
@@ -44,9 +83,24 @@ def _attrs_map(doc: Any) -> Dict[str, Any]:
         if not d:
             continue
         out[d.codice] = av.valore
+    
+    logger.debug(
+        "_attrs_map: doc.id=%s, found %d attributes: %s",
+        getattr(doc, 'pk', 'NEW'),
+        len(out),
+        out
+    )
+    
     return out
 
-def build_document_filename(doc: Any, original_name: str) -> str:
+
+def _attrs_definitions_map(doc: Any) -> Dict[str, Any]:
+    """Mappa codice attributo -> definizione AttributoDefinizione per il documento."""
+    AttributoDefinizione = apps.get_model("documenti", "AttributoDefinizione")
+    defs = AttributoDefinizione.objects.filter(tipo_documento=doc.tipo).only("id", "codice", "tipo_dato", "widget")
+    return {d.codice: d for d in defs}
+
+def build_document_filename(doc: Any, original_name: str, attrs: Optional[Dict[str, Any]] = None) -> str:
     """
     Costruisce il nome file finale in base a DocumentiTipo.nome_file_pattern.
     Token supportati:
@@ -55,6 +109,7 @@ def build_document_filename(doc: Any, original_name: str) -> str:
       - {slug:descrizione}
       - {attr:<codice>} e {attr:<codice>:%Y%m%d} (fmt opzionale per date)
       - {uattr:<codice>} e {uattr:<codice>:%Y%m%d} -> inserisce "_<valore>" solo se l'attributo esiste
+            - {cliente} e {cliente.<path>[:fmt]} per leggere campi/relazioni del Cliente (es. {cliente.denominazione})
       - {attrobj:<attr_codice>:<app_label>:<model_name>:<field_name>} -> recupera il valore del campo specificato
         dall'istanza del modello collegata tramite l'id memorizzato nell'attributo.
       - {upper:TEXT} / {lower:TEXT} -> converte TEXT in maiuscolo/minuscolo (non annidato)
@@ -62,6 +117,9 @@ def build_document_filename(doc: Any, original_name: str) -> str:
     Se il risultato è vuoto, si usa come fallback il codice del documento.
     L'estensione del file viene preservata da original_name; se mancante, si usa ".bin".
     
+    :param doc: istanza del documento
+    :param original_name: nome file originale
+    :param attrs: dizionario opzionale di attributi (codice -> valore). Se None, vengono letti dal DB.
     """
     base, ext = os.path.splitext(original_name or "")
     ext = ext or ".bin"
@@ -71,27 +129,142 @@ def build_document_filename(doc: Any, original_name: str) -> str:
         # fallback minimale: <codice-documento><ext>
         return f"{(doc.codice or 'DOC')}{ext}"
 
-    attrs = _attrs_map(doc)
+    # Se attrs non è fornito, lo leggiamo dal DB
+    if attrs is None:
+        attrs = _attrs_map(doc)
+    
+    # Carica anche le definizioni degli attributi per sapere il tipo di widget
+    attrs_defs = _attrs_definitions_map(doc)
+    
+    logger.debug(
+        "build_document_filename: doc.id=%s, pattern=%s, attrs_passed=%s, attrs_map=%s",
+        getattr(doc, 'pk', 'NEW'),
+        pattern,
+        'YES' if attrs is not None else 'NO',
+        attrs
+    )
 
     def repl(m: re.Match) -> str:
         token = m.group(1).strip()
 
         # uattr:code[:fmt] -> "_" + valore se presente
+        # oppure uattr:code.path[:fmt] per navigazione su FK
         if token.startswith("uattr:"):
             parts = token.split(":", 2)
-            code = parts[1].strip() if len(parts) > 1 else ""
+            code_and_path = parts[1].strip() if len(parts) > 1 else ""
             fmt = parts[2] if len(parts) > 2 else None
-            s = _format_value(attrs.get(code), fmt)
-            return f"_{s}" if s else ""
+            
+            # Verifica se c'è una navigazione dotted-path (es. "dipendente.codice")
+            if "." in code_and_path:
+                code, path = code_and_path.split(".", 1)
+                code = code.strip()
+                path = path.strip()
+                
+                # Recupera il valore dell'attributo (sarà l'ID dell'oggetto FK)
+                val = attrs.get(code)
+                
+                if val is not None:
+                    # Recupera la definizione dell'attributo per sapere il widget
+                    attr_def = attrs_defs.get(code)
+                    if attr_def and getattr(attr_def, "widget", "").lower() in ("anagrafica", "fk_anagrafica", "anag"):
+                        # È un FK verso Anagrafica, carica l'oggetto e naviga il path
+                        try:
+                            Anagrafica = apps.get_model("anagrafiche", "Anagrafica")
+                            anagrafica_obj = Anagrafica.objects.get(id=val)
+                            # Naviga il path (es. "codice" o "denominazione")
+                            final_val = _resolve_attr_path(anagrafica_obj, path)
+                            s = _sanitize_filename_part(_format_value(final_val, fmt))
+                            return f"_{s}" if s else ""
+                        except Exception as e:
+                            logger.warning(
+                                "Errore durante navigazione uattr:%s.%s: %s",
+                                code,
+                                path,
+                                str(e)
+                            )
+                            return ""
+                    else:
+                        # Non è un widget anagrafica, prova comunque la navigazione generica
+                        final_val = _resolve_attr_path(val, path)
+                        s = _sanitize_filename_part(_format_value(final_val, fmt))
+                        return f"_{s}" if s else ""
+                else:
+                    # Attributo non ha valore
+                    return ""
+            else:
+                # Semplice attributo senza navigazione
+                code = code_and_path
+                s = _sanitize_filename_part(_format_value(attrs.get(code), fmt))
+                return f"_{s}" if s else ""
 
-        # attr:code[:fmt]
+        # attr:code[:fmt] oppure attr:code.path[:fmt]
         if token.startswith("attr:"):
             # split massimo 2 per tenere insieme eventuale fmt con i suoi ':'
             parts = token.split(":", 2)
-            code = parts[1].strip() if len(parts) > 1 else ""
+            code_and_path = parts[1].strip() if len(parts) > 1 else ""
             fmt = parts[2] if len(parts) > 2 else None
-            val = attrs.get(code)
-            return _format_value(val, fmt)
+            
+            # Verifica se c'è una navigazione dotted-path (es. "dipendente.codice")
+            if "." in code_and_path:
+                code, path = code_and_path.split(".", 1)
+                code = code.strip()
+                path = path.strip()
+                
+                # Recupera il valore dell'attributo (sarà l'ID dell'oggetto FK)
+                val = attrs.get(code)
+                
+                if val is not None:
+                    # Recupera la definizione dell'attributo per sapere il widget
+                    attr_def = attrs_defs.get(code)
+                    if attr_def and getattr(attr_def, "widget", "").lower() in ("anagrafica", "fk_anagrafica", "anag"):
+                        # È un FK verso Anagrafica, carica l'oggetto e naviga il path
+                        try:
+                            Anagrafica = apps.get_model("anagrafiche", "Anagrafica")
+                            anagrafica_obj = Anagrafica.objects.get(id=val)
+                            # Naviga il path (es. "codice" o "denominazione")
+                            final_val = _resolve_attr_path(anagrafica_obj, path)
+                            # Sanitizza il valore per rimuovere caratteri non validi
+                            return _sanitize_filename_part(_format_value(final_val, fmt))
+                        except Exception as e:
+                            logger.warning(
+                                "Errore durante navigazione attr:%s.%s: %s",
+                                code,
+                                path,
+                                str(e)
+                            )
+                            return ""
+                    else:
+                        # Non è un widget anagrafica, prova comunque la navigazione generica
+                        # Questo potrebbe funzionare se val è già un oggetto (improbabile ma possibile)
+                        final_val = _resolve_attr_path(val, path)
+                        # Sanitizza il valore
+                        return _sanitize_filename_part(_format_value(final_val, fmt))
+                else:
+                    # Attributo non ha valore
+                    return ""
+            else:
+                # Semplice attributo senza navigazione
+                code = code_and_path
+                val = attrs.get(code)
+                # Sanitizza il valore dell'attributo per rimuovere caratteri non validi
+                return _sanitize_filename_part(_format_value(val, fmt))
+
+        # cliente.<campo>[:fmt] o cliente[:fmt]
+        if token.startswith("cliente"):
+            fmt = None
+            expr = token
+            if ":" in token:
+                expr, fmt = token.split(":", 1)
+            cliente_obj = getattr(doc, "cliente", None)
+            if expr == "cliente":
+                val = cliente_obj
+            elif expr.startswith("cliente."):
+                path = expr.split(".", 1)[1]
+                val = _resolve_attr_path(cliente_obj, path)
+            else:
+                val = None
+            # Sanitizza il valore del cliente
+            return _sanitize_filename_part(_format_value(val, fmt))
 
         # data_documento[:fmt]
         if token.startswith("data_documento"):
@@ -170,6 +343,18 @@ def build_document_filename(doc: Any, original_name: str) -> str:
         return ""
 
     name = _token_rx.sub(repl, pattern).strip().strip("_- ")
+    
+    # Rimuovi underscore, trattini e spazi doppi/multipli
+    while "__" in name:
+        name = name.replace("__", "_")
+    while "--" in name:
+        name = name.replace("--", "-")
+    while "  " in name:
+        name = name.replace("  ", " ")
+    
+    # Rimuovi underscore/trattini/spazi all'inizio e alla fine
+    name = name.strip("_- ")
+    
     # fallback se vuoto
     if not name:
         name = (doc.codice or "DOC")

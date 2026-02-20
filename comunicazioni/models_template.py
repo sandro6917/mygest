@@ -44,6 +44,7 @@ class TemplateContextField(models.Model):
         DATETIME = "datetime", _("Data e ora")
         BOOLEAN = "boolean", _("Booleano")
         CHOICE = "choice", _("Scelta singola")
+        CODICE_TRIBUTO = "codice_tributo", _("Codice Tributo F24")
 
     template = models.ForeignKey(
         TemplateComunicazione,
@@ -68,7 +69,29 @@ class TemplateContextField(models.Model):
     source_path = models.CharField(
         max_length=200,
         blank=True,
-        help_text=_("Percorso attributo da `comunicazione`, es. anagrafica.ragione_sociale"),
+        help_text=_("Percorso attributo da `comunicazione`, es. get_prima_anagrafica.ragione_sociale"),
+    )
+    widget = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name="Widget",
+        help_text=_(
+            "Rendering del campo: vuoto=default, 'anagrafica'=select Anagrafica. "
+            "Usare con tipo_dato 'integer' per salvare l'ID dell'anagrafica."
+        ),
+    )
+    format_string = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Formato",
+        help_text=_(
+            "Formato di visualizzazione. Esempi: "
+            "Per date: '%d/%m/%Y' o '%d %B %Y'. "
+            "Per decimali: '{:,.2f}' (formato US: 1,234.56) o '{:,.2f}it' (formato IT: 1.234,56). "
+            "Per interi: '{:,d}' (con separatore migliaia). "
+            "Per testo: '{:.50}' (max 50 caratteri)."
+        ),
     )
     ordering = models.PositiveIntegerField(default=0, verbose_name="Ordine")
     active = models.BooleanField(default=True, verbose_name="Attivo")
@@ -120,6 +143,14 @@ class TemplateContextField(models.Model):
             return value.isoformat()
         if self.field_type == self.FieldType.BOOLEAN:
             return bool(value)
+        if self.field_type == self.FieldType.CODICE_TRIBUTO:
+            try:
+                from scadenze.models import CodiceTributoF24
+                codice_id = int(value)
+                codice = CodiceTributoF24.objects.get(id=codice_id)
+                return f"{codice.codice} - {codice.descrizione}"
+            except (TypeError, ValueError, CodiceTributoF24.DoesNotExist):
+                return str(value)
         return value
 
     def format_initial(self, value: Any) -> Any:
@@ -153,6 +184,25 @@ class TemplateContextField(models.Model):
                 except TypeError:
                     return None
         return current
+    
+    def resolve_anagrafica_value(self, anagrafica_id: int):
+        """
+        Risolve l'ID di un'anagrafica e restituisce l'oggetto Anagrafica completo.
+        Usato quando widget='anagrafica' per popolare il contesto template con l'oggetto invece dell'ID.
+        
+        Args:
+            anagrafica_id: ID dell'anagrafica da recuperare
+            
+        Returns:
+            Oggetto Anagrafica o None se non trovato
+        """
+        if not anagrafica_id:
+            return None
+        try:
+            from anagrafiche.models import Anagrafica
+            return Anagrafica.objects.get(id=int(anagrafica_id))
+        except (TypeError, ValueError, Anagrafica.DoesNotExist):
+            return None
 
     def parse_raw_input(self, raw_value: Any) -> Any:
         if raw_value in (None, ""):
@@ -163,6 +213,13 @@ class TemplateContextField(models.Model):
             value_str = str(raw_value).strip().lower()
             return value_str in {"1", "true", "on", "yes"}
         if self.field_type == self.FieldType.INTEGER:
+            # Se è un widget anagrafica, restituisce l'oggetto Anagrafica
+            if self.widget in ("anagrafica", "fk_anagrafica", "anag"):
+                try:
+                    anagrafica_id = int(raw_value)
+                    return self.resolve_anagrafica_value(anagrafica_id)
+                except (TypeError, ValueError):
+                    return None
             try:
                 return int(raw_value)
             except (TypeError, ValueError):
@@ -184,6 +241,14 @@ class TemplateContextField(models.Model):
                     value = timezone.make_aware(value, timezone.get_current_timezone())
                 return value
             except (TypeError, ValueError):
+                return None
+        if self.field_type == self.FieldType.CODICE_TRIBUTO:
+            try:
+                from scadenze.models import CodiceTributoF24
+                codice_id = int(raw_value)
+                codice = CodiceTributoF24.objects.get(id=codice_id)
+                return f"{codice.codice} - {codice.descrizione}"
+            except (TypeError, ValueError, CodiceTributoF24.DoesNotExist):
                 return None
         return str(raw_value)
 
@@ -215,6 +280,14 @@ class TemplateContextField(models.Model):
                 return parsed
             except (TypeError, ValueError):
                 return None
+        if self.field_type == self.FieldType.CODICE_TRIBUTO:
+            try:
+                from scadenze.models import CodiceTributoF24
+                codice_id = int(value)
+                codice = CodiceTributoF24.objects.get(id=codice_id)
+                return f"{codice.codice} - {codice.descrizione}"
+            except (TypeError, ValueError, CodiceTributoF24.DoesNotExist):
+                return None
         return str(value)
 
 
@@ -239,3 +312,12 @@ class FirmaComunicazione(models.Model):
 
     def __str__(self):
         return self.nome
+
+    def get_text(self) -> str:
+        """Restituisce il corpo testuale della firma"""
+        return self.corpo_testo or ""
+
+    def get_html(self) -> str:
+        """Restituisce il corpo HTML della firma"""
+        return self.corpo_html or ""
+

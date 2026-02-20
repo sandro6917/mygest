@@ -23,6 +23,8 @@ class Scadenza(models.Model):
         ATTIVA = "attiva", _("Attiva")
         COMPLETATA = "completata", _("Completata")
         ARCHIVIATA = "archiviata", _("Archiviata")
+        IN_SCADENZA = "in_scadenza", _("In scadenza")
+        SCADUTA = "scaduta", _("Scaduta")
 
     class Priorita(models.TextChoices):
         BASSA = "low", _("Bassa")
@@ -100,6 +102,17 @@ class Scadenza(models.Model):
         blank=True,
         help_text=_("Parametri aggiuntivi per la generazione delle occorrenze."),
     )
+    
+    num_occorrenze = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Numero massimo di occorrenze da generare (lascia vuoto per illimitate)."),
+    )
+    data_scadenza = models.DateField(
+        null=True,
+        blank=True,
+        help_text=_("Data della prima occorrenza (se non specificata, usa la data attuale)."),
+    )
 
     google_calendar_calendar_id = models.CharField(
         max_length=255,
@@ -135,19 +148,25 @@ class Scadenza(models.Model):
             .first()
         )
 
-    def genera_occorrenze_massive(
+    def genera_occorrenze(
         self,
         *,
-        start: datetime,
+        start: datetime | None = None,
         end: datetime | None = None,
-    count: int | None = None,
-    offset_alert_minuti: int = 0,
-    metodo_alert: str = "email",
+        count: int | None = None,
+        offset_alert_minuti: int = 0,
+        metodo_alert: str = "email",
         alert_config: dict[str, Any] | None = None,
     ) -> list["ScadenzaOccorrenza"]:
         """Genera occorrenze basandosi sui parametri di periodicità della scadenza."""
         from .services import OccurrenceGenerator
 
+        # Se non viene specificato start, usa l'inizio della giornata corrente
+        if not start:
+            now = timezone.now()
+            # Normalizza all'inizio della giornata (ore 09:00 come orario lavorativo)
+            start = now.replace(hour=9, minute=0, second=0, microsecond=0)
+        
         generator = OccurrenceGenerator(self)
         metodo = metodo_alert or ScadenzaOccorrenza.MetodoAlert.EMAIL
         return generator.generate(
@@ -184,6 +203,10 @@ class ScadenzaOccorrenza(models.Model):
     descrizione = models.TextField(blank=True)
     inizio = models.DateTimeField(db_index=True)
     fine = models.DateTimeField(null=True, blank=True)
+    giornaliera = models.BooleanField(
+        default=False,
+        help_text=_("Se True, l'occorrenza occupa l'intera giornata (all-day event).")
+    )
 
     metodo_alert = models.CharField(
         max_length=20,
@@ -264,6 +287,120 @@ class ScadenzaOccorrenza(models.Model):
         self.save(update_fields=["stato", "alert_inviata_il", "aggiornato_il"])
 
 
+class ScadenzaAlert(models.Model):
+    """Alert multipli per ogni occorrenza con configurazione granulare del timing."""
+
+    class TipoPeriodo(models.TextChoices):
+        MINUTI = "minutes", _("Minuti")
+        ORE = "hours", _("Ore")
+        GIORNI = "days", _("Giorni")
+        SETTIMANE = "weeks", _("Settimane")
+
+    class MetodoAlert(models.TextChoices):
+        EMAIL = "email", _("Email")
+        WEBHOOK = "webhook", _("Webhook")
+
+    class Stato(models.TextChoices):
+        PENDENTE = "pending", _("In attesa")
+        PROGRAMMATO = "scheduled", _("Programmato")
+        INVIATO = "sent", _("Inviato")
+        FALLITO = "failed", _("Fallito")
+
+    occorrenza = models.ForeignKey(
+        ScadenzaOccorrenza,
+        on_delete=models.CASCADE,
+        related_name="alerts",
+    )
+    
+    offset_alert_periodo = models.CharField(
+        max_length=20,
+        choices=TipoPeriodo.choices,
+        default=TipoPeriodo.GIORNI,
+        help_text=_("Unità di tempo per calcolare quando inviare l'alert.")
+    )
+    offset_alert = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(0)],
+        help_text=_("Numero di unità di tempo prima dell'occorrenza.")
+    )
+    
+    metodo_alert = models.CharField(
+        max_length=20,
+        choices=MetodoAlert.choices,
+        default=MetodoAlert.EMAIL,
+        db_index=True,
+    )
+    alert_config = JSONField(
+        default=dict,
+        blank=True,
+        help_text=_("Configurazione specifica per questo alert (destinatari, URL, etc.).")
+    )
+    
+    alert_programmata_il = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text=_("Momento calcolato in cui l'alert deve essere inviato.")
+    )
+    alert_inviata_il = models.DateTimeField(null=True, blank=True)
+    
+    stato = models.CharField(
+        max_length=20,
+        choices=Stato.choices,
+        default=Stato.PENDENTE,
+        db_index=True
+    )
+    
+    creato_il = models.DateTimeField(auto_now_add=True)
+    aggiornato_il = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Alert scadenza")
+        verbose_name_plural = _("Alert scadenze")
+        ordering = ["alert_programmata_il"]
+        indexes = [
+            models.Index(fields=["occorrenza", "stato"]),
+            models.Index(fields=["alert_programmata_il", "stato"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.get_metodo_alert_display()} {self.offset_alert} {self.get_offset_alert_periodo_display()} prima"
+
+    def clean(self) -> None:
+        super().clean()
+        if self.metodo_alert == self.MetodoAlert.EMAIL:
+            destinatari = (self.alert_config or {}).get("destinatari")
+            if not destinatari and not self.occorrenza.scadenza.comunicazione_destinatari:
+                raise ValidationError({
+                    "alert_config": _("Specificare almeno un destinatario email oppure configurare la scadenza."),
+                })
+        if self.metodo_alert == self.MetodoAlert.WEBHOOK:
+            url = (self.alert_config or {}).get("url")
+            if not url:
+                raise ValidationError({
+                    "alert_config": _("URL webhook obbligatoria per questo metodo di alert."),
+                })
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # Calcola automaticamente alert_programmata_il in base all'occorrenza e all'offset
+        if self.occorrenza and self.occorrenza.inizio:
+            delta_kwargs = {self.offset_alert_periodo: self.offset_alert}
+            self.alert_programmata_il = self.occorrenza.inizio - timedelta(**delta_kwargs)
+        super().save(*args, **kwargs)
+
+    def mark_sent(self, *, timestamp: datetime | None = None) -> None:
+        """Marca l'alert come inviato."""
+        timestamp = timestamp or timezone.now()
+        self.alert_inviata_il = timestamp
+        self.stato = self.Stato.INVIATO
+        self.save(update_fields=["alert_inviata_il", "stato", "aggiornato_il"])
+
+    def mark_failed(self, *, error_message: str = "") -> None:
+        """Marca l'alert come fallito."""
+        self.stato = self.Stato.FALLITO
+        self.save(update_fields=["stato", "aggiornato_il"])
+
+
 class ScadenzaNotificaLog(models.Model):
     """Log strutturato per tenere traccia delle comunicazioni inviate."""
 
@@ -318,10 +455,16 @@ class ScadenzaWebhookPayload(models.Model):
         ordering = ["-inviato_il"]
 
 
-def _sync_calendar_after_save(sender, instance: ScadenzaOccorrenza, created: bool, **_: Any) -> None:
-    """Trigger asincrono per mantenere allineato Google Calendar."""
+def _sync_calendar_after_save(sender, instance: ScadenzaOccorrenza, created: bool, **kwargs: Any) -> None:
+    """
+    Trigger asincrono per mantenere allineato Google Calendar.
+    """
     from .services import GoogleCalendarSync
 
+    # Evita loop infiniti: skip se stiamo già sincronizzando
+    if getattr(instance, '_syncing_calendar', False):
+        return
+    
     if instance.stato in {
         ScadenzaOccorrenza.Stato.ANNULLATA,
     }:
@@ -330,15 +473,26 @@ def _sync_calendar_after_save(sender, instance: ScadenzaOccorrenza, created: boo
         sync = GoogleCalendarSync()
         sync.upsert_occurrence(instance)
     except Exception as exc:  # pragma: no cover - solo logging
-        ScadenzaNotificaLog.objects.create(
-            occorrenza=instance,
-            evento=ScadenzaNotificaLog.Evento.CALENDAR_SYNC,
-            esito=False,
-            messaggio=str(exc),
-        )
+        try:
+            # Verifica che l'occorrenza esista ancora prima di creare il log
+            if ScadenzaOccorrenza.objects.filter(pk=instance.pk).exists():
+                ScadenzaNotificaLog.objects.create(
+                    occorrenza=instance,
+                    evento=ScadenzaNotificaLog.Evento.CALENDAR_SYNC,
+                    esito=False,
+                    messaggio=str(exc),
+                )
+        except Exception:
+            # Ignora errori nel logging per non bloccare il salvataggio
+            pass
 
 
 def _delete_calendar_event(sender, instance: ScadenzaOccorrenza, **_: Any) -> None:
+    """
+    Signal pre_delete per eliminare l'evento da Google Calendar.
+    IMPORTANTE: Usa pre_delete invece di post_delete perché dobbiamo
+    creare il log mentre l'occorrenza esiste ancora nel database.
+    """
     from .services import GoogleCalendarSync
 
     if not instance.google_calendar_event_id:
@@ -347,15 +501,116 @@ def _delete_calendar_event(sender, instance: ScadenzaOccorrenza, **_: Any) -> No
         sync = GoogleCalendarSync()
         sync.delete_occurrence(instance)
     except Exception as exc:  # pragma: no cover
-        ScadenzaNotificaLog.objects.create(
-            occorrenza=instance,
-            evento=ScadenzaNotificaLog.Evento.CALENDAR_SYNC,
-            esito=False,
-            messaggio=f"Delete failed: {exc}",
-        )
+        # Salva il log PRIMA che l'occorrenza venga eliminata
+        try:
+            ScadenzaNotificaLog.objects.create(
+                occorrenza=instance,
+                evento=ScadenzaNotificaLog.Evento.CALENDAR_SYNC,
+                esito=False,
+                messaggio=f"Delete failed: {exc}",
+            )
+        except Exception:
+            # Se fallisce anche il log, ignora (l'occorrenza sta per essere eliminata)
+            pass
 
 
-from django.db.models.signals import post_delete, post_save  # noqa: E402  pylint: disable=wrong-import-position
+class CodiceTributoF24(models.Model):
+    """Codici tributo utilizzabili nel modello F24."""
 
+    class Sezione(models.TextChoices):
+        ERARIO = "erario", _("Erario")
+        INPS = "inps", _("INPS")
+        REGIONI = "regioni", _("Regioni")
+        ALTRI_ENTI = "altri", _("Altri Enti Previdenziali")
+        IMU = "imu", _("IMU e altri tributi locali")
+        INAIL = "inail", _("INAIL")
+        ACCISE = "accise", _("Accise")
+
+    codice = models.CharField(
+        max_length=10,
+        unique=True,
+        db_index=True,
+        help_text="Codice identificativo del tributo (es: 1001, 1040, ecc.)"
+    )
+    sezione = models.CharField(
+        max_length=20,
+        choices=Sezione.choices,
+        db_index=True,
+        help_text="Sezione del modello F24"
+    )
+    descrizione = models.CharField(
+        max_length=500,
+        help_text="Descrizione completa del tributo"
+    )
+    causale = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Causale/sigla del tributo"
+    )
+    periodicita = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Periodicità del versamento (mensile, trimestrale, annuale, ecc.)"
+    )
+    note = models.TextField(
+        blank=True,
+        help_text="Note e informazioni aggiuntive sul tributo"
+    )
+    attivo = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="Indica se il codice tributo è ancora utilizzabile"
+    )
+    data_inizio_validita = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Data da cui il codice è valido"
+    )
+    data_fine_validita = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Data fino a cui il codice è valido (se applicabile)"
+    )
+    data_creazione = models.DateTimeField(auto_now_add=True)
+    data_modifica = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Codice Tributo F24"
+        verbose_name_plural = "Codici Tributo F24"
+        ordering = ['sezione', 'codice']
+        indexes = [
+            models.Index(fields=['codice', 'attivo']),
+            models.Index(fields=['sezione', 'attivo']),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.codice} - {self.descrizione[:50]}"
+
+    def clean(self):
+        """Validazione del modello."""
+        super().clean()
+        if self.data_fine_validita and self.data_inizio_validita:
+            if self.data_fine_validita < self.data_inizio_validita:
+                raise ValidationError({
+                    'data_fine_validita': _('La data di fine validità non può essere precedente alla data di inizio')
+                })
+
+    def is_valido_oggi(self) -> bool:
+        """Verifica se il codice tributo è valido oggi."""
+        oggi = timezone.now().date()
+        if not self.attivo:
+            return False
+        if self.data_inizio_validita and oggi < self.data_inizio_validita:
+            return False
+        if self.data_fine_validita and oggi > self.data_fine_validita:
+            return False
+        return True
+
+
+from django.db.models.signals import post_save, pre_delete  # noqa: E402  pylint: disable=wrong-import-position
+
+# Google Calendar sync ABILITATO - Configurato il 2 Febbraio 2026
+# Service Account: mygest-calendar-sync@mygest-478007.iam.gserviceaccount.com
+# Per modificare la configurazione, vedi docs/GOOGLE_CALENDAR_SETUP.md
 post_save.connect(_sync_calendar_after_save, sender=ScadenzaOccorrenza, dispatch_uid="scadenze_sync_google")
-post_delete.connect(_delete_calendar_event, sender=ScadenzaOccorrenza, dispatch_uid="scadenze_delete_google")
+pre_delete.connect(_delete_calendar_event, sender=ScadenzaOccorrenza, dispatch_uid="scadenze_delete_google")

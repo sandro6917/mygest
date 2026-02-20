@@ -1,0 +1,57 @@
+# Esempi di configurazione crontab per la pulizia automatica dei file
+
+# ============================================================
+# CRONTAB - Aggiungi con: crontab -e
+# ============================================================
+
+# Esempio 1: Pulizia ogni 5 minuti (file più vecchi di 5 minuti)
+*/5 * * * * cd /home/sandro/mygest/scripts && /usr/bin/python3 cron_cleanup.py --staging-dir /home/sandro/upload-staging --max-age 300 >> /home/sandro/mygest/logs/cleanup_cron.log 2>&1
+
+# Esempio 2: Pulizia ogni ora (file più vecchi di 1 ora)
+0 * * * * cd /home/sandro/mygest/scripts && /usr/bin/python3 cron_cleanup.py --staging-dir /home/sandro/upload-staging --max-age 3600
+
+# Esempio 3: Pulizia notturna (alle 2:00 AM, file più vecchi di 24 ore)
+0 2 * * * cd /home/sandro/mygest/scripts && /usr/bin/python3 cron_cleanup.py --staging-dir /home/sandro/upload-staging --max-age 86400
+
+# Esempio 4: Pulizia solo PDF ogni 15 minuti
+*/15 * * * * cd /home/sandro/mygest/scripts && /usr/bin/python3 cron_cleanup.py --staging-dir /home/sandro/upload-staging --max-age 900 --extensions .pdf
+
+# Esempio 5: Più directory contemporaneamente
+*/10 * * * * cd /home/sandro/mygest/scripts && /usr/bin/python3 cron_cleanup.py --staging-dir /home/sandro/upload-staging --max-age 600 && /usr/bin/python3 cron_cleanup.py --staging-dir /home/sandro/downloads --max-age 1800
+
+# ============================================================
+# COME CONFIGURARE
+# ============================================================
+# 
+# 1. Apri il crontab dell'utente:
+#    crontab -e
+#
+# 2. Aggiungi una delle righe sopra (scegli quella adatta)
+#
+# 3. Salva e chiudi
+#
+# 4. Verifica che sia attivo:
+#    crontab -l
+#
+# 5. Controlla i log per verificare l'esecuzione:
+#    tail -f /home/sandro/mygest/scripts/cron_cleanup.log
+#
+# ============================================================
+# FORMATO CRONTAB
+# ============================================================
+# 
+# * * * * * comando
+# │ │ │ │ │
+# │ │ │ │ └─── Giorno settimana (0-7, 0 e 7 = domenica)
+# │ │ │ └───── Mese (1-12)
+# │ │ └─────── Giorno mese (1-31)
+# │ └───────── Ora (0-23)
+# └─────────── Minuto (0-59)
+#
+# Esempi:
+# */5 * * * *   = Ogni 5 minuti
+# 0 * * * *     = Ogni ora
+# 0 2 * * *     = Ogni giorno alle 2:00
+# 0 2 * * 0     = Ogni domenica alle 2:00
+# 0 0 1 * *     = Il primo del mese a mezzanotte
+#

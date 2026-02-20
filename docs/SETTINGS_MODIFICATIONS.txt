@@ -1,0 +1,139 @@
+# Modifiche da applicare a mygest/settings.py
+# 
+# ISTRUZIONI:
+# 1. Aggiungere queste configurazioni al file settings.py
+# 2. Rimuovere o commentare i vecchi path hardcoded
+# 3. Testare con .env configurato
+
+# ====================================
+# DA AGGIUNGERE DOPO LA SEZIONE STATIC_ROOT
+# (circa linea 186)
+# ====================================
+
+# ====================================
+# File Storage e Path Configurazione
+# ====================================
+
+# Path base archivio documentale
+# Ambiente sviluppo: /mnt/archivio (WSL mount NAS)
+# Ambiente produzione: /srv/mygest/archivio (VPS)
+# Test: usa BASE_DIR / "test_archivio"
+ARCHIVIO_BASE_PATH = os.getenv(
+    "ARCHIVIO_BASE_PATH", 
+    str(BASE_DIR / "media" / "archivio") if DEBUG else "/srv/mygest/archivio"
+)
+
+# Directory temporanea upload (relativa a MEDIA_ROOT)
+UPLOAD_TEMP_DIR = os.getenv("UPLOAD_TEMP_DIR", "tmp")
+
+# Directory sorgente per importazioni
+# Supporta path multipli separati da ":" (come PATH Unix)
+IMPORTAZIONI_SOURCE_DIRS_STR = os.getenv(
+    "IMPORTAZIONI_SOURCE_DIRS",
+    str(BASE_DIR / "importazioni")  # Default: <project>/importazioni
+)
+IMPORTAZIONI_SOURCE_DIRS = [
+    p.strip() for p in IMPORTAZIONI_SOURCE_DIRS_STR.split(":")
+    if p.strip()
+]
+
+# Media URL per servire i file dell'archivio
+MEDIA_URL = '/archivio/'
+# MEDIA_ROOT non utilizzato - tutti i file vanno in ARCHIVIO_BASE_PATH
+# Manteniamo la definizione per compatibilità con eventuali app di terze parti
+MEDIA_ROOT = ARCHIVIO_BASE_PATH
+
+# Storage personalizzato per NAS
+NAS_STORAGE = FileSystemStorage(location=ARCHIVIO_BASE_PATH)
+
+# Validazione: assicurati che le directory esistano
+Path(ARCHIVIO_BASE_PATH).mkdir(parents=True, exist_ok=True)
+for imp_dir in IMPORTAZIONI_SOURCE_DIRS:
+    Path(imp_dir).mkdir(parents=True, exist_ok=True)
+
+
+# ====================================
+# Upload File - Limiti e Sicurezza
+# ====================================
+
+# Dimensione massima file in upload (in bytes)
+# Default: 50 MB per file singolo
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv(
+    "FILE_UPLOAD_MAX_MEMORY_SIZE", 
+    50 * 1024 * 1024  # 50 MB
+))
+
+# Dimensione massima totale richiesta (tutti i file + form data)
+# Default: 100 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv(
+    "DATA_UPLOAD_MAX_MEMORY_SIZE",
+    100 * 1024 * 1024  # 100 MB
+))
+
+# Numero massimo campi in una richiesta POST
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+# Estensioni file permesse (globali) - whitelist
+ALLOWED_FILE_EXTENSIONS = [
+    'pdf', 'docx', 'doc', 'xlsx', 'xls', 'odt', 'ods',
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tif', 'tiff',
+    'txt', 'csv', 'zip', 'rar', '7z',
+    'eml', 'msg',  # Email
+    'p7m', 'p7s',  # Firma digitale
+]
+
+# Estensioni file proibite (blacklist) - sicurezza
+FORBIDDEN_FILE_EXTENSIONS = [
+    'exe', 'bat', 'cmd', 'com', 'pif', 'scr',  # Eseguibili Windows
+    'sh', 'bash', 'run',  # Script Unix
+    'js', 'vbs', 'vbe', 'jar',  # Script
+    'msi', 'dll', 'sys',  # Componenti sistema
+]
+
+# MIME types permessi (opzionale, per double-check)
+ALLOWED_MIME_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/tiff',
+    'text/plain',
+    'application/zip',
+    'message/rfc822',  # Email
+]
+
+
+# ====================================
+# Antivirus - ClamAV
+# ====================================
+
+# Abilita/disabilita scansione antivirus
+ANTIVIRUS_ENABLED = os.getenv('ANTIVIRUS_ENABLED', 'true').lower() == 'true'
+
+# Se True, blocca l'upload se ClamAV non è disponibile
+# Se False, logga warning ma permette upload se ClamAV down
+ANTIVIRUS_REQUIRED = os.getenv('ANTIVIRUS_REQUIRED', 'false').lower() == 'true'
+
+# Socket Unix (default per Debian/Ubuntu)
+CLAMAV_SOCKET = os.getenv('CLAMAV_SOCKET', '/var/run/clamav/clamd.ctl')
+
+# In alternativa, connessione TCP (se socket non disponibile)
+CLAMAV_HOST = os.getenv('CLAMAV_HOST', 'localhost')
+CLAMAV_PORT = int(os.getenv('CLAMAV_PORT', '3310'))
+
+
+# ====================================
+# DA RIMUOVERE O COMMENTARE (circa linea 201-202)
+# ====================================
+
+# VECCHIA CONFIGURAZIONE DA RIMUOVERE:
+# IMPORTAZIONI_SOURCE_DIRS = [
+#     "/home/sandro/documenti",
+#     "/mnt/archivio/importazioni",
+# ]
+
+# La nuova configurazione usa variabili ambiente (vedi sopra)

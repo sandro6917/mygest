@@ -152,7 +152,7 @@
             <a class="link" href="{% url 'fascicoli:detail' parent.pk %}">{{ parent.codice }}</a>
           {% else %}<span class="muted">—</span>{% endif %}
         </p>
-        <p><strong>Children:</strong></p>
+        <p><strong>Sottofascicoli:</strong></p>
         {% if children %}
           <ul class="list">
             {% for c in children %}
@@ -161,6 +161,37 @@
           </ul>
         {% else %}
           <p class="muted">Nessun sottofascicolo.</p>
+        {% endif %}
+
+        <!-- Sezione per collegare fascicoli esistenti -->
+        {% if fascicoli_collegabili %}
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid #ddd;">
+          <p><strong>Collega fascicolo esistente come sottofascicolo:</strong></p>
+          <p class="muted" style="font-size: 0.9em; margin-bottom: 8px;">
+            Fascicoli dello stesso cliente non collegati ad altri fascicoli
+          </p>
+          <ul class="list">
+            {% for fasc in fascicoli_collegabili %}
+              <li style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                <span>
+                  <strong>{{ fasc.codice }}</strong> — {{ fasc.titolo|truncatewords:8 }}
+                  <small class="muted">[{{ fasc.titolario_voce.codice }} · {{ fasc.anno }}]</small>
+                </span>
+                <form method="post" action="{% url 'fascicoli:collega' fascicolo.pk %}" style="margin: 0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="target_id" value="{{ fasc.pk }}">
+                  <button 
+                    type="submit" 
+                    class="btn btn-sm btn-secondary" 
+                    title="Collega {{ fasc.codice }} come sottofascicolo"
+                    onclick="return confirm('Collegare {{ fasc.codice }} come sottofascicolo di {{ fascicolo.codice }}?');"
+                  >
+                    + Collega
+                  </button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
         {% endif %}
       </div>
     </section>

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h1 class="h3">Conferma disiscrizione</h1>
+      <p>
+        Stai per disiscriverti dalla mailing list <strong>{{ token.mailing_list.nome }}</strong> con l'indirizzo
+        <code>{{ token.email }}</code>.
+      </p>
+      <p class="text-muted">L'operazione rimuoverà il consenso marketing per questa lista e non riceverai più aggiornamenti.</p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Conferma disiscrizione</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

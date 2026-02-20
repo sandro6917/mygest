@@ -1,0 +1,222 @@
+[
+  {
+    "codice": "1001",
+    "sezione": "erario",
+    "descrizione": "Ritenute su redditi da lavoro dipendente e assimilati",
+    "causale": "Ritenute lavoro dipendente",
+    "periodicita": "mensile",
+    "note": "Da versare entro il 16 del mese successivo",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "1040",
+    "sezione": "erario",
+    "descrizione": "Ritenute su redditi da lavoro autonomo",
+    "causale": "Ritenute lavoro autonomo",
+    "periodicita": "mensile",
+    "note": "Ritenuta del 20% per professionisti",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "6001",
+    "sezione": "erario",
+    "descrizione": "Ritenute su provvigioni",
+    "causale": "Ritenute provvigioni",
+    "periodicita": "mensile",
+    "note": "Per agenti e rappresentanti",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "4001",
+    "sezione": "erario",
+    "descrizione": "IVA mensile",
+    "causale": "IVA",
+    "periodicita": "mensile",
+    "note": "Versamento IVA del periodo precedente",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "6099",
+    "sezione": "erario",
+    "descrizione": "Acconto IVA",
+    "causale": "Acconto IVA",
+    "periodicita": "annuale",
+    "note": "Da versare entro il 27 dicembre",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "4034",
+    "sezione": "erario",
+    "descrizione": "Saldo IVA annuale",
+    "causale": "Saldo IVA",
+    "periodicita": "annuale",
+    "note": "Versamento del saldo annuale",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "2003",
+    "sezione": "erario",
+    "descrizione": "IRPEF - Prima rata acconto",
+    "causale": "IRPEF acconto",
+    "periodicita": "annuale",
+    "note": "40% del totale acconto - scadenza 30 giugno",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "2004",
+    "sezione": "erario",
+    "descrizione": "IRPEF - Seconda rata acconto o unica",
+    "causale": "IRPEF acconto",
+    "periodicita": "annuale",
+    "note": "60% del totale acconto - scadenza 30 novembre",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "4033",
+    "sezione": "erario",
+    "descrizione": "IRPEF - Saldo",
+    "causale": "IRPEF saldo",
+    "periodicita": "annuale",
+    "note": "Versamento del saldo annuale",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "DM10",
+    "sezione": "inps",
+    "descrizione": "Contributi INPS - Dipendenti",
+    "causale": "Contributi dipendenti",
+    "periodicita": "mensile",
+    "note": "Da versare entro il 16 del mese successivo",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "AP23",
+    "sezione": "inps",
+    "descrizione": "Contributi artigiani e commercianti - Saldo",
+    "causale": "Contributi artigiani",
+    "periodicita": "annuale",
+    "note": "Versamento saldo annuale",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "AP53",
+    "sezione": "inps",
+    "descrizione": "Contributi artigiani e commercianti - Prima rata acconto",
+    "causale": "Contributi artigiani acconto",
+    "periodicita": "annuale",
+    "note": "40% del totale - scadenza giugno",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "3800",
+    "sezione": "imu",
+    "descrizione": "IMU - Imposta Municipale Unica",
+    "causale": "IMU",
+    "periodicita": "semestrale",
+    "note": "Acconto giugno, saldo dicembre",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "3850",
+    "sezione": "imu",
+    "descrizione": "IMU - Interessi",
+    "causale": "IMU interessi",
+    "periodicita": "occasionale",
+    "note": "Per versamenti in ritardo",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "3851",
+    "sezione": "imu",
+    "descrizione": "IMU - Sanzioni",
+    "causale": "IMU sanzioni",
+    "periodicita": "occasionale",
+    "note": "Per versamenti omessi o insufficienti",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "3918",
+    "sezione": "imu",
+    "descrizione": "TASI - Tributo Servizi Indivisibili",
+    "causale": "TASI",
+    "periodicita": "semestrale",
+    "note": "Acconto giugno, saldo dicembre (se applicabile)",
+    "attivo": false,
+    "data_inizio_validita": "2014-01-01",
+    "data_fine_validita": "2019-12-31"
+  },
+  {
+    "codice": "3944",
+    "sezione": "imu",
+    "descrizione": "TARI - Tassa Rifiuti",
+    "causale": "TARI",
+    "periodicita": "variabile",
+    "note": "Periodicità stabilita dal comune",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "KK00",
+    "sezione": "inail",
+    "descrizione": "Premi INAIL",
+    "causale": "Premi INAIL",
+    "periodicita": "annuale",
+    "note": "Versamento premi assicurativi",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "3813",
+    "sezione": "regioni",
+    "descrizione": "Addizionale regionale IRPEF - Saldo",
+    "causale": "Addizionale regionale",
+    "periodicita": "annuale",
+    "note": "Versamento del saldo annuale",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "3812",
+    "sezione": "regioni",
+    "descrizione": "Addizionale regionale IRPEF - Acconto",
+    "causale": "Addizionale regionale acconto",
+    "periodicita": "annuale",
+    "note": "Versamento dell'acconto",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  }
+]

@@ -19,4 +19,6 @@ urlpatterns = [
     ),
     path("api/contatti/", views.autocomplete_contatti, name="api-contatti-autocomplete"),
     path("api/liste/", views.autocomplete_liste, name="api-liste-autocomplete"),
+    path("preferenze/", views.mailinglist_preferences, name="mailinglist-preferences"),
+    path("unsubscribe/<uuid:token>/", views.unsubscribe_confirm, name="unsubscribe-confirm"),
 ]

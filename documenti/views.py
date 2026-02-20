@@ -484,10 +484,20 @@ def protocolla_documento(request, pk: int):
             uf = UnitaFisica.objects.get(pk=int(uf_id))
         except Exception:
             uf = None
+
+    def resolve_anagrafica(key: str):
+        anagrafica_id = request.POST.get(key)
+        if not anagrafica_id:
+            return None
+        try:
+            return Anagrafica.objects.get(pk=int(anagrafica_id))
+        except (Anagrafica.DoesNotExist, ValueError, TypeError):
+            return None
     try:
         if tipo == "uscita":
             from datetime import datetime
             a_chi = request.POST.get("a_chi") or ""
+            a_chi_anagrafica = resolve_anagrafica("a_chi_anagrafica")
             data_rp = request.POST.get("data_rientro_prevista") or ""
             data_rp = datetime.strptime(data_rp, "%Y-%m-%d").date() if data_rp else None
             MovimentoProtocollo.registra_uscita(
@@ -495,6 +505,7 @@ def protocolla_documento(request, pk: int):
                 quando=timezone.now(),
                 operatore=request.user,
                 a_chi=a_chi,
+                destinatario_anagrafica=a_chi_anagrafica,
                 data_rientro_prevista=data_rp,
                 causale=request.POST.get("causale") or "",
                 note=request.POST.get("note") or "",
@@ -503,11 +514,13 @@ def protocolla_documento(request, pk: int):
             messages.success(request, "Uscita registrata.")
         else:
             da_chi = request.POST.get("da_chi") or ""
+            da_chi_anagrafica = resolve_anagrafica("da_chi_anagrafica")
             MovimentoProtocollo.registra_entrata(
                 documento=doc,
                 quando=timezone.now(),
                 operatore=request.user,
                 da_chi=da_chi,
+                destinatario_anagrafica=da_chi_anagrafica,
                 ubicazione=uf,
                 causale=request.POST.get("causale") or "",
                 note=request.POST.get("note") or "",
@@ -564,3 +577,362 @@ def nuovo(request, pk=None):
     else:
         form = DocumentoForm(initial=initial)
     return render(request, "documenti/form.html", {"form": form})
+
+
+# ============================================================================
+# IMPORTAZIONE UNILAV
+# ============================================================================
+
+@login_required
+def importa_unilav(request):
+    """
+    View per importazione UNILAV - Step 1: Upload PDF e anteprima dati estratti
+    """
+    breadcrumb_chain = [
+        ("Documenti", reverse("documenti:home")),
+        ("Importa UNILAV", None),
+    ]
+    set_breadcrumbs(request, breadcrumb_chain)
+    
+    if request.method == "POST" and request.FILES.get("file"):
+        # Step 1: Analizza PDF e mostra anteprima
+        pdf_file = request.FILES["file"]
+        
+        # Validazione file
+        if not pdf_file.name.lower().endswith('.pdf'):
+            messages.error(request, "Il file deve essere in formato PDF")
+            return render(request, "documenti/importa_unilav.html", {"error": "Il file deve essere in formato PDF"})
+        
+        max_size = 10 * 1024 * 1024  # 10MB
+        if pdf_file.size > max_size:
+            messages.error(request, f"Il file è troppo grande ({pdf_file.size / 1024 / 1024:.1f}MB). Massimo 10MB")
+            return render(request, "documenti/importa_unilav.html", {
+                "error": f"Il file è troppo grande ({pdf_file.size / 1024 / 1024:.1f}MB). Dimensione massima: 10MB"
+            })
+        
+        # Salva temporaneamente il file
+        import tempfile
+        import os
+        
+        temp_dir = tempfile.mkdtemp()
+        temp_path = os.path.join(temp_dir, pdf_file.name)
+        
+        with open(temp_path, 'wb+') as destination:
+            for chunk in pdf_file.chunks():
+                destination.write(chunk)
+        
+        try:
+            # Parse PDF
+            from .parsers.unilav_parser import parse_unilav_pdf
+            parsed_data = parse_unilav_pdf(temp_path)
+            
+            # Prepara dati per il template
+            datore_data = parsed_data['datore']
+            cf_datore = datore_data['codice_fiscale']
+            tipo_datore = 'PF' if len(cf_datore) == 16 else 'PG'
+            
+            datore_preview = {
+                'codice_fiscale': cf_datore,
+                'tipo': tipo_datore,
+                'crea_se_non_esiste': True,
+                'crea_cliente': True,
+            }
+            
+            if tipo_datore == 'PG':
+                datore_preview['ragione_sociale'] = datore_data['denominazione']
+            else:
+                parti = datore_data['denominazione'].split(' ', 1)
+                datore_preview['cognome'] = parti[0] if len(parti) > 0 else datore_data['denominazione']
+                datore_preview['nome'] = parti[1] if len(parti) > 1 else ''
+            
+            datore_preview.update({
+                'email': datore_data.get('email'),
+                'telefono': datore_data.get('telefono'),
+                'comune': datore_data.get('comune_sede_legale'),
+                'cap': datore_data.get('cap_sede_legale'),
+                'indirizzo': datore_data.get('indirizzo_sede_legale'),
+            })
+            
+            # Verifica esistenza datore
+            try:
+                anagrafica_datore = Anagrafica.objects.get(codice_fiscale=cf_datore)
+                datore_preview['esiste'] = True
+                datore_preview['anagrafica_id'] = anagrafica_datore.id
+                try:
+                    cliente_datore = Cliente.objects.get(anagrafica=anagrafica_datore)
+                    datore_preview['cliente_id'] = cliente_datore.id
+                except Cliente.DoesNotExist:
+                    datore_preview['cliente_id'] = None
+            except Anagrafica.DoesNotExist:
+                datore_preview['esiste'] = False
+                datore_preview['anagrafica_id'] = None
+                datore_preview['cliente_id'] = None
+            
+            # Lavoratore
+            lavoratore_data = parsed_data['lavoratore']
+            cf_lavoratore = lavoratore_data['codice_fiscale']
+            
+            lavoratore_preview = {
+                'codice_fiscale': cf_lavoratore,
+                'tipo': 'PF',
+                'cognome': lavoratore_data['cognome'],
+                'nome': lavoratore_data['nome'],
+                'sesso': lavoratore_data.get('sesso'),
+                'data_nascita': lavoratore_data.get('data_nascita'),
+                'comune_nascita': lavoratore_data.get('comune_nascita'),
+                'comune': lavoratore_data.get('comune_domicilio'),
+                'cap': lavoratore_data.get('cap_domicilio'),
+                'indirizzo': lavoratore_data.get('indirizzo_domicilio'),
+                'crea_se_non_esiste': True,
+                'crea_cliente': False,
+            }
+            
+            # Verifica esistenza lavoratore
+            try:
+                anagrafica_lavoratore = Anagrafica.objects.get(codice_fiscale=cf_lavoratore)
+                lavoratore_preview['esiste'] = True
+                lavoratore_preview['anagrafica_id'] = anagrafica_lavoratore.id
+            except Anagrafica.DoesNotExist:
+                lavoratore_preview['esiste'] = False
+                lavoratore_preview['anagrafica_id'] = None
+            
+            # Documento UNILAV
+            unilav_data = parsed_data['unilav']
+            
+            documento_preview = {
+                'codice_comunicazione': unilav_data['codice_comunicazione'],
+                'tipo_comunicazione': unilav_data.get('tipo_comunicazione'),
+                'data_comunicazione': unilav_data['data_comunicazione'],
+                'dipendente': lavoratore_preview.get('anagrafica_id'),
+                'tipo': unilav_data.get('tipologia_contrattuale'),
+                'data_da': unilav_data.get('data_inizio_rapporto'),
+                'data_a': unilav_data.get('data_fine_rapporto'),
+                'qualifica': unilav_data.get('qualifica_professionale'),
+                'contratto_collettivo': unilav_data.get('contratto_collettivo'),
+                'livello': unilav_data.get('livello_inquadramento'),
+                'retribuzione': unilav_data.get('retribuzione'),
+                'ore_settimanali': unilav_data.get('ore_settimanali'),
+                'tipo_orario': unilav_data.get('tipo_orario'),
+            }
+            
+            preview_data = {
+                'datore': datore_preview,
+                'lavoratore': lavoratore_preview,
+                'documento': documento_preview,
+                'file_temp_path': temp_path,
+            }
+            
+            return render(request, "documenti/importa_unilav.html", {
+                "preview_data": preview_data
+            })
+            
+        except Exception as e:
+            # Pulizia file temporaneo in caso di errore
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            if os.path.exists(temp_dir):
+                try:
+                    os.rmdir(temp_dir)
+                except:
+                    pass
+            
+            messages.error(request, f"Errore nell'analisi del PDF: {str(e)}")
+            return render(request, "documenti/importa_unilav.html", {
+                "error": f"Errore nell'analisi del PDF: {str(e)}"
+            })
+    
+    # GET: Mostra form upload
+    return render(request, "documenti/importa_unilav.html", {})
+
+
+@login_required
+@require_POST
+def importa_unilav_confirm(request):
+    """
+    View per importazione UNILAV - Step 2: Conferma e salvataggio definitivo
+    """
+    import os
+    from datetime import datetime
+    
+    file_path = request.POST.get('file_path')
+    
+    # Verifica che il file temporaneo esista ancora
+    if not file_path or not os.path.exists(file_path):
+        messages.error(request, "File temporaneo non trovato. Ricarica il PDF.")
+        return redirect("documenti:importa_unilav")
+    
+    try:
+        # Estrai dati dal form
+        datore_data = {
+            'codice_fiscale': request.POST.get('datore_codice_fiscale'),
+            'tipo': request.POST.get('datore_tipo'),
+            'ragione_sociale': request.POST.get('datore_ragione_sociale', ''),
+            'cognome': request.POST.get('datore_cognome', ''),
+            'nome': request.POST.get('datore_nome', ''),
+            'email': request.POST.get('datore_email', ''),
+            'telefono': request.POST.get('datore_telefono', ''),
+            'comune': request.POST.get('datore_comune', ''),
+            'cap': request.POST.get('datore_cap', ''),
+            'indirizzo': request.POST.get('datore_indirizzo', ''),
+        }
+        
+        lavoratore_data = {
+            'codice_fiscale': request.POST.get('lavoratore_codice_fiscale'),
+            'tipo': 'PF',
+            'cognome': request.POST.get('lavoratore_cognome'),
+            'nome': request.POST.get('lavoratore_nome'),
+            'sesso': request.POST.get('lavoratore_sesso', ''),
+            'data_nascita': request.POST.get('lavoratore_data_nascita') or None,
+            'comune_nascita': request.POST.get('lavoratore_comune_nascita', ''),
+            'comune': request.POST.get('lavoratore_comune', ''),
+            'cap': request.POST.get('lavoratore_cap', ''),
+            'indirizzo': request.POST.get('lavoratore_indirizzo', ''),
+        }
+        
+        documento_data = {
+            'codice_comunicazione': request.POST.get('doc_codice_comunicazione'),
+            'tipo_comunicazione': request.POST.get('doc_tipo_comunicazione', ''),
+            'data_comunicazione': request.POST.get('doc_data_comunicazione'),
+            'tipo': request.POST.get('doc_tipo', ''),
+            'data_da': request.POST.get('doc_data_da') or None,
+            'data_a': request.POST.get('doc_data_a') or None,
+            'qualifica': request.POST.get('doc_qualifica', ''),
+            'contratto_collettivo': request.POST.get('doc_contratto_collettivo', ''),
+            'livello': request.POST.get('doc_livello', ''),
+            'retribuzione': request.POST.get('doc_retribuzione', ''),
+            'ore_settimanali': request.POST.get('doc_ore_settimanali', ''),
+            'tipo_orario': request.POST.get('doc_tipo_orario', ''),
+        }
+        
+        with transaction.atomic():
+            # 1. Crea/Aggiorna datore
+            anagrafica_datore, _ = Anagrafica.objects.get_or_create(
+                codice_fiscale=datore_data['codice_fiscale'],
+                defaults={
+                    'tipo': datore_data['tipo'],
+                    'ragione_sociale': datore_data['ragione_sociale'],
+                    'cognome': datore_data['cognome'],
+                    'nome': datore_data['nome'],
+                }
+            )
+            
+            cliente_datore, _ = Cliente.objects.get_or_create(
+                anagrafica=anagrafica_datore
+            )
+            
+            # 2. Crea/Aggiorna lavoratore
+            anagrafica_lavoratore, _ = Anagrafica.objects.get_or_create(
+                codice_fiscale=lavoratore_data['codice_fiscale'],
+                defaults={
+                    'tipo': 'PF',
+                    'cognome': lavoratore_data['cognome'],
+                    'nome': lavoratore_data['nome'],
+                    'sesso': lavoratore_data['sesso'],
+                    'data_nascita': lavoratore_data['data_nascita'],
+                }
+            )
+            
+            # 3. Verifica tipo UNILAV
+            try:
+                tipo_unilav = DocumentiTipo.objects.get(codice='UNILAV')
+            except DocumentiTipo.DoesNotExist:
+                messages.error(request, "Tipo documento UNILAV non configurato. Contatta l'amministratore.")
+                return redirect("documenti:importa_unilav")
+            
+            # 4. Crea documento
+            descrizione = f"UNILAV {documento_data['codice_comunicazione']} - {anagrafica_lavoratore.denominazione}"
+            
+            documento = Documento.objects.create(
+                tipo=tipo_unilav,
+                cliente=cliente_datore,
+                descrizione=descrizione,
+                data_documento=documento_data['data_comunicazione'],
+                digitale=True,
+                tracciabile=True,
+                stato='definitivo',
+            )
+            
+            # 5. Salva file PDF
+            with open(file_path, 'rb') as f:
+                from django.core.files import File
+                documento.file.save(
+                    os.path.basename(file_path),
+                    File(f),
+                    save=True
+                )
+            
+            # 6. Salva attributi dinamici
+            from .models import AttributoValore, AttributoDefinizione
+            
+            attributi_map = {
+                'dipendente': anagrafica_lavoratore.id,
+                'tipo': documento_data.get('tipo'),
+                'data_comunicazione': documento_data.get('data_comunicazione'),
+                'data_da': documento_data.get('data_da'),
+                'data_a': documento_data.get('data_a'),
+            }
+            
+            for codice_attr, valore in attributi_map.items():
+                if valore is not None:
+                    try:
+                        definizione = AttributoDefinizione.objects.get(
+                            tipo_documento=tipo_unilav,
+                            codice=codice_attr
+                        )
+                        
+                        AttributoValore.objects.create(
+                            documento=documento,
+                            definizione=definizione,
+                            valore=valore
+                        )
+                    except AttributoDefinizione.DoesNotExist:
+                        pass
+            
+            # Aggiungi dati extra nelle note
+            note_extra = []
+            if documento_data.get('qualifica'):
+                note_extra.append(f"Qualifica: {documento_data['qualifica']}")
+            if documento_data.get('contratto_collettivo'):
+                note_extra.append(f"CCNL: {documento_data['contratto_collettivo']}")
+            if documento_data.get('livello'):
+                note_extra.append(f"Livello: {documento_data['livello']}")
+            if documento_data.get('retribuzione'):
+                note_extra.append(f"Retribuzione: {documento_data['retribuzione']}")
+            if documento_data.get('ore_settimanali'):
+                note_extra.append(f"Ore settimanali: {documento_data['ore_settimanali']}")
+            if documento_data.get('tipo_orario'):
+                note_extra.append(f"Tipo orario: {documento_data['tipo_orario']}")
+            
+            if note_extra:
+                documento.note = '\n'.join(note_extra)
+                documento.save()
+            
+            # Pulizia file temporaneo
+            try:
+                os.remove(file_path)
+                temp_dir = os.path.dirname(file_path)
+                if os.path.exists(temp_dir):
+                    os.rmdir(temp_dir)
+            except:
+                pass
+            
+            messages.success(request, f"✓ UNILAV importato con successo! Documento #{documento.id}")
+            return render(request, "documenti/importa_unilav.html", {
+                "success": True,
+                "documento_id": documento.id
+            })
+            
+    except Exception as e:
+        # Pulizia file temporaneo in caso di errore
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            temp_dir = os.path.dirname(file_path)
+            if os.path.exists(temp_dir):
+                os.rmdir(temp_dir)
+        except:
+            pass
+        
+        messages.error(request, f"Errore nell'importazione: {str(e)}")
+        return redirect("documenti:importa_unilav")
+

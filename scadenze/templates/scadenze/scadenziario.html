@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Scadenziario" %}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1>{% trans "Scadenziario" %}</h1>
+    <div class="actions">
+      <a class="btn btn-secondary" href="{% url 'scadenze:home' %}">{% trans "Torna alle scadenze" %}</a>
+      <a class="btn btn-success" href="{% url 'scadenze:export_scadenziario_pdf' %}?{{ request.GET.urlencode }}">📄 {% trans "Export PDF" %}</a>
+      <a class="btn btn-success" href="{% url 'scadenze:export_scadenziario_excel' %}?{{ request.GET.urlencode }}">📊 {% trans "Export Excel" %}</a>
+      <a class="btn btn-primary" href="{% url 'scadenze:create' %}">{% trans "Nuova scadenza" %}</a>
+    </div>
+  </div>
+
+  <!-- Filtri -->
+  <form method="get" class="card" style="margin-bottom:20px;">
+    <div class="body">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+        <div style="flex:1; min-width:150px;">
+          <label>{% trans "Periodo" %}</label>
+          <select name="periodo" onchange="this.form.submit()">
+            <option value="oggi" {% if periodo == 'oggi' %}selected{% endif %}>{% trans "Oggi" %}</option>
+            <option value="settimana" {% if periodo == 'settimana' %}selected{% endif %}>{% trans "Prossimi 7 giorni" %}</option>
+            <option value="mese" {% if periodo == 'mese' %}selected{% endif %}>{% trans "Prossimi 30 giorni" %}</option>
+            <option value="trimestre" {% if periodo == 'trimestre' %}selected{% endif %}>{% trans "Prossimi 90 giorni" %}</option>
+          </select>
+        </div>
+
+        <div style="flex:1; min-width:150px;">
+          <label>{% trans "Stato" %}</label>
+          <select name="stato" onchange="this.form.submit()">
+            <option value="">{% trans "Tutti" %}</option>
+            {% for value,label in stato_choices %}
+              <option value="{{ value }}" {% if stato_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="flex:1; min-width:150px;">
+          <label>{% trans "Priorità" %}</label>
+          <select name="priorita" onchange="this.form.submit()">
+            <option value="">{% trans "Tutte" %}</option>
+            {% for value,label in priorita_choices %}
+              <option value="{{ value }}" {% if priorita_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button class="btn btn-secondary" type="submit">{% trans "Applica" %}</button>
+        {% if stato_filter or priorita_filter %}
+          <a class="btn" href="{% url 'scadenze:scadenziario' %}?periodo={{ periodo }}">{% trans "Reset filtri" %}</a>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+
+  <!-- Statistiche -->
+  <div class="card" style="margin-bottom:20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="body" style="color: white;">
+      <h2 style="color: white; margin-bottom: 10px;">{{ titolo_periodo }}</h2>
+      <div style="display:flex; gap:30px; flex-wrap:wrap;">
+        <div>
+          <div style="font-size:32px; font-weight:bold;">{{ totale_occorrenze }}</div>
+          <div style="opacity:0.9;">{% trans "Occorrenze" %}</div>
+        </div>
+        <div>
+          <div style="font-size:32px; font-weight:bold;">{{ totale_alert_pendenti }}</div>
+          <div style="opacity:0.9;">{% trans "Alert programmati" %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Occorrenze per giorno -->
+  {% if occorrenze_per_giorno %}
+    {% for data, occorrenze in occorrenze_per_giorno.items %}
+      <div class="card" style="margin-bottom:20px;">
+        <div class="header" style="background: #f8f9fa; border-bottom: 2px solid #dee2e6; padding: 15px 20px;">
+          <h3 style="margin:0; color:#495057;">
+            {{ data|date:"l j F Y" }}
+            <span class="badge" style="margin-left:10px; background:#6c757d; color:white; padding:4px 12px; border-radius:12px; font-size:14px;">
+              {{ occorrenze|length }} {% if occorrenze|length == 1 %}occorrenza{% else %}occorrenze{% endif %}
+            </span>
+          </h3>
+        </div>
+        <div class="body" style="padding:0;">
+          <table class="table" style="margin:0;">
+            <thead>
+              <tr>
+                <th style="width:80px;">{% trans "Ora" %}</th>
+                <th>{% trans "Scadenza" %}</th>
+                <th>{% trans "Occorrenza" %}</th>
+                <th style="width:100px;">{% trans "Priorità" %}</th>
+                <th style="width:120px;">{% trans "Alert" %}</th>
+                <th style="width:100px;">{% trans "Stato" %}</th>
+                <th style="width:120px;">{% trans "Azioni" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for occ in occorrenze %}
+                <tr style="{% if occ.scadenza.priorita == 'critical' %}background:#fff5f5;{% elif occ.scadenza.priorita == 'high' %}background:#fffaf0;{% endif %}">
+                  <td style="font-weight:bold; font-size:16px;">
+                    {% if occ.giornaliera %}
+                      <span title="{% trans 'Evento giornaliero' %}">🗓️</span>
+                    {% else %}
+                      {{ occ.inizio|date:"H:i" }}
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'scadenze:detail' occ.scadenza.pk %}" style="font-weight:600; color:#2563eb;">
+                      {{ occ.scadenza.titolo }}
+                    </a>
+                    <div style="font-size:12px; color:#6b7280; margin-top:4px;">
+                      {% if occ.scadenza.pratiche.all %}
+                        🗂️ 
+                        {% for pr in occ.scadenza.pratiche.all %}
+                          <a href="{% url 'pratiche:dettaglio' pr.pk %}" style="color:#6b7280;">{{ pr.codice }}</a>
+                          {% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div>{{ occ.titolo|default:"-" }}</div>
+                    {% if occ.descrizione %}
+                      <div style="font-size:12px; color:#6b7280; margin-top:4px;">
+                        {{ occ.descrizione|truncatewords:15 }}
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if occ.scadenza.priorita == 'critical' %}
+                      <span class="badge" style="background:#dc2626; color:white;">🔴 {{ occ.scadenza.get_priorita_display }}</span>
+                    {% elif occ.scadenza.priorita == 'high' %}
+                      <span class="badge" style="background:#f59e0b; color:white;">🟠 {{ occ.scadenza.get_priorita_display }}</span>
+                    {% elif occ.scadenza.priorita == 'medium' %}
+                      <span class="badge" style="background:#3b82f6; color:white;">🔵 {{ occ.scadenza.get_priorita_display }}</span>
+                    {% else %}
+                      <span class="badge" style="background:#6b7280; color:white;">⚪ {{ occ.scadenza.get_priorita_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% with alert_count=occ.alerts.count alert_pendenti=occ.alerts.all|dictsort:"stato"|slice:":10" %}
+                      {% if alert_count > 0 %}
+                        <div title="{% trans 'Alert configurati' %}">
+                          <span style="font-weight:600; color:#059669;">✓ {{ alert_count }}</span>
+                          {% if alert_pendenti %}
+                            <div style="font-size:11px; color:#6b7280; margin-top:2px;">
+                              {% for alert in alert_pendenti %}
+                                {% if alert.stato == 'pending' %}
+                                  <div>⏰ {{ alert.offset_alert }}{{ alert.offset_alert_periodo|slice:":1" }}</div>
+                                {% endif %}
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
+                      {% else %}
+                        <span style="color:#9ca3af;">-</span>
+                      {% endif %}
+                    {% endwith %}
+                  </td>
+                  <td>
+                    <span class="badge" style="
+                      {% if occ.stato == 'completed' %}background:#10b981; color:white;
+                      {% elif occ.stato == 'alerted' %}background:#3b82f6; color:white;
+                      {% elif occ.stato == 'cancelled' %}background:#6b7280; color:white;
+                      {% else %}background:#f3f4f6; color:#374151;
+                      {% endif %}
+                    ">
+                      {{ occ.get_stato_display }}
+                    </span>
+                  </td>
+                  <td>
+                    <div style="display:flex; gap:5px;">
+                      <a href="{% url 'scadenze:detail' occ.scadenza.pk %}" class="btn btn-sm" title="{% trans 'Dettagli' %}">👁️</a>
+                      <form method="post" action="{% url 'scadenze:trigger_alert' occ.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button class="btn btn-sm" type="submit" title="{% trans 'Invia alert' %}">🔔</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="card">
+      <div class="body" style="text-align:center; padding:40px; color:#9ca3af;">
+        <div style="font-size:48px; margin-bottom:15px;">📅</div>
+        <div style="font-size:18px; font-weight:600; margin-bottom:8px;">{% trans "Nessuna occorrenza" %}</div>
+        <div>{% trans "Non ci sono occorrenze programmate per il periodo selezionato." %}</div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #f9fafb;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.table td {
+  padding: 15px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.btn-sm:hover {
+  background: #f3f4f6;
+}
+</style>
+{% endblock %}

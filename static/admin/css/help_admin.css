@@ -1,0 +1,120 @@
+/* CSS custom per Help Admin Form */
+
+/* Fieldset Help - colori distintivi */
+.fieldset-help-descrizione h2 {
+    background-color: #e3f2fd;
+    padding: 10px;
+    border-left: 4px solid #2196f3;
+}
+
+.fieldset-help-quando_usare h2 {
+    background-color: #f3e5f5;
+    padding: 10px;
+    border-left: 4px solid #9c27b0;
+}
+
+.fieldset-help-relazione_fascicoli h2 {
+    background-color: #e8f5e9;
+    padding: 10px;
+    border-left: 4px solid #4caf50;
+}
+
+.fieldset-help-workflow h2 {
+    background-color: #fff3e0;
+    padding: 10px;
+    border-left: 4px solid #ff9800;
+}
+
+.fieldset-help-note_speciali h2 {
+    background-color: #fce4ec;
+    padding: 10px;
+    border-left: 4px solid #e91e63;
+}
+
+.fieldset-help-faq h2 {
+    background-color: #ede7f6;
+    padding: 10px;
+    border-left: 4px solid #673ab7;
+}
+
+/* Textarea help - dimensioni migliori */
+.field-help_descrizione_breve textarea,
+.field-help_quando_usare_casi textarea,
+.field-help_quando_usare_non_usare textarea,
+.field-help_relazione_fascicoli_descrizione textarea,
+.field-help_relazione_fascicoli_best_practices textarea,
+.field-help_workflow_stati textarea,
+.field-help_note_attenzioni textarea,
+.field-help_note_suggerimenti textarea,
+.field-help_note_vincoli textarea,
+.field-help_faq_json textarea {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+/* JSON textarea - monospace e colore distintivo */
+.field-help_faq_json textarea {
+    background-color: #f5f5f5;
+    border-left: 3px solid #673ab7;
+}
+
+/* Help text migliorato */
+.help {
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+/* Badge per sezioni auto-generate */
+.auto-generated-badge {
+    display: inline-block;
+    background-color: #4caf50;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.manual-badge {
+    display: inline-block;
+    background-color: #2196f3;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+/* Warning box per help_data raw */
+.field-help_data .description {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 10px;
+    color: #856404;
+}
+
+/* Link wizard */
+.wizard-link {
+    display: inline-block;
+    background-color: #673ab7;
+    color: white !important;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.wizard-link:hover {
+    background-color: #5e35b1;
+    color: white !important;
+}

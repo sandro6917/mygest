@@ -8,7 +8,9 @@ from .models import (
     MailingList,
     MailingListMembership,
     MailingListIndirizzo,
+    MailingListUnsubscribeToken,
 )
+from .models_comuni import ComuneItaliano
 
 class IndirizzoInline(admin.TabularInline):
     model = Indirizzo
@@ -21,13 +23,13 @@ class EmailContattoInline(admin.TabularInline):
 
 @admin.register(Anagrafica)
 class AnagraficaAdmin(admin.ModelAdmin):
-    list_display = ("display_name","tipo","codice","codice_fiscale","partita_iva","pec","email","telefono")
+    list_display = ("display_name","tipo","codice","codice_fiscale","partita_iva","denominazione_abbreviata","pec","email","telefono")
     list_filter = ("tipo",)
-    search_fields = ("codice","ragione_sociale","cognome","nome","codice_fiscale","partita_iva","pec","email")
+    search_fields = ("codice","ragione_sociale","cognome","nome","codice_fiscale","partita_iva","denominazione_abbreviata","pec","email")
     autocomplete_fields = ()
     fieldsets = (
         (None, {"fields": ("tipo","ragione_sociale","nome","cognome")}),
-        ("Identificativi", {"fields": ("codice","codice_fiscale","partita_iva")}),
+        ("Identificativi", {"fields": ("codice","codice_fiscale","partita_iva","denominazione_abbreviata")}),
         ("Contatti", {"fields": ("pec","email","telefono","indirizzo")}),
         ("Altro", {"fields": ("note",)}),
     )
@@ -65,27 +67,30 @@ class ClientiTipoAdmin(admin.ModelAdmin):
 
 @admin.register(EmailContatto)
 class EmailContattoAdmin(admin.ModelAdmin):
-    list_display = ("anagrafica", "email", "nominativo", "tipo", "is_preferito", "attivo")
-    list_filter = ("tipo", "attivo", "is_preferito")
+    list_display = ("anagrafica", "email", "nominativo", "tipo", "is_preferito", "attivo", "marketing_consent")
+    list_filter = ("tipo", "attivo", "is_preferito", "marketing_consent")
     search_fields = ("email", "nominativo", "anagrafica__ragione_sociale", "anagrafica__nome", "anagrafica__cognome")
     autocomplete_fields = ("anagrafica",)
+    readonly_fields = ("marketing_consent_acquired_at",)
 
 
 class MailingListMembershipInline(admin.TabularInline):
     model = MailingListMembership
     extra = 0
     autocomplete_fields = ("contatto",)
+    readonly_fields = ("disiscritto_il",)
 
 
 class MailingListIndirizzoInline(admin.TabularInline):
     model = MailingListIndirizzo
     extra = 0
+    readonly_fields = ("marketing_consent_acquired_at", "disiscritto_il")
 
 
 @admin.register(MailingList)
 class MailingListAdmin(admin.ModelAdmin):
-    list_display = ("nome", "slug", "proprietario", "attiva")
-    list_filter = ("attiva",)
+    list_display = ("nome", "slug", "proprietario", "finalita", "attiva")
+    list_filter = ("finalita", "attiva")
     search_fields = ("nome", "slug", "descrizione", "proprietario__ragione_sociale", "proprietario__nome", "proprietario__cognome")
     autocomplete_fields = ("proprietario",)
     inlines = [MailingListMembershipInline, MailingListIndirizzoInline]
@@ -93,11 +98,53 @@ class MailingListAdmin(admin.ModelAdmin):
 
 @admin.register(MailingListIndirizzo)
 class MailingListIndirizzoAdmin(admin.ModelAdmin):
-    list_display = ("mailing_list", "email", "nominativo")
+    list_display = ("mailing_list", "email", "nominativo", "marketing_consent")
     search_fields = ("email", "nominativo", "mailing_list__nome")
+    list_filter = ("marketing_consent",)
 
 
+@admin.register(MailingListUnsubscribeToken)
+class MailingListUnsubscribeTokenAdmin(admin.ModelAdmin):
+    list_display = ("mailing_list", "email", "token", "created_at", "used_at")
+    search_fields = ("email", "token", "mailing_list__nome")
+    list_filter = ("mailing_list", "used_at")
 
+
+@admin.register(ComuneItaliano)
+class ComuneItalianoAdmin(admin.ModelAdmin):
+    list_display = ("nome", "provincia", "cap", "regione", "codice_istat", "codice_belfiore", "flag_capoluogo", "attivo")
+    list_filter = ("provincia", "regione", "flag_capoluogo", "attivo")
+    search_fields = ("nome", "nome_alternativo", "cap", "codice_istat", "codice_belfiore", "provincia")
+    list_per_page = 50
+    ordering = ("nome",)
+    fieldsets = (
+        ("Identificazione", {
+            "fields": ("codice_istat", "codice_belfiore", "nome", "nome_alternativo")
+        }),
+        ("Ubicazione", {
+            "fields": ("provincia", "nome_provincia", "regione", "codice_regione", "cap")
+        }),
+        ("Metadati", {
+            "fields": ("flag_capoluogo", "latitudine", "longitudine")
+        }),
+        ("Gestione", {
+            "fields": ("attivo", "note"),
+            "classes": ("collapse",)
+        }),
+    )
+    readonly_fields = ("created_at", "updated_at")
+    
+    actions = ["attiva_comuni", "disattiva_comuni"]
+    
+    def attiva_comuni(self, request, queryset):
+        count = queryset.update(attivo=True)
+        self.message_user(request, f"{count} comuni attivati.")
+    attiva_comuni.short_description = "Attiva comuni selezionati"
+    
+    def disattiva_comuni(self, request, queryset):
+        count = queryset.update(attivo=False)
+        self.message_user(request, f"{count} comuni disattivati.")
+    disattiva_comuni.short_description = "Disattiva comuni selezionati"
 
 
 

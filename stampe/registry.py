@@ -70,10 +70,11 @@ def get_or_generic(app_label: str, model: str) -> LayoutFn:
 
 
 # Registrazioni default
-from .layouts import layout_documento, layout_unita_fisica  # noqa: E402
+from .layouts import layout_documento, layout_unita_fisica, layout_fascicolo  # noqa: E402
 
 register("documenti", "documento", layout_documento)
 register("archivio_fisico", "unitafisica", layout_unita_fisica)
+register("fascicoli", "fascicolo", layout_fascicolo)
 
 __all__ = [
     "LayoutFn",

@@ -2,15 +2,33 @@ from __future__ import annotations
 from django import forms
 from django.forms import ModelForm
 from django.utils import timezone
-from .models import Documento, DocumentiTipo, AttributoDefinizione, AttributoValore, Ubicazione
+from .models import Documento, DocumentiTipo, AttributoDefinizione, AttributoValore
+from .validators import validate_uploaded_file
 import datetime
 from decimal import Decimal
 from django.utils.dateparse import parse_date, parse_datetime
 from anagrafiche.models import Anagrafica, Cliente  # <-- aggiungi Cliente all'import in alto
 from fascicoli.models import Fascicolo
 import os
+import logging
+from archivio_fisico.models import UnitaFisica
+
+logger = logging.getLogger(__name__)
 
 class DocumentoDinamicoForm(ModelForm):
+    # Campo per scegliere se copiare o spostare il file
+    file_operation = forms.ChoiceField(
+        choices=[
+            ('copy', 'Copia il file (mantieni l\'originale)'),
+            ('move', 'Sposta il file (elimina l\'originale)'),
+        ],
+        initial='copy',
+        required=False,
+        label='Operazione file',
+        help_text='Scegli se copiare il file nel gestionale mantenendo l\'originale o spostarlo eliminando il file dalla directory di origine.',
+        widget=forms.RadioSelect,
+    )
+    
     class Meta:
         model = Documento
         fields = [
@@ -21,6 +39,7 @@ class DocumentoDinamicoForm(ModelForm):
             "data_documento",
             "descrizione",
             "digitale",
+            "ubicazione",
             "file",
             "stato",
             "tracciabile",
@@ -68,6 +87,14 @@ class DocumentoDinamicoForm(ModelForm):
             if istanza and getattr(istanza, "fascicolo_id", None):
                 self.initial.setdefault("fascicolo", istanza.fascicolo_id)
 
+        if "ubicazione" in self.fields:
+            qs_unita = UnitaFisica.objects.all().order_by("full_path", "nome")
+            self.fields["ubicazione"].queryset = qs_unita
+            self.fields["ubicazione"].required = False
+            self.fields["ubicazione"].label = "Ubicazione fisica"
+            if istanza and getattr(istanza, "ubicazione_id", None):
+                self.initial.setdefault("ubicazione", istanza.ubicazione_id)
+
         if tipo_obj:
             self.fields["tipo"].initial = tipo_obj.pk
             self.fields["tipo"].disabled = True
@@ -112,10 +139,17 @@ class DocumentoDinamicoForm(ModelForm):
             # se marcato come anagrafica, mostra select su Anagrafica
             if widget in ("anagrafica", "fk_anagrafica", "anag"):
                 try:
-                    qs = Anagrafica.objects.all().order_by("denominazione")
+                    qs = Anagrafica.objects.all().order_by("ragione_sociale", "cognome", "nome")
                 except Exception:
                     qs = Anagrafica.objects.all()
-                return forms.ModelChoiceField(queryset=qs, **common)
+                # Crea il widget Select con la classe select2 per l'autocomplete
+                select_widget = forms.Select(attrs={
+                    "class": "form-select select2",
+                    "data-placeholder": "Seleziona un'anagrafica",
+                    "data-allow-clear": "true",
+                    "style": "width: 100%;",
+                })
+                return forms.ModelChoiceField(queryset=qs, widget=select_widget, **common)
             return forms.IntegerField(**common)
         if tipo == "decimal":
             return forms.DecimalField(max_digits=18, decimal_places=4, **common)
@@ -208,6 +242,20 @@ class DocumentoDinamicoForm(ModelForm):
                 return cliente
         return value
 
+    def clean_file(self):
+        """Valida il file caricato"""
+        file = self.cleaned_data.get('file')
+        if file:
+            # Validazione completa: dimensione, estensione, MIME type, antivirus
+            validate_uploaded_file(
+                file,
+                check_size=True,
+                check_extension=True,
+                check_content=True,
+                antivirus=True  # Scansione antivirus se disponibile
+            )
+        return file
+
     def clean(self):
         cleaned = super().clean()
         fascicolo = cleaned.get("fascicolo")
@@ -219,9 +267,22 @@ class DocumentoDinamicoForm(ModelForm):
             if coerced:
                 cleaned["cliente"] = coerced
                 self.cleaned_data["cliente"] = coerced
-        if not cleaned.get("digitale") and fascicolo and not getattr(fascicolo, "ubicazione_id", None):
-            self.add_error("fascicolo", "I documenti cartacei richiedono un fascicolo con ubicazione fisica.")
         is_digitale = cleaned.get("digitale")
+        ubicazione = cleaned.get("ubicazione") or getattr(self.instance, "ubicazione", None)
+
+        if not is_digitale and fascicolo and not getattr(fascicolo, "ubicazione_id", None):
+            self.add_error("fascicolo", "I documenti cartacei richiedono un fascicolo con ubicazione fisica.")
+
+        if is_digitale:
+            cleaned["ubicazione"] = None
+            self.cleaned_data["ubicazione"] = None
+        else:
+            if fascicolo and getattr(fascicolo, "ubicazione", None):
+                cleaned["ubicazione"] = fascicolo.ubicazione
+                self.cleaned_data["ubicazione"] = fascicolo.ubicazione
+            elif not ubicazione:
+                self.add_error("ubicazione", "I documenti cartacei richiedono un'ubicazione fisica.")
+
         uploaded_file = cleaned.get("file") or (self.instance.file if getattr(self.instance, "file", None) else None)
         if is_digitale and not uploaded_file:
             self.add_error("file", "Per i documenti digitali è necessario allegare un file.")
@@ -237,12 +298,26 @@ class DocumentoDinamicoForm(ModelForm):
         if self._tipo and not getattr(doc, "tipo_id", None):
             doc.tipo = self._tipo
 
+        # Ottieni l'operazione file scelta dall'utente
+        file_operation = self.cleaned_data.get('file_operation', 'copy')
+        
+        # Passa l'operazione al documento per il salvataggio
+        doc._file_operation = file_operation
+        
+        # Indica al modello di NON rinominare automaticamente il file
+        # perché lo faremo noi DOPO aver salvato gli attributi dinamici
+        doc._skip_auto_rename = True
+
         if commit:
             doc.save()
 
         # Salva attributi dinamici
         tipo = self._tipo or getattr(doc, "tipo", None)
         defs = AttributoDefinizione.objects.filter(tipo_documento=tipo)
+        
+        # Costruisci una mappa degli attributi aggiornati
+        attrs_map = {}
+        
         for d in defs:
             key = f"attr_{d.codice}"
             if key in self.cleaned_data:
@@ -251,6 +326,8 @@ class DocumentoDinamicoForm(ModelForm):
                 AttributoValore.objects.update_or_create(
                     documento=doc, definizione=d, defaults={"valore": val}
                 )
+                # Aggiungi alla mappa per passarla alla rinominazione
+                attrs_map[d.codice] = val
 
         # Dopo aver salvato gli attributi, forza la rinomina con il pattern aggiornato
         if getattr(doc, "file", None):
@@ -259,12 +336,22 @@ class DocumentoDinamicoForm(ModelForm):
                 doc.percorso_archivio = doc._build_path()
                 doc.save(update_fields=["percorso_archivio"])
                 current_basename = os.path.basename(doc.file.name)
-                # only_new=False per rinominare anche dopo la creazione
-                doc._rename_file_if_needed(current_basename, only_new=False)
-                doc._move_file_into_archivio()
-            except Exception:
-                # evita di bloccare il salvataggio in caso di problemi di I/O
-                pass
+                # only_new=False per rinominare sempre (anche in modifica)
+                # Passa la mappa degli attributi appena salvati per evitare cache stale
+                logger.info(
+                    "Form save: rinominazione file per documento id=%s con attrs=%s",
+                    doc.pk,
+                    attrs_map
+                )
+                doc._rename_file_if_needed(current_basename, only_new=False, attrs=attrs_map)
+                doc._move_file_into_archivio(attrs=attrs_map)
+            except Exception as e:
+                # Logga l'errore ma evita di bloccare il salvataggio
+                logger.exception(
+                    "Errore durante rinominazione/spostamento file per documento id=%s: %s",
+                    doc.pk,
+                    str(e)
+                )
 
         return doc
 
@@ -302,13 +389,11 @@ class DocumentoDinamicoForm(ModelForm):
                 return value
         return value
 
-from .models import Ubicazione  # assicurati che l'import ci sia
-
 class ProtocolloForm(forms.Form):
     DIREZIONI = (("IN", "Entrata"), ("OUT", "Uscita"))
     direzione = forms.ChoiceField(choices=DIREZIONI, initial="IN")
     quando = forms.DateTimeField(required=False, widget=forms.DateTimeInput(attrs={"type": "datetime-local"}))
-    ubicazione = forms.ModelChoiceField(queryset=Ubicazione.objects.none(), required=False)  # <-- no query qui
+    ubicazione = forms.ModelChoiceField(queryset=UnitaFisica.objects.none(), required=False)
     causale = forms.CharField(required=False)
     note = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 2}))
     da_chi = forms.CharField(required=False)
@@ -318,8 +403,8 @@ class ProtocolloForm(forms.Form):
     def __init__(self, *args, target=None, **kwargs):
         self.target = target
         super().__init__(*args, **kwargs)
-        self.fields["ubicazione"].queryset = Ubicazione.objects.all().order_by("descrizione")  # <-- fix campo
-        self.fields["ubicazione"].label_from_instance = lambda u: f"{u.codice} — {u.descrizione}"
+        self.fields["ubicazione"].queryset = UnitaFisica.objects.all().order_by("full_path", "nome")
+        self.fields["ubicazione"].label_from_instance = lambda u: u.full_path or f"{u.codice} — {u.nome}"
         target = self.target
         if isinstance(target, Documento):
             if target.digitale:
@@ -405,6 +490,19 @@ from .models import Documento
 from anagrafiche.models import Anagrafica, Cliente  # usati per la coercizione
 
 class DocumentoForm(forms.ModelForm):
+    # Campo per scegliere se copiare o spostare il file
+    file_operation = forms.ChoiceField(
+        choices=[
+            ('copy', 'Copia il file (mantieni l\'originale)'),
+            ('move', 'Sposta il file (elimina l\'originale)'),
+        ],
+        initial='copy',
+        required=False,
+        label='Operazione file',
+        help_text='Scegli se copiare il file nel gestionale mantenendo l\'originale o spostarlo eliminando il file dalla directory di origine.',
+        widget=forms.RadioSelect,
+    )
+    
     class Meta:
         model = Documento
         fields = "__all__"
@@ -462,6 +560,12 @@ class DocumentoForm(forms.ModelForm):
                 src_cli = getattr(src, "cliente", None) or getattr(getattr(src, "pratica", None), "cliente", None)
             if src_cli:
                 obj.cliente = self._coerce_cliente_value(src_cli)
+
+        # Ottieni l'operazione file scelta dall'utente
+        file_operation = self.cleaned_data.get('file_operation', 'copy')
+        
+        # Passa l'operazione al documento per il salvataggio
+        obj._file_operation = file_operation
 
         if commit:
             obj.save()

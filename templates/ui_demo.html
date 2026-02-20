@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Demo Nuovi Componenti UI{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>🎨 Demo Componenti UI/UX</h1>
+  <p class="text-secondary">Questa pagina dimostra tutte le nuove funzionalità UI implementate</p>
+
+  <div class="dashboard-grid" style="margin-top: 32px;">
+    
+    <!-- Sezione Theme Toggle -->
+    <section class="card card-full">
+      <h2>🌓 Dark/Light Mode</h2>
+      <div class="body">
+        <p>Il toggle tema è disponibile nella navbar in alto a destra.</p>
+        <p>Prova a cliccare l'icona sole/luna per cambiare tema!</p>
+        <div class="form-actions">
+          <button onclick="setTheme('light')" class="btn">Tema Chiaro</button>
+          <button onclick="setTheme('dark')" class="btn btn-secondary">Tema Scuro</button>
+          <button onclick="toggleTheme()" class="btn">Toggle Tema</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione Toast -->
+    <section class="card">
+      <h2>🍞 Toast Notifications</h2>
+      <div class="body">
+        <p>Notifiche non invasive con diversi tipi e opzioni.</p>
+        <div class="form-actions">
+          <button onclick="toast.info('Informazione generica')" class="btn">Info</button>
+          <button onclick="toast.success('Operazione completata!')" class="btn">Success</button>
+          <button onclick="toast.warning('Attenzione!')" class="btn">Warning</button>
+          <button onclick="toast.error('Si è verificato un errore')" class="btn">Error</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione Badge -->
+    <section class="card">
+      <h2>🏷️ Badge</h2>
+      <div class="body">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <span class="badge badge-primary">Primario</span>
+          <span class="badge badge-success">Successo</span>
+          <span class="badge badge-warning">Avviso</span>
+          <span class="badge badge-danger">Pericolo</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sezione Loading -->
+    <section class="card">
+      <h2>⏳ Loading States</h2>
+      <div class="body">
+        <h4>Spinner</h4>
+        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 16px;">
+          <div class="spinner spinner-sm"></div>
+          <div class="spinner"></div>
+          <div class="spinner spinner-lg"></div>
+        </div>
+        
+        <h4>Skeleton Loaders</h4>
+        <div class="skeleton-list">
+          <div class="skeleton-item"></div>
+          <div class="skeleton-item"></div>
+          <div class="skeleton-item"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Form Enhancement Demo -->
+    <section class="card card-full">
+      <h2>✅ Form con Validazione Real-Time</h2>
+      <div class="body">
+        <form method="post" data-enhance="true" class="form-grid-2cols">
+          {% csrf_token %}
+          
+          <div class="form-field">
+            <label for="nome" class="required">Nome</label>
+            <input type="text" id="nome" name="nome" required>
+            <small class="help-text">Il nome è obbligatorio</small>
+          </div>
+          
+          <div class="form-field">
+            <label for="cognome" class="required">Cognome</label>
+            <input type="text" id="cognome" name="cognome" required>
+          </div>
+          
+          <div class="form-field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="nome@esempio.it">
+            <small class="help-text">Validazione automatica del formato email</small>
+          </div>
+          
+          <div class="form-field">
+            <label for="telefono">Telefono</label>
+            <input type="tel" id="telefono" name="telefono" placeholder="+39 123 456 7890">
+          </div>
+          
+          <div class="form-field form-grid-full">
+            <label for="codice_fiscale">Codice Fiscale</label>
+            <input type="text" id="codice_fiscale" name="codice_fiscale" 
+                   placeholder="RSSMRA80A01H501U" 
+                   maxlength="16" 
+                   style="text-transform: uppercase;">
+            <small class="help-text">Validazione automatica formato italiano (16 caratteri)</small>
+          </div>
+          
+          <div class="form-field form-grid-full">
+            <label for="partita_iva">Partita IVA</label>
+            <input type="text" id="partita_iva" name="partita_iva" 
+                   placeholder="12345678901" 
+                   maxlength="11">
+            <small class="help-text">Deve contenere esattamente 11 cifre</small>
+          </div>
+          
+          <div class="form-field form-grid-full">
+            <label for="note">Note</label>
+            <textarea id="note" name="note" rows="3" maxlength="200" 
+                      placeholder="Inserisci eventuali note..."></textarea>
+            <small class="help-text">Massimo 200 caratteri. Il contatore apparirà automaticamente.</small>
+          </div>
+          
+          <div class="form-grid-full">
+            <div class="form-actions">
+              <button type="submit" class="btn">Salva</button>
+              <button type="button" class="btn btn-secondary" onclick="toast.info('Form annullato')">Annulla</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Input Groups -->
+    <section class="card">
+      <h2>📝 Input Groups</h2>
+      <div class="body">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <label>Importo</label>
+            <div class="input-group">
+              <span class="input-group-addon prefix">€</span>
+              <input type="number" class="with-prefix" placeholder="0.00">
+            </div>
+          </div>
+          
+          <div>
+            <label>Email aziendale</label>
+            <div class="input-group">
+              <input type="text" class="with-suffix" placeholder="nome">
+              <span class="input-group-addon suffix">@azienda.it</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Switch e Checkbox -->
+    <section class="card">
+      <h2>🔘 Switch & Checkbox</h2>
+      <div class="body">
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <label style="display: block; margin-bottom: 8px;">Switch Toggle</label>
+            <label class="switch">
+              <input type="checkbox">
+              <span class="switch-slider"></span>
+            </label>
+            <span style="margin-left: 12px;">Attiva notifiche</span>
+          </div>
+          
+          <div class="custom-checkbox">
+            <input type="checkbox" id="check1">
+            <label for="check1">Checkbox personalizzato</label>
+          </div>
+          
+          <div class="custom-radio">
+            <input type="radio" id="radio1" name="demo-radio" value="1" checked>
+            <label for="radio1">Opzione 1</label>
+          </div>
+          
+          <div class="custom-radio">
+            <input type="radio" id="radio2" name="demo-radio" value="2">
+            <label for="radio2">Opzione 2</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty State -->
+    <section class="card">
+      <h2>📭 Empty State</h2>
+      <div class="body">
+        <div class="empty-state">
+          <div class="empty-state-icon">📋</div>
+          <h3 class="empty-state-title">Nessun elemento trovato</h3>
+          <p class="empty-state-description">
+            Non ci sono elementi da visualizzare in questo momento.
+          </p>
+          <button class="btn">Aggiungi Elemento</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tooltip -->
+    <section class="card">
+      <h2>💬 Tooltip</h2>
+      <div class="body">
+        <p>
+          Passa il mouse sopra 
+          <span data-tooltip="Questa è una spiegazione utile!" style="text-decoration: underline; cursor: help;">
+            questo testo
+          </span> 
+          per vedere il tooltip.
+        </p>
+      </div>
+    </section>
+
+    <!-- Form Steps -->
+    <section class="card card-full">
+      <h2>📊 Form Steps (Wizard)</h2>
+      <div class="body">
+        <div class="form-steps">
+          <div class="form-step completed">
+            <div class="form-step-circle">1</div>
+            <span class="form-step-label">Dati personali</span>
+          </div>
+          <div class="form-step active">
+            <div class="form-step-circle">2</div>
+            <span class="form-step-label">Indirizzo</span>
+          </div>
+          <div class="form-step">
+            <div class="form-step-circle">3</div>
+            <span class="form-step-label">Riepilogo</span>
+          </div>
+          <div class="form-step">
+            <div class="form-step-circle">4</div>
+            <span class="form-step-label">Conferma</span>
+          </div>
+        </div>
+        <p class="text-center">Step attivo: <strong>Indirizzo</strong></p>
+      </div>
+    </section>
+
+    <!-- Floating Labels -->
+    <section class="card">
+      <h2>🏷️ Floating Labels</h2>
+      <div class="body">
+        <div class="floating-label">
+          <input type="text" id="float-name" placeholder=" ">
+          <label for="float-name">Nome completo</label>
+        </div>
+        
+        <div class="floating-label" style="margin-top: 24px;">
+          <input type="email" id="float-email" placeholder=" ">
+          <label for="float-email">Indirizzo email</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- API Demo -->
+    <section class="card card-full">
+      <h2>⚙️ JavaScript API</h2>
+      <div class="body">
+        <h4>Theme API</h4>
+        <pre style="background: var(--bg-actions); padding: 12px; border-radius: 6px; overflow-x: auto;"><code>// Cambia tema
+setTheme('dark');  // o 'light'
+
+// Ottieni tema corrente
+const theme = getTheme();
+
+// Toggle tema
+toggleTheme();
+
+// Ascolta cambiamenti
+window.addEventListener('themechange', (e) => {
+  console.log('Nuovo tema:', e.detail.theme);
+});</code></pre>
+
+        <h4 style="margin-top: 24px;">Toast API</h4>
+        <pre style="background: var(--bg-actions); padding: 12px; border-radius: 6px; overflow-x: auto;"><code>// Mostra toast
+showToast('Messaggio');
+showToast({ message: 'Test', type: 'success', duration: 3000 });
+
+// Shortcuts
+toast.info('Info');
+toast.success('Successo');
+toast.warning('Avviso');
+toast.error('Errore');
+
+// Con azione
+showToast({
+  message: 'Vuoi procedere?',
+  action: {
+    label: 'Si',
+    onClick: () => console.log('Cliccato')
+  }
+});</code></pre>
+
+        <h4 style="margin-top: 24px;">Form Validation API</h4>
+        <pre style="background: var(--bg-actions); padding: 12px; border-radius: 6px; overflow-x: auto;"><code>// Valida form manualmente
+const form = document.getElementById('my-form');
+const isValid = validateForm(form);
+
+// Auto-save (aggiungi attributo al form)
+// &lt;form data-autosave="true" id="form-id"&gt;</code></pre>
+      </div>
+    </section>
+
+  </div>
+
+  <div style="margin-top: 48px; padding: 24px; background: var(--bg-card); border-radius: 12px; border: 2px dashed var(--border);">
+    <h3>📚 Documentazione Completa</h3>
+    <p>Per maggiori dettagli su come utilizzare tutti i componenti, consulta:</p>
+    <ul>
+      <li><a href="/static/docs/PROPOSTA_MIGLIORAMENTO_UI_UX.md" class="link">Proposta Miglioramento UI/UX</a></li>
+      <li><a href="/static/docs/GUIDA_NUOVE_FUNZIONALITA_UI.md" class="link">Guida alle Nuove Funzionalità</a></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// Test automatico toast all'apertura pagina
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    showToast({
+      message: 'Benvenuto nella demo dei nuovi componenti UI! 🎉',
+      type: 'success',
+      duration: 5000
+    });
+  }, 1000);
+});
+</script>
+
+{% endblock %}

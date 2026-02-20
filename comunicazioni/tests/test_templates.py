@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from unittest.mock import patch
 
 from anagrafiche.models import Anagrafica
 from comunicazioni.forms import ComunicazioneForm
@@ -10,8 +11,13 @@ from comunicazioni.models_template import FirmaComunicazione, TemplateComunicazi
 from comunicazioni.utils_template import merge_contenuti, render_firma_comunicazione, render_template_comunicazione
 
 
+@override_settings(STATICFILES_STORAGE="django.contrib.staticfiles.storage.StaticFilesStorage")
 class ComunicazioniTemplateViewTests(TestCase):
     def setUp(self):
+        static_patch = patch("django.contrib.staticfiles.storage.staticfiles_storage")
+        self.mock_static_storage = static_patch.start()
+        self.addCleanup(static_patch.stop)
+        self.mock_static_storage.url.side_effect = lambda path: f"/static/{path}"
         user_model = get_user_model()
         self.user = user_model.objects.create_user(
             username="tester",
@@ -124,7 +130,6 @@ class ComunicazioniTemplateViewTests(TestCase):
             corpo_html="<p>Gentile cliente,</p>",
             mittente="mittente@example.com",
             destinatari="destinatario@example.com",
-            anagrafica=self.anagrafica,
             template=self.template,
             firma=self.firma,
         )
@@ -177,6 +182,26 @@ class ComunicazioniTemplateViewTests(TestCase):
 
         comunicazione = Comunicazione.objects.latest("id")
         self.assertEqual(comunicazione.dati_template.get("numero_pratica"), "PR-001")
+        comunicazione.anagrafica = self.anagrafica
         context = comunicazione.get_template_context()
         self.assertEqual(context["numero_pratica"], "PR-001")
         self.assertEqual(context["ragione"], self.anagrafica.ragione_sociale)
+
+    def test_render_content_applica_firma_senza_template(self):
+        comunicazione = Comunicazione.objects.create(
+            tipo=Comunicazione.TipoComunicazione.INFORMATIVA,
+            direzione=Comunicazione.Direzione.OUT,
+            oggetto="Messaggio manuale",
+            corpo="Corpo principale",
+            mittente="mittente@example.com",
+            destinatari="dest@example.com",
+            firma=self.firma,
+        )
+
+        comunicazione.render_content()
+
+        self.assertIn(self.firma.get_text(), comunicazione.corpo)
+        self.assertTrue(comunicazione.corpo.endswith(self.firma.get_text()))
+        self.assertIn("Lo staff MyGest", comunicazione.corpo)
+        self.assertIn("Lo staff MyGest", comunicazione.corpo_html)
+        self.assertIn("<strong>Lo staff MyGest</strong>", comunicazione.corpo_html)

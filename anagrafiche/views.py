@@ -9,13 +9,14 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.contrib import messages
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from collections import Counter
 from anagrafiche.models import Anagrafica, AnagraficaDeletion, Cliente
 from comunicazioni.models import Comunicazione
 from documenti.models import Documento
 from pratiche.models import Pratica
 from fascicoli.models import Fascicolo
-from .forms import SearchAnagraficaForm, AnagraficaForm, ClienteForm, IndirizzoForm
+from .forms import SearchAnagraficaForm, AnagraficaForm, ClienteForm, IndirizzoForm, ImportAnagraficaForm
 from .models import ClientiTipo, Indirizzo
 import csv, io
 from django import forms
@@ -412,39 +413,182 @@ def import_anagrafiche(request):
         form = ImportAnagraficaForm(request.POST, request.FILES)
         if form.is_valid():
             csv_file = form.cleaned_data['file']
+            
+            # Decodifica del file CSV
             try:
                 decoded_file = csv_file.read().decode('utf-8')
             except UnicodeDecodeError:
                 csv_file.seek(0)
                 decoded_file = csv_file.read().decode('latin-1')
-            # Gestione BOM e separatore ;
+            
+            # Gestione BOM e preparazione reader
             decoded_file = decoded_file.lstrip('\ufeff')
             reader = csv.DictReader(io.StringIO(decoded_file), delimiter=';')
-            count = 0
+            
+            # Contatori e report
+            importate = []
+            scartate = []
+            riga_numero = 1  # Inizia da 1 per l'header
+            
             for row in reader:
+                riga_numero += 1
+                errori_riga = []
+                
                 try:
+                    # Validazione campi obbligatori
+                    tipo = row.get("tipo", "").strip().upper()
+                    codice_fiscale = row.get("codice_fiscale", "").strip().upper()
+                    
+                    if not tipo:
+                        errori_riga.append("Campo 'tipo' mancante")
+                    elif tipo not in ["PF", "PG"]:
+                        errori_riga.append(f"Tipo '{tipo}' non valido (deve essere PF o PG)")
+                    
+                    if not codice_fiscale:
+                        errori_riga.append("Campo 'codice_fiscale' mancante")
+                    
+                    # Validazione specifica per tipo
+                    nome = row.get("nome", "").strip()
+                    cognome = row.get("cognome", "").strip()
+                    ragione_sociale = row.get("ragione_sociale", "").strip()
+                    
+                    if tipo == "PF":
+                        if not nome:
+                            errori_riga.append("Campo 'nome' obbligatorio per Persona Fisica")
+                        if not cognome:
+                            errori_riga.append("Campo 'cognome' obbligatorio per Persona Fisica")
+                    elif tipo == "PG":
+                        if not ragione_sociale:
+                            errori_riga.append("Campo 'ragione_sociale' obbligatorio per Persona Giuridica")
+                    
+                    # Se ci sono errori di validazione base, scarta la riga
+                    if errori_riga:
+                        scartate.append({
+                            "riga": riga_numero,
+                            "dati": f"{cognome} {nome}".strip() or ragione_sociale or codice_fiscale,
+                            "motivi": errori_riga
+                        })
+                        continue
+                    
+                    # Verifica duplicati per codice fiscale
+                    if Anagrafica.objects.filter(codice_fiscale=codice_fiscale).exists():
+                        scartate.append({
+                            "riga": riga_numero,
+                            "dati": f"{cognome} {nome}".strip() or ragione_sociale,
+                            "motivi": [f"Codice fiscale '{codice_fiscale}' già presente nel database"]
+                        })
+                        continue
+                    
+                    # Preparazione campi opzionali
+                    partita_iva = row.get("partita_iva", "").strip()
                     codice = row.get("codice", "").strip() or None
-                    Anagrafica.objects.create(
-                        tipo=row.get("tipo", ""),
-                        ragione_sociale=row.get("ragione_sociale", ""),
-                        nome=row.get("nome", ""),
-                        cognome=row.get("cognome", ""),
-                        codice_fiscale=row.get("codice_fiscale", ""),
-                        partita_iva=row.get("partita_iva", ""),
+                    pec = row.get("pec", "").strip()
+                    email = row.get("email", "").strip()
+                    telefono = row.get("telefono", "").strip()
+                    indirizzo = row.get("indirizzo", "").strip()
+                    note = row.get("note", "").strip()
+                    denominazione_abbreviata = row.get("denominazione_abbreviata", "").strip()
+                    
+                    # Verifica duplicati per P.IVA se presente
+                    if partita_iva and Anagrafica.objects.filter(partita_iva=partita_iva).exists():
+                        scartate.append({
+                            "riga": riga_numero,
+                            "dati": f"{cognome} {nome}".strip() or ragione_sociale,
+                            "motivi": [f"Partita IVA '{partita_iva}' già presente nel database"]
+                        })
+                        continue
+                    
+                    # Verifica duplicati per PEC se presente
+                    if pec and Anagrafica.objects.filter(pec=pec).exists():
+                        scartate.append({
+                            "riga": riga_numero,
+                            "dati": f"{cognome} {nome}".strip() or ragione_sociale,
+                            "motivi": [f"PEC '{pec}' già presente nel database"]
+                        })
+                        continue
+                    
+                    # Creazione anagrafica con validazione
+                    anagrafica = Anagrafica(
+                        tipo=tipo,
+                        ragione_sociale=ragione_sociale if tipo == "PG" else "",
+                        nome=nome if tipo == "PF" else "",
+                        cognome=cognome if tipo == "PF" else "",
+                        codice_fiscale=codice_fiscale,
+                        partita_iva=partita_iva,
                         codice=codice,
-                        pec=row.get("pec", ""),
-                        email=row.get("email", ""),
-                        telefono=row.get("telefono", ""),
-                        indirizzo=row.get("indirizzo", ""),
-                        note=row.get("note", ""),
+                        pec=pec,
+                        email=email,
+                        telefono=telefono,
+                        indirizzo=indirizzo,
+                        note=note,
+                        denominazione_abbreviata=denominazione_abbreviata,
                     )
-                    count += 1
+                    
+                    # Validazione model (clean())
+                    try:
+                        anagrafica.full_clean()
+                        anagrafica.save()
+                        
+                        # Aggiunta alla lista delle importate
+                        importate.append({
+                            "riga": riga_numero,
+                            "nome": anagrafica.display_name(),
+                            "codice_fiscale": codice_fiscale,
+                            "id": anagrafica.id
+                        })
+                        
+                    except ValidationError as ve:
+                        # Errori di validazione Django
+                        errori_validazione = []
+                        if hasattr(ve, 'message_dict'):
+                            for field, errors in ve.message_dict.items():
+                                errori_validazione.extend([f"{field}: {e}" for e in errors])
+                        else:
+                            errori_validazione.append(str(ve))
+                        
+                        scartate.append({
+                            "riga": riga_numero,
+                            "dati": f"{cognome} {nome}".strip() or ragione_sociale,
+                            "motivi": errori_validazione
+                        })
+                
                 except Exception as e:
-                    messages.error(request, f"Errore riga: {row} - {e}")
-            messages.success(request, f"Importate {count} anagrafiche.")
-            return redirect("anagrafiche:import")
+                    # Errore generico
+                    scartate.append({
+                        "riga": riga_numero,
+                        "dati": str(row),
+                        "motivi": [f"Errore imprevisto: {str(e)}"]
+                    })
+            
+            # Preparazione contesto per il template di report
+            context = {
+                "form": ImportAnagraficaForm(),
+                "report": {
+                    "totale": riga_numero - 1,  # -1 per l'header
+                    "importate": importate,
+                    "scartate": scartate,
+                    "num_importate": len(importate),
+                    "num_scartate": len(scartate),
+                }
+            }
+            
+            # Messaggi di riepilogo
+            if importate:
+                messages.success(request, f"✓ Importate con successo {len(importate)} anagrafiche.")
+            if scartate:
+                messages.warning(request, f"⚠ Scartate {len(scartate)} righe. Vedi dettagli sotto.")
+            
+            set_breadcrumbs(
+                request,
+                [
+                    ("Anagrafiche", reverse("anagrafiche:home")),
+                    ("Importazione", None),
+                ],
+            )
+            return render(request, "anagrafiche/import_anagrafiche.html", context)
     else:
         form = ImportAnagraficaForm()
+    
     context = {"form": form}
     set_breadcrumbs(
         request,
@@ -456,21 +600,102 @@ def import_anagrafiche(request):
     return render(request, "anagrafiche/import_anagrafiche.html", context)
 
 def facsimile_csv(request):
-    # Genera un CSV di esempio
+    """
+    Genera un CSV di esempio per l'importazione anagrafiche.
+    Include tutti i campi disponibili con esempi per PF e PG.
+    """
     header = [
-        "tipo", "ragione_sociale", "nome", "cognome", "codice_fiscale",
-        "partita_iva", "codice", "pec", "email", "telefono", "indirizzo", "note"
+        "tipo", 
+        "ragione_sociale", 
+        "nome", 
+        "cognome", 
+        "codice_fiscale",
+        "partita_iva", 
+        "codice", 
+        "denominazione_abbreviata",
+        "pec", 
+        "email", 
+        "telefono", 
+        "indirizzo", 
+        "note"
     ]
-    example = [
-        ["PF", "", "Mario", "Rossi", "RSSMRA80A01H501U", "", "CLI0001", "mario.rossi@pec.it", "mario@email.it", "3331234567", "Via Roma 1, Milano", ""],
-        ["PG", "Azienda Srl", "", "", "12345678901", "12345678901", "CLI0002", "azienda@pec.it", "info@azienda.it", "024567890", "Via Milano 10, Milano", "Cliente importante"],
+    
+    examples = [
+        # Persona Fisica - esempio 1
+        [
+            "PF",                           # tipo
+            "",                             # ragione_sociale (vuoto per PF)
+            "Mario",                        # nome
+            "Rossi",                        # cognome
+            "RSSMRA80A01H501U",            # codice_fiscale
+            "",                             # partita_iva (opzionale)
+            "CLI0001",                      # codice (opzionale, auto-generato se vuoto)
+            "ROSSI MARIO",                  # denominazione_abbreviata (opzionale)
+            "mario.rossi@pec.it",          # pec
+            "mario.rossi@email.it",        # email
+            "3331234567",                   # telefono
+            "Via Roma 1, 20121 Milano",    # indirizzo
+            "Cliente preferenziale"         # note
+        ],
+        # Persona Fisica - esempio 2
+        [
+            "PF",
+            "",
+            "Anna",
+            "Verdi",
+            "VRDNNA85M45F205X",
+            "",
+            "",                             # codice vuoto = auto-generato
+            "",
+            "anna.verdi@pec.example.it",
+            "anna@example.com",
+            "+39 02 12345678",
+            "Corso Italia 45, 00100 Roma",
+            ""
+        ],
+        # Persona Giuridica - esempio 1
+        [
+            "PG",                           # tipo
+            "Acme S.r.l.",                 # ragione_sociale
+            "",                             # nome (vuoto per PG)
+            "",                             # cognome (vuoto per PG)
+            "12345678901",                  # codice_fiscale (11 cifre per PG)
+            "12345678901",                  # partita_iva
+            "CLI0002",                      # codice
+            "ACME SRL",                     # denominazione_abbreviata
+            "acme@pec.it",                 # pec
+            "info@acme.it",                # email
+            "024567890",                    # telefono
+            "Via Milano 10, 20100 Milano", # indirizzo
+            "Cliente importante - fatturazione elettronica"
+        ],
+        # Persona Giuridica - esempio 2
+        [
+            "PG",
+            "Beta Solutions S.p.A.",
+            "",
+            "",
+            "98765432109",
+            "98765432109",
+            "",
+            "BETA SPA",
+            "beta@pec.example.com",
+            "contatti@beta.com",
+            "+39 06 9876543",
+            "Piazza Duomo 1, 50100 Firenze",
+            "Partner tecnologico"
+        ],
     ]
-    response = HttpResponse(content_type='text/csv')
+    
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="facsimile_anagrafiche.csv"'
-    writer = csv.writer(response)
+    response.write('\ufeff')  # BOM per UTF-8
+    
+    writer = csv.writer(response, delimiter=';')
     writer.writerow(header)
-    for row in example:
+    for row in examples:
         writer.writerow(row)
+    
     return response
 
 @login_required

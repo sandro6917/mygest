@@ -8,12 +8,28 @@
         {% csrf_token %}
         {{ form.non_field_errors }}
         {% for field in form %}
+          {% if field.name != 'file_operation' %}
           <div style="margin:6px 0">
             <label for="{{ field.id_for_label }}">{{ field.label }}</label><br>
             {{ field }}
             {% if field.help_text %}<div class="muted">{{ field.help_text }}</div>{% endif %}
             {% for err in field.errors %}<div style="color:#c62828">{{ err }}</div>{% endfor %}
+            
+            <!-- Mostra il campo file_operation subito dopo il campo file -->
+            {% if field.name == 'file' %}
+              {% for f in form %}
+                {% if f.name == 'file_operation' %}
+            <div style="margin:12px 0; padding:10px; background:#f5f5f5; border-radius:4px">
+              <label for="{{ f.id_for_label }}"><strong>{{ f.label }}</strong></label><br>
+              {{ f }}
+              {% if f.help_text %}<div class="muted" style="margin-top:6px">{{ f.help_text }}</div>{% endif %}
+              {% for err in f.errors %}<div style="color:#c62828">{{ err }}</div>{% endfor %}
+            </div>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
           </div>
+          {% endif %}
         {% endfor %}
         <div class="form-actions">
           <button type="submit">Salva</button>
@@ -23,4 +39,46 @@
       </form>
     </div>
   </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  console.log("Inizializzazione Select2 avviata");
+  
+  // Debug: mostra tutti i campi con classe select2
+  var select2Fields = $('.select2');
+  console.log("Campi con classe select2 trovati:", select2Fields.length);
+  
+  // Inizializza Select2 su tutti i campi con classe select2
+  select2Fields.each(function(index) {
+    var $element = $(this);
+    console.log("Inizializzazione campo", index, ":", $element.attr('name'), $element.attr('id'));
+    
+    var placeholder = $element.data('placeholder') || 'Seleziona...';
+    var allowClear = $element.data('allow-clear') !== undefined ? $element.data('allow-clear') : true;
+    
+    try {
+      $element.select2({
+        width: $element.data('width') || $element.css('width') || '100%',
+        placeholder: placeholder,
+        allowClear: allowClear,
+        language: {
+          noResults: function() {
+            return "Nessun risultato trovato";
+          },
+          searching: function() {
+            return "Ricerca in corso...";
+          }
+        }
+      });
+      console.log("Select2 inizializzato con successo per", $element.attr('name'));
+    } catch(e) {
+      console.error("Errore inizializzazione Select2:", e);
+    }
+  });
+  
+  console.log("Inizializzazione Select2 completata");
+});
+</script>
 {% endblock %}

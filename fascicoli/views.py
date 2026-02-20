@@ -181,6 +181,19 @@ class FascicoloDetailView(DetailView):
         children_mgr = getattr(f, "children", None) or getattr(f, "sottofascicoli", f.__class__.objects.none())
         ctx["children"] = children_mgr.all()
 
+        # Fascicoli collegabili: stesso cliente, titolario, anno, nessun parent, escludi se stesso
+        ctx["fascicoli_collegabili"] = (
+            Fascicolo.objects.filter(
+                cliente=f.cliente,
+                titolario_voce=f.titolario_voce,
+                anno=f.anno,
+                parent__isnull=True
+            )
+            .exclude(pk=f.pk)
+            .select_related("titolario_voce")
+            .order_by("-progressivo")[:20]
+        )
+
         # Pratiche correlate (M2M)
         ctx["pratiche"] = f.pratiche.select_related("tipo", "cliente").all()[:50]
 
@@ -401,6 +414,24 @@ def fascicolo_collega(request, pk: int):
     target = Fascicolo.objects.filter(pk=target_id).first()
     if not target:
         messages.error(request, "Fascicolo da collegare non trovato.")
+        return redirect(redirect_url)
+
+    # Validazione business rules: cliente, titolario, anno devono coincidere
+    if target.cliente_id != fascicolo.cliente_id:
+        messages.error(request, f"Impossibile collegare: il cliente del fascicolo {target.codice} non coincide.")
+        return redirect(redirect_url)
+    
+    if target.titolario_voce_id != fascicolo.titolario_voce_id:
+        messages.error(request, f"Impossibile collegare: la voce di titolario del fascicolo {target.codice} non coincide.")
+        return redirect(redirect_url)
+    
+    if target.anno != fascicolo.anno:
+        messages.error(request, f"Impossibile collegare: l'anno del fascicolo {target.codice} non coincide.")
+        return redirect(redirect_url)
+
+    # Verifica che il target non abbia già un parent
+    if target.parent_id:
+        messages.error(request, f"Il fascicolo {target.codice} è già collegato ad un altro fascicolo.")
         return redirect(redirect_url)
 
     ancestor = fascicolo

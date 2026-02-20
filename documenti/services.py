@@ -2,7 +2,10 @@ from __future__ import annotations
 from typing import Optional
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from .models import Documento, MovimentoProtocollo, Ubicazione
+from archivio_fisico.models import UnitaFisica
+from anagrafiche.models import Anagrafica
+from protocollo.models import MovimentoProtocollo
+from .models import Documento
 
 def protocolla(
     documento: Documento,
@@ -11,7 +14,8 @@ def protocolla(
     quando=None,
     operatore=None,
     destinatario: str = "",
-    ubicazione: Optional[Ubicazione] = None,
+    destinatario_anagrafica: Optional[Anagrafica] = None,
+    ubicazione: Optional[UnitaFisica] = None,
     data_rientro_prevista=None,
     causale: str = "",
     note: str = "",
@@ -24,12 +28,14 @@ def protocolla(
     if direzione == "IN":
         return MovimentoProtocollo.registra_entrata(
             documento=documento, quando=quando, operatore=operatore,
-            da_chi=destinatario, ubicazione=ubicazione,
+            da_chi=destinatario, destinatario_anagrafica=destinatario_anagrafica,
+            ubicazione=ubicazione,
             causale=causale, note=note
         )
     else:
         return MovimentoProtocollo.registra_uscita(
             documento=documento, quando=quando, operatore=operatore,
-            a_chi=destinatario, data_rientro_prevista=data_rientro_prevista,
+            a_chi=destinatario, destinatario_anagrafica=destinatario_anagrafica,
+            data_rientro_prevista=data_rientro_prevista,
             causale=causale, note=note, ubicazione=ubicazione
         )

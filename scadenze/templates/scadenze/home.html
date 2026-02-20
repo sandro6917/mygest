@@ -8,6 +8,9 @@
   <div class="page-header">
     <h1>{% trans "Scadenze" %}</h1>
     <div class="actions">
+      <a class="btn btn-secondary" href="{% url 'scadenze:scadenziario' %}">📋 {% trans "Scadenziario" %}</a>
+      <a class="btn btn-secondary" href="{% url 'scadenze:calendario_visual' %}">📅 {% trans "Calendario" %}</a>
+      <a class="btn btn-secondary" href="{% url 'scadenze:statistiche' %}">📊 {% trans "Statistiche" %}</a>
       <a class="btn btn-primary" href="{% url 'scadenze:create' %}">{% trans "Nuova scadenza" %}</a>
     </div>
   </div>
@@ -34,26 +37,127 @@
   <div class="card">
     <div class="body">
       {% if scadenze %}
-        <ul class="list">
-          {% for sc in scadenze %}
-            <li>
-              <a class="link" href="{% url 'scadenze:detail' sc.pk %}"><strong>{{ sc.titolo }}</strong></a>
-              <small class="muted">· {{ sc.get_stato_display }} · {{ sc.get_priorita_display }}</small>
-              {% if sc.prossima_occorrenza %}
-                <div class="muted">{% trans "Prossima" %}: {{ sc.prossima_occorrenza.inizio|date:"d/m/Y H:i" }}</div>
-              {% endif %}
-              {% with pratiche=sc.pratiche.all %}
-                {% if pratiche %}
-                  <div class="muted">{% trans "Pratiche" %}: {% for pr in pratiche %}<a href="{% url 'pratiche:dettaglio' pr.pk %}">{{ pr.codice }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</div>
-                {% endif %}
-              {% endwith %}
-            </li>
-          {% endfor %}
-        </ul>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{% trans "Scadenza" %}</th>
+              <th>{% trans "Prossima Occorrenza" %}</th>
+              <th style="width:120px;">{% trans "Alert" %}</th>
+              <th style="width:100px;">{% trans "Stato" %}</th>
+              <th style="width:100px;">{% trans "Priorità" %}</th>
+              <th style="width:150px;">{% trans "Collegamenti" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sc in scadenze %}
+              <tr>
+                <td>
+                  <a class="link" href="{% url 'scadenze:detail' sc.pk %}" style="font-weight:600; font-size:15px;">
+                    {{ sc.titolo }}
+                  </a>
+                  {% if sc.descrizione %}
+                    <div class="muted" style="font-size:13px; margin-top:4px;">
+                      {{ sc.descrizione|truncatewords:20 }}
+                    </div>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if sc.prossima_occorrenza %}
+                    <div style="font-weight:600; color:#2563eb;">
+                      {{ sc.prossima_occorrenza.inizio|date:"d/m/Y H:i" }}
+                    </div>
+                    {% if sc.prossima_occorrenza.titolo %}
+                      <div class="muted" style="font-size:12px; margin-top:2px;">
+                        {{ sc.prossima_occorrenza.titolo }}
+                      </div>
+                    {% endif %}
+                  {% else %}
+                    <span class="muted">{% trans "Nessuna" %}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if sc.prossima_occorrenza %}
+                    {% with alert_count=sc.prossima_occorrenza.alerts.count %}
+                      {% if alert_count > 0 %}
+                        <span style="color:#059669; font-weight:600;">✓ {{ alert_count }}</span>
+                      {% else %}
+                        <span class="muted">-</span>
+                      {% endif %}
+                    {% endwith %}
+                  {% else %}
+                    <span class="muted">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge badge-{{ sc.stato }}">{{ sc.get_stato_display }}</span>
+                </td>
+                <td>
+                  {% if sc.priorita == 'critical' %}
+                    <span class="badge" style="background:#dc2626; color:white;">🔴 {{ sc.get_priorita_display }}</span>
+                  {% elif sc.priorita == 'high' %}
+                    <span class="badge" style="background:#f59e0b; color:white;">🟠 {{ sc.get_priorita_display }}</span>
+                  {% elif sc.priorita == 'medium' %}
+                    <span class="badge" style="background:#3b82f6; color:white;">{{ sc.get_priorita_display }}</span>
+                  {% else %}
+                    <span class="badge" style="background:#6b7280; color:white;">{{ sc.get_priorita_display }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% with pratiche=sc.pratiche.all %}
+                    {% if pratiche %}
+                      {% for pr in pratiche %}
+                        <a href="{% url 'pratiche:dettaglio' pr.pk %}" style="font-size:12px;">{{ pr.codice }}</a>
+                        {% if not forloop.last %}, {% endif %}
+                      {% endfor %}
+                    {% else %}
+                      <span class="muted">-</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       {% else %}
         <div class="muted">{% trans "Nessuna scadenza trovata" %}</div>
       {% endif %}
     </div>
   </div>
 </div>
+
+<style>
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  background: #f9fafb;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.table td {
+  padding: 15px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.table tbody tr:hover {
+  background: #f9fafb;
+}
+</style>
 {% endblock %}

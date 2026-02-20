@@ -4,6 +4,7 @@ import tempfile
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
+from django.urls import reverse
 from django.utils import timezone
 
 from anagrafiche.models import Anagrafica, Cliente
@@ -116,3 +117,128 @@ class MovimentoProtocolloClienteNormalizationTests(TestCase):
 
 		self.assertEqual(movimento.ubicazione, unita)
 		self.assertEqual(movimento.documento, documento)
+
+	def test_target_fields_populated_for_documento(self):
+		documento = self._create_documento_cartaceo(codice="DOC-TARGET")
+		unita = UnitaFisica.objects.create(
+			prefisso_codice="UF",
+			nome="Deposito",
+			tipo=UnitaFisica.Tipo.UFFICIO,
+		)
+
+		movimento = MovimentoProtocollo.registra_uscita(
+			documento=documento,
+			quando=timezone.now(),
+			operatore=self.user,
+			a_chi="Cliente finale",
+			ubicazione=unita,
+		)
+
+		self.assertIsNotNone(movimento.target_content_type)
+		self.assertEqual(movimento.target_object_id, str(documento.pk))
+		self.assertEqual(movimento.target_tipo, "documento")
+		self.assertEqual(movimento.target_label, str(documento))
+
+	def test_registra_entrata_dopo_uscita_documento(self):
+		documento = self._create_documento_cartaceo(codice="DOC-MULTI")
+		unita = UnitaFisica.objects.create(
+			prefisso_codice="UF",
+			nome="Magazzino",
+			tipo=UnitaFisica.Tipo.UFFICIO,
+		)
+
+		MovimentoProtocollo.registra_uscita(
+			documento=documento,
+			quando=timezone.now(),
+			operatore=self.user,
+			a_chi="Studio Legale",
+			ubicazione=unita,
+		)
+
+		movimento_in = MovimentoProtocollo.registra_entrata(
+			documento=documento,
+			quando=timezone.now(),
+			operatore=self.user,
+			da_chi="Studio Legale",
+			ubicazione=unita,
+		)
+
+		self.assertTrue(movimento_in.rientro_di)
+		self.assertTrue(movimento_in.rientro_di.chiuso)
+		self.assertEqual(MovimentoProtocollo.objects.filter(documento=documento).count(), 2)
+
+	def test_registra_uscita_con_destinatario_anagrafica(self):
+		documento = self._create_documento_cartaceo(codice="DOC-DEST")
+		unita = UnitaFisica.objects.create(
+			prefisso_codice="UF",
+			nome="Deposito",
+			tipo=UnitaFisica.Tipo.UFFICIO,
+		)
+		destinatario = Anagrafica.objects.create(
+			tipo=Anagrafica.TipoSoggetto.PERSONA_GIURIDICA,
+			ragione_sociale="Studio Associato Verdi",
+			codice_fiscale="20000000008",
+			partita_iva="20000000008",
+		)
+		movimento = MovimentoProtocollo.registra_uscita(
+			documento=documento,
+			quando=timezone.now(),
+			operatore=self.user,
+			a_chi="",
+			destinatario_anagrafica=destinatario,
+			ubicazione=unita,
+		)
+		self.assertEqual(movimento.destinatario_anagrafica, destinatario)
+		self.assertEqual(movimento.destinatario, destinatario.display_name())
+
+	def test_api_protocolla_target_documento(self):
+		self.client.force_login(self.user)
+		documento = self._create_documento_cartaceo(codice="DOC-API")
+		unita = UnitaFisica.objects.create(
+			prefisso_codice="UF",
+			nome="Sede API",
+			tipo=UnitaFisica.Tipo.UFFICIO,
+		)
+		url = reverse('movimento-protocollo-protocolla-target')
+		payload = {
+			"direzione": "OUT",
+			"a_chi": "Destinatario API",
+			"ubicazione_id": unita.pk,
+			"target_type": "documenti.documento",
+			"target_id": str(documento.pk),
+		}
+		response = self.client.post(url, data=payload)
+		self.assertEqual(response.status_code, 201, response.content)
+		data = response.json()
+		self.assertTrue(data["success"])
+		self.assertEqual(data["movimento"]["target_object_id"], str(documento.pk))
+
+	def test_api_protocolla_con_a_chi_anagrafica(self):
+		self.client.force_login(self.user)
+		documento = self._create_documento_cartaceo(codice="DOC-API-ANA")
+		unita = UnitaFisica.objects.create(
+			prefisso_codice="UF",
+			nome="Deposito API",
+			tipo=UnitaFisica.Tipo.UFFICIO,
+		)
+		anagrafica_dest = Anagrafica.objects.create(
+			tipo=Anagrafica.TipoSoggetto.PERSONA_GIURIDICA,
+			ragione_sociale="Studio Digitale",
+			codice_fiscale="30000000007",
+			partita_iva="30000000007",
+		)
+		url = reverse('movimento-protocollo-protocolla-target')
+		payload = {
+			"direzione": "OUT",
+			"a_chi": "",
+			"a_chi_anagrafica": anagrafica_dest.pk,
+			"ubicazione_id": unita.pk,
+			"target_type": "documenti.documento",
+			"target_id": str(documento.pk),
+		}
+		response = self.client.post(url, data=payload)
+		self.assertEqual(response.status_code, 201, response.content)
+		data = response.json()
+		self.assertTrue(data["success"])
+		self.assertEqual(data["movimento"]["destinatario_anagrafica"], anagrafica_dest.pk)
+		self.assertEqual(data["movimento"]["destinatario"], anagrafica_dest.display_name())

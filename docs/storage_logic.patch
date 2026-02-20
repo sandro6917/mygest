@@ -1,0 +1,74 @@
+--- a/documenti/models.py
++++ b/documenti/models.py
+@@ -27,6 +27,24 @@ from anagrafiche.utils import get_or_generate_cli
+ nas_storage = NASPathStorage()
+ logger = logging.getLogger("documenti.protocollazione")
+ User = get_user_model()
++
++
++# ============================================
++# Utility: voce di titolario default
++# ============================================
++def get_or_create_default_titolario() -> TitolarioVoce:
++    """
++    Ottiene o crea la voce di titolario di default '99 - Varie'
++    per documenti senza classificazione specifica.
++    """
++    default_voce, created = TitolarioVoce.objects.get_or_create(
++        codice="99",
++        parent=None,
++        defaults={
++            "titolo": "Varie",
++            "pattern_codice": "{CLI}-{TIT}-{ANNO}-{SEQ:03d}"
++        }
++    )
++    if created:
++        logger.info("Creata voce di titolario default: 99 - Varie")
++    return default_voce
+ 
+ # --- in cima al file dove hai definito documento_upload_to ---
+ def upload_path(instance, filename):
+@@ -230,26 +248,23 @@ class Documento(models.Model):
+             return f"{cli_code}-{tit_code}-{anno}-{seq:03d}"
+ 
+     def _build_path(self) -> str:
+-        """Percorso ASSOLUTO del contenitore del documento nel NAS, coerente con Fascicolo."""
+-        # 1) Path "del documento" (in base al suo titolario, se presente)
++        """
++        Percorso ASSOLUTO del contenitore del documento nel NAS.
++        
++        Logica:
++        1. Se il documento ha un titolario_voce, usa quello
++        2. Se non ha titolario_voce, usa la voce default "99 - Varie"
++        3. I documenti fascicolati possono avere un titolario diverso dal fascicolo
++           (es. documento creato prima dell'associazione al fascicolo)
++        """
+         cli_code = self._cliente_code(self.cliente)
+-        doc_parts = build_titolario_parts(self.titolario_voce) if self.titolario_voce_id else []
++        
++        # Usa il titolario del documento, oppure la voce default "99 - Varie"
++        voce_da_usare = self.titolario_voce
++        if not voce_da_usare:
++            voce_da_usare = get_or_create_default_titolario()
++        
++        doc_parts = build_titolario_parts(voce_da_usare) if voce_da_usare else []
+         doc_abs = ensure_archivio_path(cli_code, doc_parts, self.data_documento.year)
+-
+-        # 2) Se legato a un fascicolo, confronta con il path del fascicolo
+-        if self.fascicolo_id:
+-            fasc_abs = (self.fascicolo.path_archivio or "").strip()
+-            # Usa il path fascicolo solo se esiste e coincide col path del documento
+-            try:
+-                same = bool(fasc_abs) and os.path.normpath(fasc_abs) == os.path.normpath(doc_abs)
+-                exists = bool(fasc_abs) and os.path.isdir(fasc_abs)
+-            except Exception:
+-                same, exists = False, False
+-            if same and exists:
+-                return fasc_abs
+-        # 3) Default: usa il path calcolato per il documento (case 1: diverso o inesistente; case 2: sempre consentito)
+-        return doc_abs
++        
++        return doc_abs
+ 
+     def _rename_file_if_needed(self, original_name: str, only_new: bool):
+         if not self.file:

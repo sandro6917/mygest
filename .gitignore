@@ -21,13 +21,20 @@ logs/
 # Django collectstatic output
 staticfiles/
 
-# User uploads
+# User uploads and archivio
 media/
 archivio/
 
 # Secrets and environment
 .env
+.env.local
+.env.production
 secrets/
+mygest/settings_local.py
+
+# Generated documentation PDFs
+Documentazione_*.pdf
+STORAGE_*.pdf
 
 # IDE/editor settings
 .vscode/

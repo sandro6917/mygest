@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Optional
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from anagrafiche.models import Anagrafica
 from .models import MovimentoProtocollo
 
 def protocolla(
@@ -11,6 +12,7 @@ def protocolla(
     quando=None,
     operatore=None,
     destinatario: str = "",
+    destinatario_anagrafica: Optional[Anagrafica] = None,
     ubicazione=None,
     data_rientro_prevista=None,
     causale: str = "",
@@ -27,6 +29,7 @@ def protocolla(
             quando=quando,
             operatore=operatore,
             da_chi=destinatario,
+            destinatario_anagrafica=destinatario_anagrafica,
             ubicazione=ubicazione,
             causale=causale,
             note=note,
@@ -37,6 +40,7 @@ def protocolla(
             quando=quando,
             operatore=operatore,
             a_chi=destinatario,
+            destinatario_anagrafica=destinatario_anagrafica,
             data_rientro_prevista=data_rientro_prevista,
             causale=causale,
             note=note,

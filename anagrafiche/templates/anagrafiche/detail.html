@@ -25,6 +25,7 @@
           <dt>Codice fiscale</dt><dd>{{ obj.codice_fiscale|default:"—" }}</dd>
           <dt>Tipo</dt><dd>{{ obj.get_tipo_display|default:"—" }}</dd>
           {% if obj.partita_iva %}<dt>Partita IVA</dt><dd>{{ obj.partita_iva }}</dd>{% endif %}
+          {% if obj.denominazione_abbreviata %}<dt>Denominazione abbreviata</dt><dd>{{ obj.denominazione_abbreviata }}</dd>{% endif %}
           {% if obj.email %}<dt>Email</dt><dd>{{ obj.email }}</dd>{% endif %}
           {% if obj.pec %}<dt>PEC</dt><dd>{{ obj.pec }}</dd>{% endif %}
           {% if obj.telefono %}<dt>Telefono</dt><dd>{{ obj.telefono }}</dd>{% endif %}

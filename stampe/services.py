@@ -158,7 +158,15 @@ def _value_from_campo(instance: Any, campo: StampaCampo) -> str:
             return _to_str(v)
     if campo.template:
         try:
-            ctx = {"obj": instance, "attr": _attrs_namespace(instance)}
+            from django.utils import timezone
+            now = timezone.now()
+            ctx = {
+                "obj": instance,
+                "attr": _attrs_namespace(instance),
+                "now": now.strftime('%d/%m/%Y %H:%M:%S'),
+                "date": now.strftime('%d/%m/%Y'),
+                "time": now.strftime('%H:%M:%S'),
+            }
             return (campo.template or "").format(**ctx)
         except Exception:
             pass
@@ -656,6 +664,7 @@ def render_lista_pdf(ct: ContentType, lista: StampaLista, params: dict, extra_co
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import mm
     from io import BytesIO
+    from django.utils import timezone
 
     buf = BytesIO()
     fmt = lista.formato
@@ -683,6 +692,12 @@ def render_lista_pdf(ct: ContentType, lista: StampaLista, params: dict, extra_co
         data_iterable = qs
 
     extra_context = extra_context or {}
+    
+    # Aggiungi datetime corrente al context
+    now = timezone.now()
+    extra_context['now'] = now.strftime('%d/%m/%Y %H:%M:%S')
+    extra_context['date'] = now.strftime('%d/%m/%Y')
+    extra_context['time'] = now.strftime('%H:%M:%S')
 
     def _get_attrs_namespace(obj):
         try:
@@ -750,10 +765,24 @@ def render_lista_pdf(ct: ContentType, lista: StampaLista, params: dict, extra_co
 
     # --- Piè di pagina (se presente) ---
     if getattr(lista, "piedipagina", None):
+        # Renderizza il template del piè di pagina
+        ctx = extra_context.copy()
+        if primo_obj:
+            ctx['obj'] = primo_obj
+            ctx['attr'] = type("Attr", (), _get_attrs_namespace(primo_obj))()
+        
+        piedipagina_text = lista.piedipagina
+        try:
+            # Prova a formattare come template
+            piedipagina_text = piedipagina_text.format(**ctx)
+        except (KeyError, ValueError, AttributeError):
+            # Se fallisce, usa il testo statico
+            pass
+        
         c.setFont("Helvetica-Oblique", lista.piedipagina_font_size or 9)
         x = ml + (lista.piedipagina_x_mm or 0) * mm
         y_footer = mb + (lista.piedipagina_y_mm or 0) * mm
-        for line in lista.piedipagina.splitlines():
+        for line in piedipagina_text.splitlines():
             c.drawString(x, y_footer, line)
             y_footer += (lista.piedipagina_font_size or 9) * 1.1
 

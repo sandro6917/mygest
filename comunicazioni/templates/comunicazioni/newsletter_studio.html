@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{ oggetto|default:"Aggiornamenti Studio" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        background-color: #f6f7fb;
+        color: #1f2d3d;
+      }
+      .wrapper {
+        width: 100%;
+        padding: 24px 0;
+      }
+      .container {
+        max-width: 640px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 12px 24px rgba(22, 28, 45, 0.08);
+      }
+      .header {
+        background: linear-gradient(135deg, #223c66, #1b9aaa);
+        padding: 32px;
+        color: #ffffff;
+      }
+      .header h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: 0.5px;
+      }
+      .preheader {
+        font-size: 14px;
+        margin-top: 8px;
+        opacity: 0.9;
+      }
+      .content {
+        padding: 32px;
+        line-height: 1.6;
+        font-size: 16px;
+      }
+      .content h2 {
+        color: #20344a;
+        margin-top: 0;
+      }
+      .card {
+        background: #f6f7fb;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 24px 0;
+      }
+      .cta-btn {
+        display: inline-block;
+        padding: 14px 28px;
+        background: #1b9aaa;
+        color: #fff !important;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: bold;
+        box-shadow: 0 8px 18px rgba(27, 154, 170, 0.35);
+      }
+      .cta-btn:hover {
+        background: #15808c;
+      }
+      .divider {
+        border: 0;
+        border-top: 1px solid #e2e6f0;
+        margin: 32px 0;
+      }
+      .footer {
+        padding: 28px 32px;
+        font-size: 13px;
+        color: #6b7380;
+        background: #f2f4f8;
+      }
+      .footer a {
+        color: #1b9aaa;
+        text-decoration: underline;
+      }
+      @media screen and (max-width: 560px) {
+        .container {
+          border-radius: 0;
+        }
+        .header,
+        .content,
+        .footer {
+          padding: 24px;
+        }
+        .cta-btn {
+          width: 100%;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <table role="presentation" class="container" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+          <td class="header">
+            <h1>{{ studio_nome|default:"Studio Professionale" }}</h1>
+            <p class="preheader">
+              {{ preheader|default:"Comunicazione di servizio e aggiornamenti normativi" }}
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td class="content">
+            <p>Ciao {{ destinatario_nome|default:"Cliente" }},</p>
+            <p>
+              {{ intro|default:"ti inviamo di seguito gli aggiornamenti e le attività in corso che potrebbero interessare la tua azienda." }}
+            </p>
+
+            <div class="card">
+              <h2>{{ sezione_principale_titolo|default:"Aggiornamento principale" }}</h2>
+              <p>
+                {{ sezione_principale_testo|default:"Inserisci qui il contenuto principale della comunicazione, includendo spiegazioni sintetiche e link utili."|linebreaksbr }}
+              </p>
+              {% if call_to_action_url %}
+              <p style="text-align: center; margin-top: 24px;">
+                <a class="cta-btn" href="{{ call_to_action_url }}" target="_blank" rel="noopener">
+                  {{ call_to_action_label|default:"Leggi l'approfondimento" }}
+                </a>
+              </p>
+              {% endif %}
+            </div>
+
+            {% if note_secondarie %}
+            <h3>In breve</h3>
+            <ul>
+              {% for nota in note_secondarie %}
+              <li>{{ nota }}</li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if allegati_descrizione %}
+            <p style="margin-top: 24px;">
+              📎 <strong>Allegati disponibili:</strong> {{ allegati_descrizione }}
+            </p>
+            {% endif %}
+
+            <hr class="divider" />
+
+            <p style="margin-bottom: 0;">
+              {{ saluti|default:"Restiamo a disposizione per qualsiasi chiarimento." }}<br />
+              <strong>{{ firma_operatore|default:"Il Team dello Studio" }}</strong>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td class="footer">
+            <p style="margin: 0 0 8px;">
+              Ricevi questa comunicazione perché sei cliente dello studio ed hai prestato consenso all'invio di aggiornamenti.
+            </p>
+            <p style="margin: 0 0 4px;">
+              {{ studio_indirizzo|default:"Studio Professionale · Via Roma 10 · 20100 Milano" }}
+            </p>
+            <p style="margin: 0;">
+              Per aggiornare le preferenze o disiscriverti, visita
+              <a href="{{ preferenze_url|default:"/comunicazioni/preferenze/" }}" target="_blank" rel="noopener">questa pagina</a>
+              oppure scrivici a <a href="mailto:{{ privacy_email|default:"privacy@studio.it" }}">{{ privacy_email|default:"privacy@studio.it" }}</a>.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

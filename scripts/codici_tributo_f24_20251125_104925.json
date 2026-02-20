@@ -1,0 +1,46 @@
+[
+  {
+    "codice": "Web",
+    "sezione": "erario",
+    "descrizione": "www.tuttocamere.it",
+    "causale": "",
+    "periodicita": "",
+    "note": "",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "Sponsor",
+    "sezione": "erario",
+    "descrizione": "",
+    "causale": "",
+    "periodicita": "Sponsor",
+    "note": "",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "ISTAT",
+    "sezione": "erario",
+    "descrizione": "",
+    "causale": "",
+    "periodicita": "ISTAT",
+    "note": "",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  },
+  {
+    "codice": "ITALIA.IT",
+    "sezione": "erario",
+    "descrizione": "",
+    "causale": "",
+    "periodicita": "ITALIA.IT",
+    "note": "",
+    "attivo": true,
+    "data_inizio_validita": null,
+    "data_fine_validita": null
+  }
+]

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      {% if status == "success" %}
+        <h1 class="h3 text-success">Disiscrizione completata</h1>
+        <p>
+          L'indirizzo <code>{{ token.email }}</code> non riceverà più comunicazioni dalla lista
+          <strong>{{ token.mailing_list.nome }}</strong>. Potrai sempre contattarci per ripristinare il consenso.
+        </p>
+      {% elif status == "already_used" %}
+        <h1 class="h3">Link già utilizzato</h1>
+        <p>Il link di disiscrizione è già stato usato oppure è scaduto. Se hai ancora bisogno di assistenza, richiedi un nuovo link.</p>
+      {% else %}
+        <h1 class="h3">Link non valido</h1>
+        <p>Il token indicato non è valido o è scaduto.</p>
+      {% endif %}
+      <a class="btn btn-outline-primary mt-3" href="{% url 'comunicazioni:mailinglist-preferences' %}">Richiedi un nuovo link</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

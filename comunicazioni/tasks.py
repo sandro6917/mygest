@@ -12,8 +12,7 @@ from email.utils import getaddresses, parsedate_to_datetime
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Comunicazione, Mailbox, EmailImport
-from anagrafiche.models import EmailContatto
+from .models import Comunicazione, Mailbox, EmailImport, EmailImportBlacklist
 
 logger = logging.getLogger(__name__)
 
@@ -61,18 +60,39 @@ def _imap_connection(mailbox: Mailbox):
             pass
 
 
-def _should_import(mailbox: Mailbox, mittente: str, soggetto: str) -> bool:
+def _should_import(
+    mailbox: Mailbox,
+    mittente: str,
+    soggetto: str,
+    blacklist: set[str] | None = None,
+    reason_holder: dict[str, str | None] | None = None,
+) -> bool:
     mittente_lower = (mittente or "").lower()
+    if blacklist and mittente_lower in blacklist:
+        if reason_holder is not None:
+            reason_holder["reason"] = "mittente nella blacklist globale"
+        return False
     allowed = mailbox.allowed_from()
     blocked = mailbox.blocked_from()
     if allowed and mittente_lower not in allowed:
+        if reason_holder is not None:
+            reason_holder["reason"] = "mittente non presente tra gli indirizzi consentiti"
         return False
     if mittente_lower in blocked:
+        if reason_holder is not None:
+            reason_holder["reason"] = "mittente presente tra quelli esclusi nella casella"
         return False
     tokens = mailbox.subject_tokens()
     if tokens:
         soggetto_low = (soggetto or "").lower()
-        return any(token in soggetto_low for token in tokens)
+        matches = any(token in soggetto_low for token in tokens)
+        if not matches and reason_holder is not None:
+            reason_holder["reason"] = "soggetto non contiene le parole chiave richieste"
+        if reason_holder is not None and matches:
+            reason_holder["reason"] = None
+        return matches
+    if reason_holder is not None:
+        reason_holder["reason"] = None
     return True
 
 
@@ -125,11 +145,6 @@ def _crea_comunicazione_da_email(mailbox: Mailbox, mail: EmailImport) -> Comunic
         import_source=mailbox.nome,
     )
 
-    contact = EmailContatto.objects.filter(email__iexact=mail.mittente).select_related("anagrafica").first()
-    if contact:
-        comunicazione.anagrafica = contact.anagrafica
-        comunicazione.save(update_fields=["anagrafica"])
-
     mail.comunicazione = comunicazione
     mail.save(update_fields=["comunicazione"])
     return comunicazione
@@ -138,6 +153,10 @@ def _crea_comunicazione_da_email(mailbox: Mailbox, mail: EmailImport) -> Comunic
 def sincronizza_mailbox(mailbox: Mailbox, limite: int | None = None) -> int:
     """Scarica nuove email da una casella."""
     processed = 0
+    blacklist = {
+        (email or "").strip().lower()
+        for email in EmailImportBlacklist.objects.values_list("email", flat=True)
+    }
     with _imap_connection(mailbox) as conn:
         result, data = conn.uid("search", None, "UNSEEN")
         if result != "OK":
@@ -153,10 +172,12 @@ def sincronizza_mailbox(mailbox: Mailbox, limite: int | None = None) -> int:
                 pass
         if limite:
             uids = uids[:limite]
+        logger.info("Mailbox %s: trovati %s UID da processare", mailbox.nome, len(uids))
         for uid in uids:
             try:
                 result, fetch_data = conn.uid("fetch", uid, "(RFC822)")
                 if result != "OK" or not fetch_data or fetch_data[0] is None:
+                    logger.warning("Mailbox %s: fetch fallito per UID %s", mailbox.nome, uid)
                     continue
                 raw_email = fetch_data[0][1]
                 message = email.message_from_bytes(raw_email)
@@ -165,7 +186,21 @@ def sincronizza_mailbox(mailbox: Mailbox, limite: int | None = None) -> int:
                 sender = _decode_header(message.get("From"))
                 sender_addresses = _clean_addresses(message.get("From"))
                 sender_email = sender_addresses[0] if sender_addresses else sender
-                if not _should_import(mailbox, sender_email, subject):
+                reason_holder: dict[str, str | None] = {}
+                if not _should_import(
+                    mailbox,
+                    sender_email,
+                    subject,
+                    blacklist=blacklist,
+                    reason_holder=reason_holder,
+                ):
+                    logger.info(
+                        "Mailbox %s: skip Message-ID %s da %s (%s)",
+                        mailbox.nome,
+                        message_id,
+                        sender_email or "sconosciuto",
+                        reason_holder.get("reason") or "filtri casella",
+                    )
                     continue
                 to_header = ", ".join(_clean_addresses(message.get("To")))
                 cc_header = ", ".join(_clean_addresses(message.get("Cc")))
@@ -191,15 +226,39 @@ def sincronizza_mailbox(mailbox: Mailbox, limite: int | None = None) -> int:
                         "raw_headers": headers_dump,
                         "corpo_testo": bodies[0],
                         "corpo_html": bodies[1],
+                        "raw_message": raw_email,
                     },
                 )
                 if created:
                     processed += 1
+                    logger.info(
+                        "Mailbox %s: importata nuova email %s (uid=%s)",
+                        mailbox.nome,
+                        message_id,
+                        uid.decode(),
+                    )
+                else:
+                    updates = []
+                    if not email_import.raw_message:
+                        email_import.raw_message = raw_email
+                        updates.append("raw_message")
+                    if not email_import.uid:
+                        email_import.uid = uid.decode()
+                        updates.append("uid")
+                    if updates:
+                        email_import.save(update_fields=updates)
+                        logger.debug(
+                            "Mailbox %s: aggiornati campi %s per email %s",
+                            mailbox.nome,
+                            ", ".join(updates),
+                            message_id,
+                        )
                 mailbox.ultimi_uid = uid.decode()
             except Exception as exc:  # pragma: no cover - logging errori runtime
                 logger.exception("Errore durante l'import da %s: %s", mailbox.nome, exc)
         mailbox.ultima_lettura = timezone.now()
         mailbox.save(update_fields=["ultima_lettura", "ultimi_uid", "updated_at"])
+        logger.info("Mailbox %s: import concluse, %s nuove email", mailbox.nome, processed)
     return processed
 
 

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-3">Gestione preferenze mailing list</h1>
+  <p class="text-muted">
+    Inserisci l'indirizzo email con cui sei iscritto e la lista interessata. Ti invieremo un link per confermare la disiscrizione
+    o aggiornare il consenso.
+  </p>
+  {% if token_sent %}
+    <div class="alert alert-success">
+      Ti abbiamo inviato un'email con il link per completare la procedura. Controlla anche la posta indesiderata.
+    </div>
+  {% endif %}
+  <form method="post" class="card p-4 shadow-sm">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Invia link</button>
+  </form>
+</div>
+{% endblock %}

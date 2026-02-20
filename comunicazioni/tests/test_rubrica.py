@@ -40,7 +40,6 @@ class ComunicazioneRubricaFormTests(TestCase):
                 "corpo": "Test",
                 "mittente": "ufficio@example.com",
                 "destinatari": "manual@example.com",
-                "anagrafica": self.anagrafica.pk,
                 "contatti_destinatari": [str(self.contatto.pk)],
                 "liste_destinatari": [str(self.lista.pk)],
             }
@@ -71,7 +70,6 @@ class ComunicazioniApiTests(TestCase):
             corpo="",
             mittente="api@example.com",
             destinatari="dest@example.com",
-            anagrafica=self.anagrafica,
         )
 
     def test_lista_comunicazioni_api(self):
@@ -101,7 +99,6 @@ class ComunicazioniGraphQLTests(TestCase):
             corpo="",
             mittente="graphql@example.com",
             destinatari="team@example.com",
-            anagrafica=self.anagrafica,
         )
 
     def test_query_comunicazioni(self):

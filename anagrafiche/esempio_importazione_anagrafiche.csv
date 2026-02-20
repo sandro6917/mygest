@@ -1,0 +1,5 @@
+tipo;ragione_sociale;nome;cognome;codice_fiscale;partita_iva;codice;denominazione_abbreviata;pec;email;telefono;indirizzo;note
+PF;;Mario;Rossi;RSSMRA80A01H501U;;CLI0001;ROSSI MARIO;mario.rossi@pec.it;mario.rossi@email.it;3331234567;Via Roma 1, 20121 Milano;Cliente preferenziale
+PF;;Anna;Verdi;VRDNNA85M45F205X;;;;anna.verdi@pec.example.it;anna@example.com;+39 02 12345678;Corso Italia 45, 00100 Roma;
+PG;Acme S.r.l.;;;12345678901;12345678901;CLI0002;ACME SRL;acme@pec.it;info@acme.it;024567890;Via Milano 10, 20100 Milano;Cliente importante - fatturazione elettronica
+PG;Beta Solutions S.p.A.;;;98765432109;98765432109;;BETA SPA;beta@pec.example.com;contatti@beta.com;+39 06 9876543;Piazza Duomo 1, 50100 Firenze;Partner tecnologico
