@@ -106,7 +106,13 @@ backup_database() {
     local backup_file="$BACKUP_DIR/db_$(date +%Y%m%d_%H%M%S).sql"
     log "Backup database in corso..."
     
-    if pg_dump mygest > "$backup_file" 2>/dev/null; then
+    # Load database credentials from .env
+    if [ -f "$REPO_DIR/.env" ]; then
+        export $(grep -E '^(DB_NAME|DB_USER|DB_PASSWORD|DB_HOST|DB_PORT)=' "$REPO_DIR/.env" | xargs)
+    fi
+    
+    # Use PGPASSWORD environment variable for authentication
+    if PGPASSWORD="${DB_PASSWORD}" pg_dump -h "${DB_HOST:-localhost}" -p "${DB_PORT:-5432}" -U "${DB_USER:-mygest_user}" "${DB_NAME:-mygest}" > "$backup_file" 2>/dev/null; then
         success "Backup database: $backup_file ($(du -h "$backup_file" | cut -f1))"
         echo "$backup_file"
     else
