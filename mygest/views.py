@@ -107,6 +107,14 @@ def home(request):
     Serve React SPA in production.
     In development (DEBUG=True), shows Django debug page with recent entries.
     """
+    return react_spa(request)
+
+
+def react_spa(request):
+    """
+    Serve React SPA for all non-API routes in production.
+    This allows React Router to handle client-side routing.
+    """
     if not settings.DEBUG:
         # Production: serve React frontend
         frontend_index = os.path.join(settings.BASE_DIR, 'frontend', 'dist', 'index.html')

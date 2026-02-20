@@ -1,19 +1,18 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.conf.urls.static import static
-from mygest.views import home, help_index, help_topic
+from mygest.views import home, help_index, help_topic, react_spa
 from graphene_django.views import GraphQLView
 
 urlpatterns = [
-    path("", home, name="home"),
     path('admin/', admin.site.urls),
     
     # API v1 endpoints (for React SPA)
     path("api/v1/", include("api.v1.urls")),
     
-    # Traditional Django URLs
+    # Traditional Django URLs (kept for backwards compatibility)
     path("accounts/", include("django.contrib.auth.urls")),
     path("anagrafiche/", include("anagrafiche.urls", namespace="anagrafiche")),
     path("documenti/", include(("documenti.urls", "documenti"), namespace="documenti")),
@@ -29,6 +28,10 @@ urlpatterns = [
     path("help/", help_index, name="help-index"),
     path("help/<slug:slug>/", help_topic, name="help-topic"),
     path("graphql/", login_required(GraphQLView.as_view(graphiql=True))),
+    
+    # React SPA catch-all (must be last!)
+    # Matches all routes not matched above and serves React frontend
+    re_path(r'^.*$', react_spa, name="react-spa"),
 ]
 
 if settings.DEBUG:
