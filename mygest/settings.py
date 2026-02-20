@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "comunicazioni",
     "whatsapp",
     "ai_classifier",  # AI Classificatore Documenti
+    "core",  # Core functionality and management commands
 ]
 
 # Aggiungi Debug Toolbar solo in sviluppo
