@@ -40,3 +40,4 @@ STORAGE_*.pdf
 .vscode/
 .idea/
 *.code-workspace
+backups/
