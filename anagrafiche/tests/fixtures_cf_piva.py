@@ -19,7 +19,7 @@ except ImportError:
     # Fallback se codicefiscale non installato
     CODICI_FISCALI_VALIDI = [
         'RSSMRA80A01H501U',  # Mario Rossi
-        'VRDGPP85L01F205S',  # Giuseppe Verdi
+        'VRDGPP85L01F205F',  # Giuseppe Verdi (checksum corretto: F)
         'BNCMRA90C55H501Y',  # Maria Bianchi
         'NREGNN75M20F839X',  # Giovanni Neri
         'GRSDLE95E50L219T',  # Elda Grassi
@@ -41,7 +41,7 @@ CODICI_FISCALI_NON_VALIDI = [
 # Partite IVA valide (checksum corretto)
 PARTITE_IVA_VALIDE = [
     '12345678903',  # Checksum valido
-    '00000010166',  # P.IVA Comune di Milano (reale)
+    '00000010165',  # P.IVA Comune di Milano (checksum corretto: 5)
     '01234567890',  # Checksum valido
     '02313821007',  # P.IVA RAI (reale, pubblica)
 ]
