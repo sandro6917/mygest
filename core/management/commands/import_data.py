@@ -91,37 +91,43 @@ class Command(BaseCommand):
                 # Fase 2: Import con merge
                 self.stdout.write('\n📥 Fase 2: Import e merge record...')
                 
-                for obj_data in data:
-                    model_name = obj_data['model']
-                    pk = obj_data['pk']
-                    fields = obj_data['fields']
+                # Usa deserializer Django per gestire correttamente le FK
+                for deserialized_obj in serializers.deserialize('json', json.dumps(data)):
+                    obj = deserialized_obj.object
+                    model_name = f"{obj._meta.app_label}.{obj._meta.model_name}"
                     
                     try:
-                        app_label, model_class_name = model_name.split('.')
-                        Model = apps.get_model(app_label, model_class_name)
-                        
                         # Cerca record esistente
                         try:
-                            existing = Model.objects.get(pk=pk)
+                            existing = obj._meta.model.objects.get(pk=obj.pk)
                             
-                            # Update record esistente
+                            # Update record esistente (copia tutti i field tranne pk)
                             if not dry_run:
-                                for field, value in fields.items():
-                                    setattr(existing, field, value)
+                                for field in obj._meta.fields:
+                                    if not field.primary_key:  # Skip PK
+                                        setattr(existing, field.name, getattr(obj, field.name))
+                                
+                                # Gestisci M2M separatamente
                                 existing.save()
+                                for m2m_field in obj._meta.many_to_many:
+                                    m2m_value = getattr(obj, m2m_field.name).all()
+                                    getattr(existing, m2m_field.name).set(m2m_value)
                             
                             stats['updated'][model_name] += 1
                             
-                        except Model.DoesNotExist:
+                        except obj._meta.model.DoesNotExist:
                             # Crea nuovo record
                             if not dry_run:
-                                new_obj = Model(pk=pk, **fields)
-                                new_obj.save()
+                                obj.save()
+                                # Gestisci M2M per nuovi oggetti
+                                for m2m_field in obj._meta.many_to_many:
+                                    m2m_value = deserialized_obj.m2m_data.get(m2m_field.name, [])
+                                    getattr(obj, m2m_field.name).set(m2m_value)
                             
                             stats['created'][model_name] += 1
                     
                     except Exception as e:
-                        error_msg = f'Record {model_name}#{pk}: {str(e)}'
+                        error_msg = f'Record {model_name}#{obj.pk}: {str(e)}'
                         stats['errors'][model_name].append(error_msg)
                         self.stdout.write(
                             self.style.ERROR(f'  ❌ {error_msg}')
