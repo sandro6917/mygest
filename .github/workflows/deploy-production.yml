@@ -177,7 +177,7 @@ jobs:
               -o StrictHostKeyChecking=no \
               -p ${{ secrets.SSH_PORT || 22 }} \
               ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
-            set -e
+            set -ex  # Enable debugging and exit on error
             echo "🚀 Starting deployment..."
             cd /srv/mygest/app
             
@@ -188,17 +188,17 @@ jobs:
             
             # Activate venv and install deps
             echo "📦 Installing Python dependencies..."
-            source /srv/mygest/venv/bin/activate
-            pip install -q --upgrade pip
-            pip install -q -r requirements.txt
+            source /srv/mygest/venv/bin/activate || { echo "Failed to activate venv"; exit 1; }
+            pip install -q --upgrade pip || { echo "Failed to upgrade pip"; exit 1; }
+            pip install -q -r requirements.txt || { echo "Failed to install requirements"; exit 1; }
             
             # Run deploy script with --force if service is not active
             echo "🔧 Running deploy script..."
             if ! systemctl is-active --quiet gunicorn_mygest; then
               echo "⚠️  Service not active, using --force --skip-backup flags"
-              ./scripts/deploy.sh --force --skip-backup
+              ./scripts/deploy.sh --force --skip-backup || { echo "Deploy script failed"; exit 1; }
             else
-              ./scripts/deploy.sh
+              ./scripts/deploy.sh || { echo "Deploy script failed"; exit 1; }
             fi
             
             echo "✅ Deployment completed!"
