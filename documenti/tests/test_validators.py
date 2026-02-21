@@ -18,6 +18,16 @@ from documenti.validators import (
 )
 import tempfile
 import os
+import unittest
+
+# Check if ClamAV is available
+try:
+    import clamd
+    clamd_client = clamd.ClamAVUnixSocketScanner()
+    clamd_client.ping()
+    CLAMAV_AVAILABLE = True
+except Exception:
+    CLAMAV_AVAILABLE = False
 
 
 class FileSizeValidatorTest(TestCase):
@@ -117,6 +127,7 @@ class AntivirusValidatorTest(TestCase):
             if e.code != 'antivirus_unavailable':
                 raise
 
+    @unittest.skipUnless(CLAMAV_AVAILABLE, "ClamAV non disponibile")
     @override_settings(ANTIVIRUS_ENABLED=True, ANTIVIRUS_REQUIRED=False)
     def test_eicar_virus(self):
         """EICAR test string deve essere rilevato come virus"""
@@ -124,15 +135,10 @@ class AntivirusValidatorTest(TestCase):
         eicar = b'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*'
         file = SimpleUploadedFile("eicar.txt", eicar)
         
-        try:
-            with self.assertRaises(ValidationError) as cm:
-                validate_antivirus(file)
-            
-            self.assertEqual(cm.exception.code, 'virus_detected')
-        except ValidationError as e:
-            # Se ClamAV non disponibile, skip test
-            if e.code == 'antivirus_unavailable':
-                self.skipTest("ClamAV non disponibile")
+        with self.assertRaises(ValidationError) as cm:
+            validate_antivirus(file)
+        
+        self.assertEqual(cm.exception.code, 'virus_detected')
 
     @override_settings(ANTIVIRUS_ENABLED=False)
     def test_antivirus_disabled(self):

@@ -208,4 +208,5 @@ class DocumentFilenameAttrTokenTests(TestCase):
 
         filename = build_document_filename(documento, "original.pdf")
         # Quando l'attributo non ha valore, il token viene sostituito con stringa vuota
-        self.assertEqual(filename, "Doc__12345678901.pdf")
+        # Gli underscore doppi vengono normalizzati a singoli
+        self.assertEqual(filename, "Doc_12345678901.pdf")
