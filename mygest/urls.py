@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 from mygest.views import (
     home, 
     help_index, 
-    help_topic, 
+    help_topic,
+    help_topics_api,
     react_spa,
     serve_deployment_guide_html,
     serve_deployment_guide_pdf,
@@ -32,10 +33,16 @@ urlpatterns = [
     path("scadenze/", include(("scadenze.urls", "scadenze"), namespace="scadenze")),
     path("api/", include(("comunicazioni.api.urls", "comunicazioni_api"), namespace="comunicazioni-api")),
     path("whatsapp/", include(("whatsapp.urls", "whatsapp"), namespace="whatsapp")),
+    
+    # Help endpoints
+    path("api/v1/help/topics/", help_topics_api, name="help-topics-api"),
     path("help/", help_index, name="help-index"),
     path("help/<slug:slug>/", help_topic, name="help-topic"),
+    
+    # Guide files
     path("guide/deployment.html", serve_deployment_guide_html, name="guide-deployment-html"),
     path("guide/deployment.pdf", serve_deployment_guide_pdf, name="guide-deployment-pdf"),
+    
     path("graphql/", login_required(GraphQLView.as_view(graphiql=True))),
     
     # Home page (for reverse('home') in tests and templates)

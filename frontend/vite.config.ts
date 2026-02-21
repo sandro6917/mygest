@@ -17,6 +17,10 @@ export default defineConfig({
         target: 'http://100.99.234.12:8000',
         changeOrigin: true,
       },
+      '/guide': {
+        target: 'http://100.99.234.12:8000',
+        changeOrigin: true,
+      },
       '/etichette': {
         target: 'http://100.99.234.12:8000',
         changeOrigin: true,

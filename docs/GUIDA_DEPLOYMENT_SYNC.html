@@ -348,16 +348,17 @@
 <span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Hostinger</span><span class="w"> </span><span class="n">VPS</span><span class="w"> </span><span class="p">(</span><span class="mf">72.62.34.249</span><span class="p">)</span><span class="w">                            </span><span class="err">│</span>
 <span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Database</span><span class="w"> </span><span class="n">PostgreSQL</span><span class="w"> </span><span class="p">(</span><span class="n">mygest</span><span class="p">)</span><span class="w">                             </span><span class="err">│</span>
 <span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Gunicorn</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Nginx</span><span class="w">                                         </span><span class="err">│</span>
-<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Dominio</span><span class="o">:</span><span class="w"> </span><span class="n">mygest</span><span class="p">.</span><span class="n">sandro</span><span class="p">.</span><span class="n">cloud</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Dominio</span><span class="o">:</span><span class="w"> </span><span class="n">mygest</span><span class="p">.</span><span class="n">sandrochimenti</span><span class="p">.</span><span class="n">it</span><span class="w">                            </span><span class="err">│</span>
 <span class="err">└─────────────────────────────────────────────────────────────┘</span>
 <span class="w">                            </span><span class="err">↕</span>
 <span class="w">                      </span><span class="p">[</span><span class="n">rclone</span><span class="w"> </span><span class="n">backup</span><span class="p">]</span>
 <span class="w">                            </span><span class="err">↕</span>
 <span class="err">┌─────────────────────────────────────────────────────────────┐</span>
 <span class="err">│</span><span class="w">                    </span><span class="n">ARCHIVIO</span><span class="w"> </span><span class="n">DOCUMENTI</span><span class="w">                       </span><span class="err">│</span>
-<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">NAS</span><span class="w"> </span><span class="n">Locale</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="n">mnt</span><span class="o">/</span><span class="n">nas_mygest</span><span class="o">/</span><span class="p">)</span><span class="w">                           </span><span class="err">│</span>
-<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Google</span><span class="w"> </span><span class="n">Drive</span><span class="w"> </span><span class="p">(</span><span class="n">backup</span><span class="w"> </span><span class="n">cloud</span><span class="p">)</span><span class="w">                              </span><span class="err">│</span>
-<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Struttura</span><span class="o">:</span><span class="w"> </span><span class="n">Cliente</span><span class="o">/</span><span class="n">Titolario</span><span class="o">/</span><span class="n">Anno</span><span class="o">/</span><span class="n">Documenti</span><span class="w">            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Locale</span><span class="w"> </span><span class="n">Dev</span><span class="o">:</span><span class="w"> </span><span class="o">/</span><span class="n">mnt</span><span class="o">/</span><span class="n">archivio</span><span class="w">                                </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">VPS</span><span class="w"> </span><span class="n">Prod</span><span class="o">:</span><span class="w"> </span><span class="o">/</span><span class="n">srv</span><span class="o">/</span><span class="n">mygest</span><span class="o">/</span><span class="n">archivio</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Google</span><span class="w"> </span><span class="n">Drive</span><span class="o">:</span><span class="w"> </span><span class="n">backup</span><span class="w"> </span><span class="n">cloud</span><span class="w"> </span><span class="n">con</span><span class="w"> </span><span class="n">rclone</span><span class="w">                    </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Struttura</span><span class="o">:</span><span class="w"> </span><span class="n">Cliente</span><span class="o">/</span><span class="n">Titolario</span><span class="o">/</span><span class="n">Anno</span><span class="o">/</span><span class="n">Documenti</span><span class="w">             </span><span class="err">│</span>
 <span class="err">└─────────────────────────────────────────────────────────────┘</span>
 </code></pre></div>
 
@@ -489,7 +490,7 @@ git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"
 <span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;chiave-segreta-locale&gt;
 <span class="nv">DATABASE_URL</span><span class="o">=</span>postgresql://user:pass@localhost/mygest_dev
 <span class="nv">ALLOWED_HOSTS</span><span class="o">=</span>localhost,127.0.0.1
-<span class="nv">ARCHIVIO_BASE_PATH</span><span class="o">=</span>/mnt/nas_mygest
+<span class="nv">ARCHIVIO_BASE_PATH</span><span class="o">=</span>/mnt/archivio
 </code></pre></div>
 
 <p><strong>File <code>.env</code> produzione</strong> (su VPS):</p>
@@ -497,8 +498,8 @@ git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"
 <span class="nv">DEBUG</span><span class="o">=</span>False
 <span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;chiave-segreta-produzione&gt;
 <span class="nv">DATABASE_URL</span><span class="o">=</span>postgresql://mygest:password@localhost/mygest
-<span class="nv">ALLOWED_HOSTS</span><span class="o">=</span>mygest.sandro.cloud,72.62.34.249
-<span class="nv">ARCHIVIO_BASE_PATH</span><span class="o">=</span>/mnt/nas_mygest
+<span class="nv">ALLOWED_HOSTS</span><span class="o">=</span>mygest.sandrochimenti.it,72.62.34.249
+<span class="nv">ARCHIVIO_BASE_PATH</span><span class="o">=</span>/srv/mygest/archivio
 </code></pre></div>
 
 <p>⚠️ <strong>IMPORTANTE</strong>: Non committare mai file <code>.env</code> su Git! È già in <code>.gitignore</code>.</p>
@@ -572,7 +573,7 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 
 <p><strong>Passo 4: Verificare Deploy</strong></p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Aprire browser su:</span>
-https://mygest.sandro.cloud
+https://mygest.sandrochimenti.it
 
 <span class="c1"># Verificare:</span>
 <span class="c1"># ✓ Applicazione risponde</span>
@@ -740,23 +741,23 @@ curl<span class="w"> </span>http://localhost:8000/api/v1/health/
 <h4 id="323-verifiche-post-deploy">3.2.3 Verifiche Post-Deploy</h4>
 <p><strong>Checklist di verifica</strong>:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># ✓ 1. Applicazione risponde</span>
-curl<span class="w"> </span>-I<span class="w"> </span>https://mygest.sandro.cloud
+curl<span class="w"> </span>-I<span class="w"> </span>https://mygest.sandrochimenti.it
 <span class="c1"># Output: HTTP/2 200 OK</span>
 
 <span class="c1"># ✓ 2. Login funziona</span>
-<span class="c1"># Aprire browser: https://mygest.sandro.cloud/login</span>
+<span class="c1"># Aprire browser: https://mygest.sandrochimenti.it/login</span>
 <span class="c1"># Inserire credenziali admin</span>
 
 <span class="c1"># ✓ 3. API rispondono</span>
-curl<span class="w"> </span>https://mygest.sandro.cloud/api/v1/health/
+curl<span class="w"> </span>https://mygest.sandrochimenti.it/api/v1/health/
 <span class="c1"># Output: {&quot;status&quot;:&quot;ok&quot;,&quot;database&quot;:&quot;ok&quot;,&quot;redis&quot;:&quot;ok&quot;}</span>
 
 <span class="c1"># ✓ 4. Static files caricati</span>
-curl<span class="w"> </span>-I<span class="w"> </span>https://mygest.sandro.cloud/static/admin/css/base.css
+curl<span class="w"> </span>-I<span class="w"> </span>https://mygest.sandrochimenti.it/static/admin/css/base.css
 <span class="c1"># Output: HTTP/2 200 OK</span>
 
 <span class="c1"># ✓ 5. Frontend React funziona</span>
-<span class="c1"># Aprire browser: https://mygest.sandro.cloud</span>
+<span class="c1"># Aprire browser: https://mygest.sandrochimenti.it</span>
 <span class="c1"># Verificare che React app si carichi (non errori console)</span>
 
 <span class="c1"># ✓ 6. Database migrations applicate</span>
@@ -1166,13 +1167,20 @@ pg_dump<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> 
 <hr />
 <h2 id="5-gestione-archivio-nas">5. Gestione Archivio NAS</h2>
 <h3 id="51-struttura-directory">5.1 Struttura Directory</h3>
-<p>L'archivio documenti è su NAS locale con backup cloud.</p>
+<p>L'archivio documenti è su NAS con backup cloud.</p>
+<blockquote>
+<p><strong>📍 NOTA PERCORSI:</strong><br />
+- <strong>Sviluppo locale</strong>: <code>/mnt/archivio</code> (mount CIFS da NAS 192.168.1.4)<br />
+- <strong>VPS produzione</strong>: <code>/srv/mygest/archivio</code> (mount CIFS via tunnel SSH)</p>
+<p>Nei comandi seguenti, usa il percorso appropriato per il tuo ambiente.</p>
+</blockquote>
 <h4 id="511-path-e-mount-point">5.1.1 Path e Mount Point</h4>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Mount point NAS</span>
-/mnt/nas_mygest/
+<p><strong>Ambiente LOCALE (sviluppo)</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Mount point NAS locale</span>
+/mnt/archivio/
 
 <span class="c1"># Struttura directory:</span>
-/mnt/nas_mygest/
+/mnt/archivio/
 ├──<span class="w"> </span>clienti/<span class="w">                    </span><span class="c1"># Documenti per cliente</span>
 │<span class="w">   </span>├──<span class="w"> </span>CLI001_ROSSI_MARIO/
 │<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>01_CONTABILITA/
@@ -1213,26 +1221,33 @@ UNILAV-2025-003-Assunzione_Rossi.pdf
 
 <h3 id="52-configurazione-nas">5.2 Configurazione NAS</h3>
 <h4 id="521-mount-nas-su-sistemi-linux">5.2.1 Mount NAS su Sistemi Linux</h4>
+<blockquote>
+<p><strong>⚙️ Configurazione ambiente-specifica:</strong><br />
+- <strong>LOCALE</strong>: <code>/mnt/archivio</code> + NAS IP: <code>192.168.1.4/documenti/archivio</code><br />
+- <strong>VPS</strong>: <code>/srv/mygest/archivio</code> + Tunnel: <code>localhost/documenti/archivio</code></p>
+</blockquote>
 <p><strong>Verifica mount attuale</strong>:</p>
-<div class="codehilite"><pre><span></span><code>mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>nas_mygest
-<span class="c1"># Output: //192.168.1.100/mygest on /mnt/nas_mygest type cifs (rw,...)</span>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Locale</span>
+mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>/mnt/archivio
+df<span class="w"> </span>-h<span class="w"> </span>/mnt/archivio
 
-df<span class="w"> </span>-h<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>nas_mygest
-<span class="c1"># Output: //192.168.1.100/mygest  2.0T  1.2T  800G  61% /mnt/nas_mygest</span>
+<span class="c1"># VPS  </span>
+mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>/srv/mygest/archivio
+df<span class="w"> </span>-h<span class="w"> </span>/srv/mygest/archivio
 </code></pre></div>
 
-<p><strong>Se non montato, mount manuale</strong>:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Creare mount point (se non esiste)</span>
-sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/mnt/nas_mygest
+<p><strong>Mount manuale LOCALE</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Creare mount point</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/mnt/archivio
 
-<span class="c1"># Mount (CIFS/SMB)</span>
-sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>cifs<span class="w"> </span>//192.168.1.100/mygest<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>-o<span class="w"> </span><span class="nv">username</span><span class="o">=</span>mygest,password<span class="o">=</span>password,uid<span class="o">=</span><span class="m">1000</span>,gid<span class="o">=</span><span class="m">1000</span>,file_mode<span class="o">=</span><span class="m">0664</span>,dir_mode<span class="o">=</span><span class="m">0775</span>
+<span class="c1"># Mount CIFS da NAS locale</span>
+sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>cifs<span class="w"> </span>//192.168.1.4/documenti/archivio<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span><span class="nv">username</span><span class="o">=</span>admin,uid<span class="o">=</span><span class="m">1000</span>,gid<span class="o">=</span><span class="m">1000</span>,file_mode<span class="o">=</span><span class="m">0664</span>,dir_mode<span class="o">=</span><span class="m">0775</span>
 
 <span class="c1"># Verificare accesso</span>
-ls<span class="w"> </span>-la<span class="w"> </span>/mnt/nas_mygest
-touch<span class="w"> </span>/mnt/nas_mygest/test.txt
-rm<span class="w"> </span>/mnt/nas_mygest/test.txt
+ls<span class="w"> </span>-la<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+touch<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/test.txt
+rm<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/test.txt
 </code></pre></div>
 
 <p><strong>Mount automatico al boot</strong>:</p>
@@ -1251,7 +1266,7 @@ sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">600</sp
 sudo<span class="w"> </span>nano<span class="w"> </span>/etc/fstab
 
 <span class="c1"># Aggiungere riga:</span>
-//192.168.1.100/mygest<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span>cifs<span class="w"> </span><span class="nv">credentials</span><span class="o">=</span>/root/.nascreds,uid<span class="o">=</span><span class="m">1000</span>,gid<span class="o">=</span><span class="m">1000</span>,file_mode<span class="o">=</span><span class="m">0664</span>,dir_mode<span class="o">=</span><span class="m">0775</span>,_netdev<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">0</span>
+//192.168.1.100/mygest<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span><span class="w"> </span>cifs<span class="w"> </span><span class="nv">credentials</span><span class="o">=</span>/root/.nascreds,uid<span class="o">=</span><span class="m">1000</span>,gid<span class="o">=</span><span class="m">1000</span>,file_mode<span class="o">=</span><span class="m">0664</span>,dir_mode<span class="o">=</span><span class="m">0775</span>,_netdev<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">0</span>
 
 <span class="c1"># Testare mount senza reboot</span>
 sudo<span class="w"> </span>mount<span class="w"> </span>-a
@@ -1267,17 +1282,17 @@ id<span class="w"> </span>mygest
 <span class="c1"># uid=1001(mygest) gid=1001(mygest)</span>
 
 <span class="c1"># Verificare permessi directory</span>
-ls<span class="w"> </span>-ld<span class="w"> </span>/mnt/nas_mygest
-<span class="c1"># drwxrwxr-x 5 mygest mygest 4096 Feb 21 14:00 /mnt/nas_mygest</span>
+ls<span class="w"> </span>-ld<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+<span class="c1"># drwxrwxr-x 5 mygest mygest 4096 Feb 21 14:00 /mnt/archivio (o /srv/mygest/archivio su VPS)</span>
 
 <span class="c1"># Correggere se necessario</span>
-sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest
-sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX,o+rX<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX,o+rX<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 
 <span class="c1"># Test scrittura</span>
-sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>touch<span class="w"> </span>/mnt/nas_mygest/test_permissions.txt
+sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>touch<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/test_permissions.txt
 <span class="c1"># Deve avere successo</span>
-sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>rm<span class="w"> </span>/mnt/nas_mygest/test_permissions.txt
+sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>rm<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/test_permissions.txt
 </code></pre></div>
 
 <p><strong>Verifica permessi da Django</strong>:</p>
@@ -1285,7 +1300,7 @@ sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </s
 <span class="n">python</span> <span class="n">manage</span><span class="o">.</span><span class="n">py</span> <span class="n">shell</span>
 
 <span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">nas_path</span> <span class="o">=</span> <span class="s1">&#39;/mnt/nas_mygest&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">nas_path</span> <span class="o">=</span> <span class="s1">&#39;/mnt/archivio (o /srv/mygest/archivio su VPS)&#39;</span>
 <span class="o">&gt;&gt;&gt;</span> 
 <span class="o">&gt;&gt;&gt;</span> <span class="c1"># Test lettura</span>
 <span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">nas_path</span><span class="p">)</span>
@@ -1358,7 +1373,7 @@ rclone<span class="w"> </span>config
 <h4 id="532-script-backup-automatico">5.3.2 Script Backup Automatico</h4>
 <p><strong>Backup manuale test</strong>:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Sync dry-run (simulazione)</span>
-rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--dry-run<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--progress<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;temp/**&quot;</span><span class="w"> </span><span class="se">\</span>
@@ -1370,7 +1385,7 @@ rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span 
 <span class="c1"># 2024/02/21 15:00:01 NOTICE: Transferred: 0 B / 0 B, -, 0 B/s, ETA -</span>
 
 <span class="c1"># Sync reale</span>
-rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--progress<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;temp/**&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--log-file<span class="o">=</span>/var/log/rclone_sync.log
@@ -1397,7 +1412,7 @@ sudo<span class="w"> </span>nano<span class="w"> </span>/usr/local/bin/mygest_ba
 
 <span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$DATE</span><span class="s2">] Starting backup...&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$LOG_FILE</span>
 
-rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;temp/**&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;.DS_Store&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--log-file<span class="o">=</span><span class="nv">$LOG_FILE</span><span class="w"> </span><span class="se">\</span>
@@ -1472,7 +1487,7 @@ sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> <
 <div class="codehilite"><pre><span></span><code><span class="c1"># Su VPS o PC locale</span>
 
 <span class="c1"># 1. Verificare spazio disco disponibile</span>
-df<span class="w"> </span>-h<span class="w"> </span>/mnt/nas_mygest
+df<span class="w"> </span>-h<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 <span class="c1"># Deve avere almeno spazio = dimensione backup</span>
 
 <span class="c1"># 2. Creare directory temporanea restore</span>
@@ -1499,20 +1514,20 @@ tree<span class="w"> </span>/mnt/nas_restore<span class="w"> </span>-L<span clas
 sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>mygest
 
 <span class="c1"># 6. Backup NAS corrente (se parzialmente recuperabile)</span>
-sudo<span class="w"> </span>mv<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span>/mnt/nas_mygest.old
+sudo<span class="w"> </span>mv<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span><span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>.old
 
 <span class="c1"># 7. Spostare restore in produzione</span>
-sudo<span class="w"> </span>mv<span class="w"> </span>/mnt/nas_restore<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>mv<span class="w"> </span>/mnt/nas_restore<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 
 <span class="c1"># 8. Ripristinare permessi</span>
-sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest
-sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX,o+rX<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX,o+rX<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 
 <span class="c1"># 9. Riavviare applicazione</span>
 sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>mygest
 
 <span class="c1"># 10. Verificare accesso documenti</span>
-curl<span class="w"> </span>https://mygest.sandro.cloud/api/v1/documenti/1/
+curl<span class="w"> </span>https://mygest.sandrochimenti.it/api/v1/documenti/1/
 <span class="c1"># Verificare che &quot;file&quot; URL sia accessibile</span>
 </code></pre></div>
 
@@ -1538,10 +1553,10 @@ rclone<span class="w"> </span>copy<span class="w"> </span><span class="se">\</sp
 ls<span class="w"> </span>-lR<span class="w"> </span>/tmp/restore_cli042/
 
 <span class="c1"># 4. Copiare in NAS produzione</span>
-sudo<span class="w"> </span>cp<span class="w"> </span>-r<span class="w"> </span>/tmp/restore_cli042/*<span class="w"> </span>/mnt/nas_mygest/clienti/CLI042_ACME_SRL/
+sudo<span class="w"> </span>cp<span class="w"> </span>-r<span class="w"> </span>/tmp/restore_cli042/*<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/clienti/CLI042_ACME_SRL/
 
 <span class="c1"># 5. Correggere permessi</span>
-sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest/clienti/CLI042_ACME_SRL/
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/clienti/CLI042_ACME_SRL/
 </code></pre></div>
 
 <h4 id="543-restore-point-in-time">5.4.3 Restore Point-in-Time</h4>
@@ -1561,22 +1576,22 @@ rclone<span class="w"> </span>lsl<span class="w"> </span>gdrive_mygest:MyGest_Ba
 <h3 id="55-manutenzione-archivio">5.5 Manutenzione Archivio</h3>
 <h4 id="551-pulizia-file-temporanei">5.5.1 Pulizia File Temporanei</h4>
 <div class="codehilite"><pre><span></span><code><span class="c1"># File temp più vecchi di 7 giorni</span>
-find<span class="w"> </span>/mnt/nas_mygest/temp/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-mtime<span class="w"> </span>+7<span class="w"> </span>-delete
+find<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/tmp/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-mtime<span class="w"> </span>+7<span class="w"> </span>-delete
 
 <span class="c1"># Verificare spazio liberato</span>
-du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_mygest/temp/
+du<span class="w"> </span>-sh<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/tmp/
 
 <span class="c1"># Cron job pulizia automatica</span>
 sudo<span class="w"> </span>crontab<span class="w"> </span>-e
 
 <span class="c1"># Aggiungere:</span>
 <span class="c1"># Pulizia temp ogni domenica alle 3 AM</span>
-<span class="m">0</span><span class="w"> </span><span class="m">3</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span><span class="m">0</span><span class="w"> </span>find<span class="w"> </span>/mnt/nas_mygest/temp/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-mtime<span class="w"> </span>+7<span class="w"> </span>-delete
+<span class="m">0</span><span class="w"> </span><span class="m">3</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span><span class="m">0</span><span class="w"> </span>find<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/tmp/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-mtime<span class="w"> </span>+7<span class="w"> </span>-delete
 </code></pre></div>
 
 <h4 id="552-verifica-integrita-file">5.5.2 Verifica Integrità File</h4>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Verificare file corrotti (PDF)</span>
-find<span class="w"> </span>/mnt/nas_mygest/clienti/<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.pdf&quot;</span><span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>pdf<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+find<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/clienti/<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.pdf&quot;</span><span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>pdf<span class="p">;</span><span class="w"> </span><span class="k">do</span>
 <span class="w">  </span>pdfinfo<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$pdf</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Corrupt: </span><span class="nv">$pdf</span><span class="s2">&quot;</span>
 <span class="k">done</span>
 
@@ -1586,19 +1601,19 @@ find<span class="w"> </span>/mnt/nas_mygest/clienti/<span class="w"> </span>-nam
 
 <h4 id="553-report-utilizzo-spazio">5.5.3 Report Utilizzo Spazio</h4>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Spazio per cliente (top 20)</span>
-du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_mygest/clienti/*/<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-hr<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+du<span class="w"> </span>-sh<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/clienti/*/<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-hr<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
 
 <span class="c1"># Output:</span>
-<span class="c1"># 450M    /mnt/nas_mygest/clienti/CLI042_ACME_SRL/</span>
-<span class="c1"># 320M    /mnt/nas_mygest/clienti/CLI001_ROSSI_MARIO/</span>
-<span class="c1"># 280M    /mnt/nas_mygest/clienti/CLI089_VERDI_GIUSEPPE/</span>
+<span class="c1"># 450M    /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI042_ACME_SRL/</span>
+<span class="c1"># 320M    /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI001_ROSSI_MARIO/</span>
+<span class="c1"># 280M    /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI089_VERDI_GIUSEPPE/</span>
 <span class="c1"># ...</span>
 
 <span class="c1"># File più grandi (top 50)</span>
-find<span class="w"> </span>/mnt/nas_mygest/clienti/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-exec<span class="w"> </span>du<span class="w"> </span>-h<span class="w"> </span><span class="o">{}</span><span class="w"> </span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-hr<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-50
+find<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/clienti/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-exec<span class="w"> </span>du<span class="w"> </span>-h<span class="w"> </span><span class="o">{}</span><span class="w"> </span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-hr<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-50
 
 <span class="c1"># Trend crescita (da monitorare)</span>
-df<span class="w"> </span>-h<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $5}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-1
+df<span class="w"> </span>-h<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $5}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-1
 <span class="c1"># Output: 61% (uso attuale)</span>
 </code></pre></div>
 
@@ -1786,14 +1801,14 @@ pg_restore<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w
 
 <h3 id="63-problemi-archivio-nas">6.3 Problemi Archivio NAS</h3>
 <h4 id="631-nas-non-montato">6.3.1 NAS Non Montato</h4>
-<p><strong>Errore: ls /mnt/nas_mygest: Input/output error</strong></p>
-<div class="codehilite"><pre><span></span><code>ls<span class="w"> </span>/mnt/nas_mygest
-<span class="c1"># ls: cannot access &#39;/mnt/nas_mygest&#39;: Input/output error</span>
+<p><strong>Errore: ls /mnt/archivio (o /srv/mygest/archivio su VPS): Input/output error</strong></p>
+<div class="codehilite"><pre><span></span><code>ls<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+<span class="c1"># ls: cannot access &#39;/mnt/archivio (o /srv/mygest/archivio su VPS)&#39;: Input/output error</span>
 </code></pre></div>
 
 <p><strong>Soluzione</strong>:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># 1. Unmount forzato</span>
-sudo<span class="w"> </span>umount<span class="w"> </span>-f<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>umount<span class="w"> </span>-f<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 
 <span class="c1"># 2. Verificare NAS accessibile</span>
 ping<span class="w"> </span><span class="m">192</span>.168.1.100
@@ -1802,32 +1817,32 @@ ping<span class="w"> </span><span class="m">192</span>.168.1.100
 smbclient<span class="w"> </span>-L<span class="w"> </span>//192.168.1.100<span class="w"> </span>-U<span class="w"> </span>mygest
 
 <span class="c1"># 4. Remount</span>
-sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 
 <span class="c1"># 5. Verificare</span>
-ls<span class="w"> </span>-la<span class="w"> </span>/mnt/nas_mygest
+ls<span class="w"> </span>-la<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 </code></pre></div>
 
 <h4 id="632-permessi-negati">6.3.2 Permessi Negati</h4>
 <p><strong>Errore: Django cannot write to NAS</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="ne">PermissionError</span><span class="p">:</span> <span class="p">[</span><span class="n">Errno</span> <span class="mi">13</span><span class="p">]</span> <span class="n">Permission</span> <span class="n">denied</span><span class="p">:</span> <span class="s1">&#39;/mnt/nas_mygest/clienti/CLI001/test.pdf&#39;</span>
+<div class="codehilite"><pre><span></span><code><span class="ne">PermissionError</span><span class="p">:</span> <span class="p">[</span><span class="n">Errno</span> <span class="mi">13</span><span class="p">]</span> <span class="n">Permission</span> <span class="n">denied</span><span class="p">:</span> <span class="s1">&#39;/mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI001/test.pdf&#39;</span>
 </code></pre></div>
 
 <p><strong>Soluzione</strong>:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1"># 1. Verificare ownership</span>
-ls<span class="w"> </span>-ld<span class="w"> </span>/mnt/nas_mygest
+ls<span class="w"> </span>-ld<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 <span class="c1"># Deve essere: drwxrwxr-x mygest mygest</span>
 
 <span class="c1"># 2. Correggere</span>
-sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest
-sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 
 <span class="c1"># 3. Verificare mount options in /etc/fstab</span>
 <span class="c1"># Deve avere: uid=1001,gid=1001 (id user mygest)</span>
 
 <span class="c1"># 4. Remount con opzioni corrette</span>
-sudo<span class="w"> </span>umount<span class="w"> </span>/mnt/nas_mygest
-sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>umount<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
+sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>
 </code></pre></div>
 
 <h4 id="633-backup-rclone-failed">6.3.3 Backup rclone Failed</h4>
@@ -1839,7 +1854,7 @@ sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/nas_mygest
 <div class="codehilite"><pre><span></span><code><span class="c1"># 1. Google Drive quota exceeded, attendere o:</span>
 
 <span class="c1"># 2. Usare --drive-chunk-size più piccolo</span>
-rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--drive-chunk-size<span class="w"> </span>32M<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--transfers<span class="w"> </span><span class="m">1</span>
 
@@ -1950,13 +1965,13 @@ git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </
 ./scripts/sync_dev_to_prod.sh
 
 <span class="c1"># Sync file (da implementare script dedicato)</span>
-rsync<span class="w"> </span>-avz<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>mygest-vps:/mnt/nas_mygest/
+rsync<span class="w"> </span>-avz<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/<span class="w"> </span>mygest-vps:/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/
 </code></pre></div>
 
 <h3 id="73-archivio-e-backup">7.3 Archivio e Backup</h3>
 <p><strong>Q: Quanto spazio serve per backup Google Drive?</strong></p>
 <p>A: Dipende da dimensione archivio. Verificare:</p>
-<div class="codehilite"><pre><span></span><code>du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_mygest/
+<div class="codehilite"><pre><span></span><code>du<span class="w"> </span>-sh<span class="w"> </span>/mnt/archivio<span class="w"> </span><span class="o">(</span>o<span class="w"> </span>/srv/mygest/archivio<span class="w"> </span>su<span class="w"> </span>VPS<span class="o">)</span>/
 rclone<span class="w"> </span>about<span class="w"> </span>gdrive_mygest:
 </code></pre></div>
 

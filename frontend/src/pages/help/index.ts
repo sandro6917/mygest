@@ -1,2 +1,12 @@
+export { HelpIndexPage } from './HelpIndexPage';
 export { HelpDocumentiPage } from './HelpDocumentiPage';
 export { HelpDocumentoTipoDetailPage } from './HelpDocumentoTipoDetailPage';
+export { HelpAnagrafichePage } from './HelpAnagrafichePage';
+export { HelpComunicazioniPage } from './HelpComunicazioniPage';
+export { HelpFascicoliPage } from './HelpFascicoliPage';
+export { HelpPratichePage } from './HelpPratichePage';
+export { HelpArchivioFisicoPage } from './HelpArchivioFisicoPage';
+export { HelpProtocolloPage } from './HelpProtocolloPage';
+export { HelpDeploymentPage } from './HelpDeploymentPage';
+export { HelpPrincipiantiPage } from './HelpPrincipiantiPage';
+export { HelpScadenzePage } from './HelpScadenzePage';

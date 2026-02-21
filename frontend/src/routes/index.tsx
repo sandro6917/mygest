@@ -40,7 +40,20 @@ import {
 } from '@/pages/ArchivioFisico';
 import { ArchivioPage } from '@/pages/ArchivioPage';
 import { UnitaFisicaDetailPage } from '@/pages/UnitaFisicaDetailPage';
-import { HelpDocumentiPage, HelpDocumentoTipoDetailPage } from '@/pages/help';
+import { 
+  HelpIndexPage, 
+  HelpDocumentiPage, 
+  HelpDocumentoTipoDetailPage,
+  HelpAnagrafichePage,
+  HelpComunicazioniPage,
+  HelpFascicoliPage,
+  HelpPratichePage,
+  HelpArchivioFisicoPage,
+  HelpProtocolloPage,
+  HelpDeploymentPage,
+  HelpPrincipiantiPage,
+  HelpScadenzePage,
+} from '@/pages/help';
 import { JobsListPage, JobDetailPage } from '@/pages/aiClassifier';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
@@ -233,12 +246,52 @@ export const router = createBrowserRouter([
       },
       // Help Routes
       {
+        path: 'help',
+        element: <HelpIndexPage />,
+      },
+      {
+        path: 'help/guida-principianti',
+        element: <HelpPrincipiantiPage />,
+      },
+      {
+        path: 'help/guida-scadenze',
+        element: <HelpScadenzePage />,
+      },
+      {
+        path: 'help/guida-deployment',
+        element: <HelpDeploymentPage />,
+      },
+      {
+        path: 'help/anagrafiche',
+        element: <HelpAnagrafichePage />,
+      },
+      {
         path: 'help/documenti',
         element: <HelpDocumentiPage />,
       },
       {
         path: 'help/documenti/:codice',
         element: <HelpDocumentoTipoDetailPage />,
+      },
+      {
+        path: 'help/comunicazioni',
+        element: <HelpComunicazioniPage />,
+      },
+      {
+        path: 'help/fascicoli',
+        element: <HelpFascicoliPage />,
+      },
+      {
+        path: 'help/pratiche',
+        element: <HelpPratichePage />,
+      },
+      {
+        path: 'help/archivio_fisico',
+        element: <HelpArchivioFisicoPage />,
+      },
+      {
+        path: 'help/protocollo',
+        element: <HelpProtocolloPage />,
       },
       // AI Classifier Routes
       {

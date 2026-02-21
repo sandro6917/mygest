@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, NoReverseMatch
 from django.conf import settings
@@ -163,6 +163,23 @@ def react_spa(request):
     }
     set_breadcrumbs(request, [])
     return render(request, "home.html", ctx)
+
+
+def help_topics_api(request):
+    """API endpoint per ottenere la lista dei topic help (per frontend React)"""
+    topics = [
+        {
+            "slug": slug,
+            "name": data["name"],
+            "summary": data["summary"],
+            "order": data.get("order", 100),
+        }
+        for slug, data in sorted(
+            HELP_TOPICS.items(),
+            key=lambda item: (item[1].get("order", 100), item[1]["name"].lower()),
+        )
+    ]
+    return JsonResponse(topics, safe=False)
 
 
 def help_index(request):

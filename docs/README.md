@@ -21,9 +21,9 @@ Guida completa per:
 - **PDF stampa**: `GUIDA_DEPLOYMENT_SYNC.pdf` (160 KB, generato automaticamente)
 
 **Accesso online**:
-- HTML: `https://mygest.sandro.cloud/guide/deployment.html`
-- PDF: `https://mygest.sandro.cloud/guide/deployment.pdf`
-- Help integrato: `https://mygest.sandro.cloud/help/guida-deployment/`
+- HTML: `https://mygest.sandrochimenti.it/guide/deployment.html`
+- PDF: `https://mygest.sandrochimenti.it/guide/deployment.pdf`
+- Help integrato: `https://mygest.sandrochimenti.it/help/guida-deployment/`
 
 ## 🔄 Rigenerare HTML e PDF
 

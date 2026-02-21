@@ -46,16 +46,17 @@ La guida è pensata per utenti con conoscenze di base di Linux e Git.
 │  - Hostinger VPS (72.62.34.249)                            │
 │  - Database PostgreSQL (mygest)                             │
 │  - Gunicorn + Nginx                                         │
-│  - Dominio: mygest.sandro.cloud                            │
+│  - Dominio: mygest.sandrochimenti.it                            │
 └─────────────────────────────────────────────────────────────┘
                             ↕
                       [rclone backup]
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
 │                    ARCHIVIO DOCUMENTI                       │
-│  - NAS Locale (/mnt/nas_mygest/)                           │
-│  - Google Drive (backup cloud)                              │
-│  - Struttura: Cliente/Titolario/Anno/Documenti            │
+│  - Locale Dev: /mnt/archivio                                │
+│  - VPS Prod: /srv/mygest/archivio                           │
+│  - Google Drive: backup cloud con rclone                    │
+│  - Struttura: Cliente/Titolario/Anno/Documenti             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -208,7 +209,7 @@ DEBUG=True
 SECRET_KEY=<chiave-segreta-locale>
 DATABASE_URL=postgresql://user:pass@localhost/mygest_dev
 ALLOWED_HOSTS=localhost,127.0.0.1
-ARCHIVIO_BASE_PATH=/mnt/nas_mygest
+ARCHIVIO_BASE_PATH=/mnt/archivio
 ```
 
 **File `.env` produzione** (su VPS):
@@ -217,8 +218,8 @@ ARCHIVIO_BASE_PATH=/mnt/nas_mygest
 DEBUG=False
 SECRET_KEY=<chiave-segreta-produzione>
 DATABASE_URL=postgresql://mygest:password@localhost/mygest
-ALLOWED_HOSTS=mygest.sandro.cloud,72.62.34.249
-ARCHIVIO_BASE_PATH=/mnt/nas_mygest
+ALLOWED_HOSTS=mygest.sandrochimenti.it,72.62.34.249
+ARCHIVIO_BASE_PATH=/srv/mygest/archivio
 ```
 
 ⚠️ **IMPORTANTE**: Non committare mai file `.env` su Git! È già in `.gitignore`.
@@ -304,7 +305,7 @@ git push origin main
 **Passo 4: Verificare Deploy**
 ```bash
 # Aprire browser su:
-https://mygest.sandro.cloud
+https://mygest.sandrochimenti.it
 
 # Verificare:
 # ✓ Applicazione risponde
@@ -489,23 +490,23 @@ exit
 
 ```bash
 # ✓ 1. Applicazione risponde
-curl -I https://mygest.sandro.cloud
+curl -I https://mygest.sandrochimenti.it
 # Output: HTTP/2 200 OK
 
 # ✓ 2. Login funziona
-# Aprire browser: https://mygest.sandro.cloud/login
+# Aprire browser: https://mygest.sandrochimenti.it/login
 # Inserire credenziali admin
 
 # ✓ 3. API rispondono
-curl https://mygest.sandro.cloud/api/v1/health/
+curl https://mygest.sandrochimenti.it/api/v1/health/
 # Output: {"status":"ok","database":"ok","redis":"ok"}
 
 # ✓ 4. Static files caricati
-curl -I https://mygest.sandro.cloud/static/admin/css/base.css
+curl -I https://mygest.sandrochimenti.it/static/admin/css/base.css
 # Output: HTTP/2 200 OK
 
 # ✓ 5. Frontend React funziona
-# Aprire browser: https://mygest.sandro.cloud
+# Aprire browser: https://mygest.sandrochimenti.it
 # Verificare che React app si carichi (non errori console)
 
 # ✓ 6. Database migrations applicate
@@ -942,16 +943,23 @@ pg_dump -U mygest -F c mygest > /srv/mygest/backups/manual/pre_upgrade_v2.0.dump
 
 ### 5.1 Struttura Directory
 
-L'archivio documenti è su NAS locale con backup cloud.
+L'archivio documenti è su NAS con backup cloud.
+
+> **📍 NOTA PERCORSI:**
+> - **Sviluppo locale**: `/mnt/archivio` (mount CIFS da NAS 192.168.1.4)
+> - **VPS produzione**: `/srv/mygest/archivio` (mount CIFS via tunnel SSH)
+> 
+> Nei comandi seguenti, usa il percorso appropriato per il tuo ambiente.
 
 #### 5.1.1 Path e Mount Point
 
+**Ambiente LOCALE (sviluppo)**:
 ```bash
-# Mount point NAS
-/mnt/nas_mygest/
+# Mount point NAS locale
+/mnt/archivio/
 
 # Struttura directory:
-/mnt/nas_mygest/
+/mnt/archivio/
 ├── clienti/                    # Documenti per cliente
 │   ├── CLI001_ROSSI_MARIO/
 │   │   ├── 01_CONTABILITA/
@@ -998,28 +1006,34 @@ UNILAV-2025-003-Assunzione_Rossi.pdf
 
 #### 5.2.1 Mount NAS su Sistemi Linux
 
+> **⚙️ Configurazione ambiente-specifica:**
+> - **LOCALE**: `/mnt/archivio` + NAS IP: `192.168.1.4/documenti/archivio`
+> - **VPS**: `/srv/mygest/archivio` + Tunnel: `localhost/documenti/archivio`
+
 **Verifica mount attuale**:
 ```bash
-mount | grep nas_mygest
-# Output: //192.168.1.100/mygest on /mnt/nas_mygest type cifs (rw,...)
+# Locale
+mount | grep /mnt/archivio
+df -h /mnt/archivio
 
-df -h | grep nas_mygest
-# Output: //192.168.1.100/mygest  2.0T  1.2T  800G  61% /mnt/nas_mygest
+# VPS  
+mount | grep /srv/mygest/archivio
+df -h /srv/mygest/archivio
 ```
 
-**Se non montato, mount manuale**:
+**Mount manuale LOCALE**:
 ```bash
-# Creare mount point (se non esiste)
-sudo mkdir -p /mnt/nas_mygest
+# Creare mount point
+sudo mkdir -p /mnt/archivio
 
-# Mount (CIFS/SMB)
-sudo mount -t cifs //192.168.1.100/mygest /mnt/nas_mygest \
-  -o username=mygest,password=password,uid=1000,gid=1000,file_mode=0664,dir_mode=0775
+# Mount CIFS da NAS locale
+sudo mount -t cifs //192.168.1.4/documenti/archivio /mnt/archivio \
+  -o username=admin,uid=1000,gid=1000,file_mode=0664,dir_mode=0775
 
 # Verificare accesso
-ls -la /mnt/nas_mygest
-touch /mnt/nas_mygest/test.txt
-rm /mnt/nas_mygest/test.txt
+ls -la /mnt/archivio (o /srv/mygest/archivio su VPS)
+touch /mnt/archivio (o /srv/mygest/archivio su VPS)/test.txt
+rm /mnt/archivio (o /srv/mygest/archivio su VPS)/test.txt
 ```
 
 **Mount automatico al boot**:
@@ -1039,7 +1053,7 @@ sudo chmod 600 /root/.nascreds
 sudo nano /etc/fstab
 
 # Aggiungere riga:
-//192.168.1.100/mygest /mnt/nas_mygest cifs credentials=/root/.nascreds,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,_netdev 0 0
+//192.168.1.100/mygest /mnt/archivio (o /srv/mygest/archivio su VPS) cifs credentials=/root/.nascreds,uid=1000,gid=1000,file_mode=0664,dir_mode=0775,_netdev 0 0
 
 # Testare mount senza reboot
 sudo mount -a
@@ -1057,17 +1071,17 @@ id mygest
 # uid=1001(mygest) gid=1001(mygest)
 
 # Verificare permessi directory
-ls -ld /mnt/nas_mygest
-# drwxrwxr-x 5 mygest mygest 4096 Feb 21 14:00 /mnt/nas_mygest
+ls -ld /mnt/archivio (o /srv/mygest/archivio su VPS)
+# drwxrwxr-x 5 mygest mygest 4096 Feb 21 14:00 /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # Correggere se necessario
-sudo chown -R mygest:mygest /mnt/nas_mygest
-sudo chmod -R u+rwX,g+rwX,o+rX /mnt/nas_mygest
+sudo chown -R mygest:mygest /mnt/archivio (o /srv/mygest/archivio su VPS)
+sudo chmod -R u+rwX,g+rwX,o+rX /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # Test scrittura
-sudo -u mygest touch /mnt/nas_mygest/test_permissions.txt
+sudo -u mygest touch /mnt/archivio (o /srv/mygest/archivio su VPS)/test_permissions.txt
 # Deve avere successo
-sudo -u mygest rm /mnt/nas_mygest/test_permissions.txt
+sudo -u mygest rm /mnt/archivio (o /srv/mygest/archivio su VPS)/test_permissions.txt
 ```
 
 **Verifica permessi da Django**:
@@ -1076,7 +1090,7 @@ sudo -u mygest rm /mnt/nas_mygest/test_permissions.txt
 python manage.py shell
 
 >>> import os
->>> nas_path = '/mnt/nas_mygest'
+>>> nas_path = '/mnt/archivio (o /srv/mygest/archivio su VPS)'
 >>> 
 >>> # Test lettura
 >>> os.listdir(nas_path)
@@ -1156,7 +1170,7 @@ rclone config
 **Backup manuale test**:
 ```bash
 # Sync dry-run (simulazione)
-rclone sync /mnt/nas_mygest/ gdrive_mygest:MyGest_Backup/ \
+rclone sync /mnt/archivio (o /srv/mygest/archivio su VPS)/ gdrive_mygest:MyGest_Backup/ \
   --dry-run \
   --progress \
   --exclude "temp/**" \
@@ -1168,7 +1182,7 @@ rclone sync /mnt/nas_mygest/ gdrive_mygest:MyGest_Backup/ \
 # 2024/02/21 15:00:01 NOTICE: Transferred: 0 B / 0 B, -, 0 B/s, ETA -
 
 # Sync reale
-rclone sync /mnt/nas_mygest/ gdrive_mygest:MyGest_Backup/ \
+rclone sync /mnt/archivio (o /srv/mygest/archivio su VPS)/ gdrive_mygest:MyGest_Backup/ \
   --progress \
   --exclude "temp/**" \
   --log-file=/var/log/rclone_sync.log
@@ -1196,7 +1210,7 @@ DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
 echo "[$DATE] Starting backup..." >> $LOG_FILE
 
-rclone sync /mnt/nas_mygest/ gdrive_mygest:MyGest_Backup/ \
+rclone sync /mnt/archivio (o /srv/mygest/archivio su VPS)/ gdrive_mygest:MyGest_Backup/ \
   --exclude "temp/**" \
   --exclude ".DS_Store" \
   --log-file=$LOG_FILE \
@@ -1279,7 +1293,7 @@ sudo apt install mailutils
 # Su VPS o PC locale
 
 # 1. Verificare spazio disco disponibile
-df -h /mnt/nas_mygest
+df -h /mnt/archivio (o /srv/mygest/archivio su VPS)
 # Deve avere almeno spazio = dimensione backup
 
 # 2. Creare directory temporanea restore
@@ -1306,20 +1320,20 @@ tree /mnt/nas_restore -L 2
 sudo systemctl stop mygest
 
 # 6. Backup NAS corrente (se parzialmente recuperabile)
-sudo mv /mnt/nas_mygest /mnt/nas_mygest.old
+sudo mv /mnt/archivio (o /srv/mygest/archivio su VPS) /mnt/archivio (o /srv/mygest/archivio su VPS).old
 
 # 7. Spostare restore in produzione
-sudo mv /mnt/nas_restore /mnt/nas_mygest
+sudo mv /mnt/nas_restore /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # 8. Ripristinare permessi
-sudo chown -R mygest:mygest /mnt/nas_mygest
-sudo chmod -R u+rwX,g+rwX,o+rX /mnt/nas_mygest
+sudo chown -R mygest:mygest /mnt/archivio (o /srv/mygest/archivio su VPS)
+sudo chmod -R u+rwX,g+rwX,o+rX /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # 9. Riavviare applicazione
 sudo systemctl start mygest
 
 # 10. Verificare accesso documenti
-curl https://mygest.sandro.cloud/api/v1/documenti/1/
+curl https://mygest.sandrochimenti.it/api/v1/documenti/1/
 # Verificare che "file" URL sia accessibile
 ```
 
@@ -1348,10 +1362,10 @@ rclone copy \
 ls -lR /tmp/restore_cli042/
 
 # 4. Copiare in NAS produzione
-sudo cp -r /tmp/restore_cli042/* /mnt/nas_mygest/clienti/CLI042_ACME_SRL/
+sudo cp -r /tmp/restore_cli042/* /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI042_ACME_SRL/
 
 # 5. Correggere permessi
-sudo chown -R mygest:mygest /mnt/nas_mygest/clienti/CLI042_ACME_SRL/
+sudo chown -R mygest:mygest /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI042_ACME_SRL/
 ```
 
 #### 5.4.3 Restore Point-in-Time
@@ -1377,24 +1391,24 @@ rclone lsl gdrive_mygest:MyGest_Backup/clienti/CLI001_ROSSI_MARIO/01_CONTABILITA
 
 ```bash
 # File temp più vecchi di 7 giorni
-find /mnt/nas_mygest/temp/ -type f -mtime +7 -delete
+find /mnt/archivio (o /srv/mygest/archivio su VPS)/tmp/ -type f -mtime +7 -delete
 
 # Verificare spazio liberato
-du -sh /mnt/nas_mygest/temp/
+du -sh /mnt/archivio (o /srv/mygest/archivio su VPS)/tmp/
 
 # Cron job pulizia automatica
 sudo crontab -e
 
 # Aggiungere:
 # Pulizia temp ogni domenica alle 3 AM
-0 3 * * 0 find /mnt/nas_mygest/temp/ -type f -mtime +7 -delete
+0 3 * * 0 find /mnt/archivio (o /srv/mygest/archivio su VPS)/tmp/ -type f -mtime +7 -delete
 ```
 
 #### 5.5.2 Verifica Integrità File
 
 ```bash
 # Verificare file corrotti (PDF)
-find /mnt/nas_mygest/clienti/ -name "*.pdf" -type f | while read pdf; do
+find /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/ -name "*.pdf" -type f | while read pdf; do
   pdfinfo "$pdf" > /dev/null 2>&1 || echo "Corrupt: $pdf"
 done
 
@@ -1406,19 +1420,19 @@ done
 
 ```bash
 # Spazio per cliente (top 20)
-du -sh /mnt/nas_mygest/clienti/*/ | sort -hr | head -20
+du -sh /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/*/ | sort -hr | head -20
 
 # Output:
-# 450M    /mnt/nas_mygest/clienti/CLI042_ACME_SRL/
-# 320M    /mnt/nas_mygest/clienti/CLI001_ROSSI_MARIO/
-# 280M    /mnt/nas_mygest/clienti/CLI089_VERDI_GIUSEPPE/
+# 450M    /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI042_ACME_SRL/
+# 320M    /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI001_ROSSI_MARIO/
+# 280M    /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI089_VERDI_GIUSEPPE/
 # ...
 
 # File più grandi (top 50)
-find /mnt/nas_mygest/clienti/ -type f -exec du -h {} + | sort -hr | head -50
+find /mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/ -type f -exec du -h {} + | sort -hr | head -50
 
 # Trend crescita (da monitorare)
-df -h /mnt/nas_mygest | awk '{print $5}' | tail -1
+df -h /mnt/archivio (o /srv/mygest/archivio su VPS) | awk '{print $5}' | tail -1
 # Output: 61% (uso attuale)
 ```
 
@@ -1647,17 +1661,17 @@ pg_restore -U mygest -d mygest /srv/mygest/backups/daily/backup_<data>.dump
 
 #### 6.3.1 NAS Non Montato
 
-**Errore: ls /mnt/nas_mygest: Input/output error**
+**Errore: ls /mnt/archivio (o /srv/mygest/archivio su VPS): Input/output error**
 
 ```bash
-ls /mnt/nas_mygest
-# ls: cannot access '/mnt/nas_mygest': Input/output error
+ls /mnt/archivio (o /srv/mygest/archivio su VPS)
+# ls: cannot access '/mnt/archivio (o /srv/mygest/archivio su VPS)': Input/output error
 ```
 
 **Soluzione**:
 ```bash
 # 1. Unmount forzato
-sudo umount -f /mnt/nas_mygest
+sudo umount -f /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # 2. Verificare NAS accessibile
 ping 192.168.1.100
@@ -1666,10 +1680,10 @@ ping 192.168.1.100
 smbclient -L //192.168.1.100 -U mygest
 
 # 4. Remount
-sudo mount /mnt/nas_mygest
+sudo mount /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # 5. Verificare
-ls -la /mnt/nas_mygest
+ls -la /mnt/archivio (o /srv/mygest/archivio su VPS)
 ```
 
 #### 6.3.2 Permessi Negati
@@ -1677,25 +1691,25 @@ ls -la /mnt/nas_mygest
 **Errore: Django cannot write to NAS**
 
 ```python
-PermissionError: [Errno 13] Permission denied: '/mnt/nas_mygest/clienti/CLI001/test.pdf'
+PermissionError: [Errno 13] Permission denied: '/mnt/archivio (o /srv/mygest/archivio su VPS)/clienti/CLI001/test.pdf'
 ```
 
 **Soluzione**:
 ```bash
 # 1. Verificare ownership
-ls -ld /mnt/nas_mygest
+ls -ld /mnt/archivio (o /srv/mygest/archivio su VPS)
 # Deve essere: drwxrwxr-x mygest mygest
 
 # 2. Correggere
-sudo chown -R mygest:mygest /mnt/nas_mygest
-sudo chmod -R u+rwX,g+rwX /mnt/nas_mygest
+sudo chown -R mygest:mygest /mnt/archivio (o /srv/mygest/archivio su VPS)
+sudo chmod -R u+rwX,g+rwX /mnt/archivio (o /srv/mygest/archivio su VPS)
 
 # 3. Verificare mount options in /etc/fstab
 # Deve avere: uid=1001,gid=1001 (id user mygest)
 
 # 4. Remount con opzioni corrette
-sudo umount /mnt/nas_mygest
-sudo mount /mnt/nas_mygest
+sudo umount /mnt/archivio (o /srv/mygest/archivio su VPS)
+sudo mount /mnt/archivio (o /srv/mygest/archivio su VPS)
 ```
 
 #### 6.3.3 Backup rclone Failed
@@ -1711,7 +1725,7 @@ ERROR : Failed to copy: googleapi: Error 403: User rate limit exceeded
 # 1. Google Drive quota exceeded, attendere o:
 
 # 2. Usare --drive-chunk-size più piccolo
-rclone sync /mnt/nas_mygest/ gdrive_mygest:MyGest_Backup/ \
+rclone sync /mnt/archivio (o /srv/mygest/archivio su VPS)/ gdrive_mygest:MyGest_Backup/ \
   --drive-chunk-size 32M \
   --transfers 1
 
@@ -1808,7 +1822,7 @@ A: Attualmente manuale:
 ./scripts/sync_dev_to_prod.sh
 
 # Sync file (da implementare script dedicato)
-rsync -avz /mnt/nas_mygest/ mygest-vps:/mnt/nas_mygest/
+rsync -avz /mnt/archivio (o /srv/mygest/archivio su VPS)/ mygest-vps:/mnt/archivio (o /srv/mygest/archivio su VPS)/
 ```
 
 ### 7.3 Archivio e Backup
@@ -1817,7 +1831,7 @@ rsync -avz /mnt/nas_mygest/ mygest-vps:/mnt/nas_mygest/
 
 A: Dipende da dimensione archivio. Verificare:
 ```bash
-du -sh /mnt/nas_mygest/
+du -sh /mnt/archivio (o /srv/mygest/archivio su VPS)/
 rclone about gdrive_mygest:
 ```
 
