@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Guida operativa MyGest per deployment, sincronizzazione database e gestione archivio NAS">
+    <meta name="author" content="MyGest Development Team">
+    <title>MyGest - Guida Deployment e Sincronizzazione</title>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #f9fafb;
+            padding: 0;
+            font-size: 16px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+        
+        /* Content */
+        .content {
+            padding: 2rem;
+        }
+        
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        h2 {
+            font-size: 2rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+            margin-top: 3rem;
+        }
+        
+        h3 {
+            font-size: 1.5rem;
+            color: #475569;
+        }
+        
+        h4 {
+            font-size: 1.25rem;
+            color: #64748b;
+        }
+        
+        p {
+            margin-bottom: 1rem;
+            text-align: justify;
+        }
+        
+        /* Links */
+        a {
+            color: #667eea;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        
+        a:hover {
+            border-bottom-color: #667eea;
+        }
+        
+        /* Code */
+        code {
+            font-family: 'Fira Code', 'Courier New', monospace;
+            background: #f1f5f9;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #e11d48;
+        }
+        
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        pre code {
+            background: transparent;
+            color: #e2e8f0;
+            padding: 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        thead {
+            background: #667eea;
+            color: white;
+        }
+        
+        th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        /* Lists */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Blockquotes */
+        blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 1.5rem;
+            margin: 1.5rem 0;
+            color: #64748b;
+            font-style: italic;
+        }
+        
+        /* Alerts */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+        
+        .alert-warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            border-color: #10b981;
+            color: #065f46;
+        }
+        
+        .alert-danger {
+            background: #fee2e2;
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+        
+        /* Utility classes */
+        .text-center {
+            text-align: center;
+        }
+        
+        .mt-4 {
+            margin-top: 2rem;
+        }
+        
+        .mb-4 {
+            margin-bottom: 2rem;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 4rem;
+        }
+        
+        .footer p {
+            margin: 0.5rem 0;
+        }
+        
+        /* Print styles */
+        @media print {
+            .container {
+                box-shadow: none;
+            }
+            
+            .header {
+                background: #667eea;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            pre {
+                background: #1e293b;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            a {
+                color: #667eea;
+            }
+            
+            h2 {
+                page-break-before: always;
+            }
+            
+            h2:first-of-type {
+                page-break-before: auto;
+            }
+            
+            pre, table {
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .content {
+                padding: 1rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            table {
+                font-size: 0.9rem;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        /* Syntax highlighting */
+        .codehilite .hll { background-color: #49483e }
+        .codehilite .c { color: #75715e } /* Comment */
+        .codehilite .k { color: #66d9ef } /* Keyword */
+        .codehilite .o { color: #f92672 } /* Operator */
+        .codehilite .p { color: #f8f8f2 } /* Punctuation */
+        .codehilite .s { color: #e6db74 } /* String */
+        .codehilite .n { color: #f8f8f2 } /* Name */
+        .codehilite .nf { color: #a6e22e } /* Name Function */
+        .codehilite .nb { color: #f8f8f2 } /* Name Builtin */
+        .codehilite .nc { color: #a6e22e } /* Name Class */
+        .codehilite .m { color: #ae81ff } /* Number */
+    </style>
+    
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 MyGest</h1>
+            <p>Guida Operativa per Deployment e Sincronizzazione</p>
+            <p style="margin-top: 1rem; font-size: 0.9rem;">Versione 1.0 - Febbraio 2026</p>
+        </div>
+        
+        <div class="content">
+            <h1 id="mygest-guida-operativa-per-deployment-e-sincronizzazione">MyGest - Guida Operativa per Deployment e Sincronizzazione</h1>
+<p><strong>Versione</strong>: 1.0<br />
+<strong>Data</strong>: Febbraio 2026<br />
+<strong>Autore</strong>: MyGest Development Team</p>
+<hr />
+<h2 id="indice">📑 Indice</h2>
+<ol>
+<li><a href="#1-introduzione">Introduzione</a></li>
+<li><a href="#2-prerequisiti">Prerequisiti</a></li>
+<li><a href="#3-deployment-applicazione">Deployment Applicazione</a></li>
+<li><a href="#4-sincronizzazione-database">Sincronizzazione Database</a></li>
+<li><a href="#5-gestione-archivio-nas">Gestione Archivio NAS</a></li>
+<li><a href="#6-troubleshooting">Troubleshooting</a></li>
+<li><a href="#7-faq">FAQ</a></li>
+</ol>
+<hr />
+<h2 id="1-introduzione">1. Introduzione</h2>
+<p>Questa guida fornisce istruzioni complete per:</p>
+<ul>
+<li><strong>Deployment</strong> dell'applicazione MyGest sul server di produzione (VPS)</li>
+<li><strong>Sincronizzazione</strong> dei dati tra ambiente di sviluppo e produzione</li>
+<li><strong>Gestione</strong> dell'archivio documentale su NAS locale</li>
+</ul>
+<p>La guida è pensata per utenti con conoscenze di base di Linux e Git.</p>
+<h3 id="11-architettura-del-sistema">1.1 Architettura del Sistema</h3>
+<div class="codehilite"><pre><span></span><code><span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">AMBIENTE</span><span class="w"> </span><span class="n">SVILUPPO</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">PC</span><span class="w"> </span><span class="n">Locale</span><span class="w"> </span><span class="p">(</span><span class="n">Linux</span><span class="p">)</span><span class="w">                                        </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Database</span><span class="w"> </span><span class="n">PostgreSQL</span><span class="w"> </span><span class="p">(</span><span class="n">mygest_dev</span><span class="p">)</span><span class="w">                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Django</span><span class="w"> </span><span class="n">Dev</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="p">(</span><span class="n">localhost</span><span class="o">:</span><span class="mi">8000</span><span class="p">)</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">React</span><span class="w"> </span><span class="n">Dev</span><span class="w"> </span><span class="n">Server</span><span class="w"> </span><span class="p">(</span><span class="n">localhost</span><span class="o">:</span><span class="mi">5173</span><span class="p">)</span><span class="w">                        </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+<span class="w">                            </span><span class="err">↕</span>
+<span class="w">                    </span><span class="p">[</span><span class="n">Git</span><span class="w"> </span><span class="n">Push</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">Deploy</span><span class="p">]</span>
+<span class="w">                            </span><span class="err">↕</span>
+<span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                   </span><span class="n">SERVER</span><span class="w"> </span><span class="n">PRODUZIONE</span><span class="w"> </span><span class="p">(</span><span class="n">VPS</span><span class="p">)</span><span class="w">                   </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Hostinger</span><span class="w"> </span><span class="n">VPS</span><span class="w"> </span><span class="p">(</span><span class="mf">72.62.34.249</span><span class="p">)</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Database</span><span class="w"> </span><span class="n">PostgreSQL</span><span class="w"> </span><span class="p">(</span><span class="n">mygest</span><span class="p">)</span><span class="w">                             </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Gunicorn</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">Nginx</span><span class="w">                                         </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Dominio</span><span class="o">:</span><span class="w"> </span><span class="n">mygest</span><span class="p">.</span><span class="n">sandro</span><span class="p">.</span><span class="n">cloud</span><span class="w">                            </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+<span class="w">                            </span><span class="err">↕</span>
+<span class="w">                      </span><span class="p">[</span><span class="n">rclone</span><span class="w"> </span><span class="n">backup</span><span class="p">]</span>
+<span class="w">                            </span><span class="err">↕</span>
+<span class="err">┌─────────────────────────────────────────────────────────────┐</span>
+<span class="err">│</span><span class="w">                    </span><span class="n">ARCHIVIO</span><span class="w"> </span><span class="n">DOCUMENTI</span><span class="w">                       </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">NAS</span><span class="w"> </span><span class="n">Locale</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="n">mnt</span><span class="o">/</span><span class="n">nas_mygest</span><span class="o">/</span><span class="p">)</span><span class="w">                           </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Google</span><span class="w"> </span><span class="n">Drive</span><span class="w"> </span><span class="p">(</span><span class="n">backup</span><span class="w"> </span><span class="n">cloud</span><span class="p">)</span><span class="w">                              </span><span class="err">│</span>
+<span class="err">│</span><span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="n">Struttura</span><span class="o">:</span><span class="w"> </span><span class="n">Cliente</span><span class="o">/</span><span class="n">Titolario</span><span class="o">/</span><span class="n">Anno</span><span class="o">/</span><span class="n">Documenti</span><span class="w">            </span><span class="err">│</span>
+<span class="err">└─────────────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<h3 id="12-flussi-operativi">1.2 Flussi Operativi</h3>
+<p><strong>Sviluppo → Produzione</strong>:<br />
+1. Sviluppo in locale con dati di test<br />
+2. Commit e push su GitHub (branch <code>main</code>)<br />
+3. Deploy automatico via GitHub Actions<br />
+4. Sincronizzazione database dev → prod (se necessario)</p>
+<p><strong>Produzione → Sviluppo</strong>:<br />
+1. Dati reali inseriti in produzione<br />
+2. Sync database prod → dev per testing locale<br />
+3. Sviluppo nuove feature con dati reali</p>
+<hr />
+<h2 id="2-prerequisiti">2. Prerequisiti</h2>
+<h3 id="21-software-necessario">2.1 Software Necessario</h3>
+<h4 id="su-pc-locale-ambiente-sviluppo">Su PC Locale (Ambiente Sviluppo)</h4>
+<p><strong>Sistema Operativo</strong>: Linux (Ubuntu/Debian consigliato)</p>
+<p><strong>Software richiesto</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Python 3.10+</span>
+python3<span class="w"> </span>--version<span class="w">  </span><span class="c1"># Deve essere &gt;= 3.10</span>
+
+<span class="c1"># PostgreSQL</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>postgresql<span class="w"> </span>postgresql-contrib
+
+<span class="c1"># Git</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>git
+
+<span class="c1"># Node.js (per frontend)</span>
+curl<span class="w"> </span>-fsSL<span class="w"> </span>https://deb.nodesource.com/setup_20.x<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>-E<span class="w"> </span>bash<span class="w"> </span>-
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>nodejs
+
+<span class="c1"># rclone (per backup NAS)</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>rclone
+
+<span class="c1"># WeasyPrint (per generazione PDF, opzionale)</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>python3-weasyprint
+</code></pre></div>
+
+<p><strong>Installazione MyGest</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Clone repository</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/sandro6917/mygest.git
+<span class="nb">cd</span><span class="w"> </span>mygest
+
+<span class="c1"># Virtual environment</span>
+python3<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+
+<span class="c1"># Dipendenze Python</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+
+<span class="c1"># Frontend</span>
+<span class="nb">cd</span><span class="w"> </span>frontend
+npm<span class="w"> </span>install
+<span class="nb">cd</span><span class="w"> </span>..
+
+<span class="c1"># Database setup</span>
+createdb<span class="w"> </span>mygest_dev
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+
+<span class="c1"># Superuser</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>createsuperuser
+</code></pre></div>
+
+<h4 id="su-server-produzione-vps">Su Server Produzione (VPS)</h4>
+<p><strong>Accesso</strong>: VPS Hostinger <code>mygest@72.62.34.249</code></p>
+<p>Software già configurato:<br />
+- ✅ Python 3.10<br />
+- ✅ PostgreSQL 14<br />
+- ✅ Nginx<br />
+- ✅ Gunicorn<br />
+- ✅ systemd (per servizi)</p>
+<h3 id="22-configurazione-ssh">2.2 Configurazione SSH</h3>
+<p><strong>Generare chiave SSH</strong> (se non presente):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su PC locale</span>
+ssh-keygen<span class="w"> </span>-t<span class="w"> </span>ed25519<span class="w"> </span>-C<span class="w"> </span><span class="s2">&quot;tuo@email.com&quot;</span><span class="w"> </span>-f<span class="w"> </span>~/.ssh/mygest_deploy
+
+<span class="c1"># Copiare chiave pubblica sul VPS</span>
+ssh-copy-id<span class="w"> </span>-i<span class="w"> </span>~/.ssh/mygest_deploy.pub<span class="w"> </span>mygest@72.62.34.249
+</code></pre></div>
+
+<p><strong>Configurare ~/.ssh/config</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Creare/editare file</span>
+nano<span class="w"> </span>~/.ssh/config
+
+<span class="c1"># Aggiungere:</span>
+Host<span class="w"> </span>mygest-vps
+<span class="w">    </span>HostName<span class="w"> </span><span class="m">72</span>.62.34.249
+<span class="w">    </span>User<span class="w"> </span>mygest
+<span class="w">    </span>IdentityFile<span class="w"> </span>~/.ssh/mygest_deploy
+<span class="w">    </span>ServerAliveInterval<span class="w"> </span><span class="m">60</span>
+</code></pre></div>
+
+<p><strong>Test connessione</strong>:</p>
+<div class="codehilite"><pre><span></span><code>ssh<span class="w"> </span>mygest-vps
+<span class="c1"># Dovrebbe connettersi senza password</span>
+
+<span class="c1"># Verificare path applicazione</span>
+ls<span class="w"> </span>/srv/mygest/app
+<span class="c1"># Output: manage.py, mygest/, frontend/, ...</span>
+
+<span class="nb">exit</span>
+</code></pre></div>
+
+<h3 id="23-configurazione-git">2.3 Configurazione Git</h3>
+<p><strong>Credenziali GitHub</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Configurare nome e email</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.name<span class="w"> </span><span class="s2">&quot;Tuo Nome&quot;</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>user.email<span class="w"> </span><span class="s2">&quot;tuo@email.com&quot;</span>
+
+<span class="c1"># Personal Access Token (PAT) per push</span>
+<span class="c1"># 1. Vai su GitHub &gt; Settings &gt; Developer settings &gt; Personal access tokens</span>
+<span class="c1"># 2. Generate new token (classic)</span>
+<span class="c1"># 3. Seleziona scopes: repo, workflow</span>
+<span class="c1"># 4. Copia il token generato</span>
+
+<span class="c1"># Salvare credenziali</span>
+git<span class="w"> </span>config<span class="w"> </span>--global<span class="w"> </span>credential.helper<span class="w"> </span>store
+
+<span class="c1"># Al primo push ti chiederà:</span>
+<span class="c1"># Username: tuo_username_github</span>
+<span class="c1"># Password: [incolla il PAT generato]</span>
+</code></pre></div>
+
+<h3 id="24-variabili-dambiente">2.4 Variabili d'Ambiente</h3>
+<p><strong>File <code>.env</code> locale</strong> (già presente in repo, verificare):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># /home/sandro/mygest/.env</span>
+<span class="nv">DEBUG</span><span class="o">=</span>True
+<span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;chiave-segreta-locale&gt;
+<span class="nv">DATABASE_URL</span><span class="o">=</span>postgresql://user:pass@localhost/mygest_dev
+<span class="nv">ALLOWED_HOSTS</span><span class="o">=</span>localhost,127.0.0.1
+<span class="nv">ARCHIVIO_BASE_PATH</span><span class="o">=</span>/mnt/nas_mygest
+</code></pre></div>
+
+<p><strong>File <code>.env</code> produzione</strong> (su VPS):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># /srv/mygest/app/.env</span>
+<span class="nv">DEBUG</span><span class="o">=</span>False
+<span class="nv">SECRET_KEY</span><span class="o">=</span>&lt;chiave-segreta-produzione&gt;
+<span class="nv">DATABASE_URL</span><span class="o">=</span>postgresql://mygest:password@localhost/mygest
+<span class="nv">ALLOWED_HOSTS</span><span class="o">=</span>mygest.sandro.cloud,72.62.34.249
+<span class="nv">ARCHIVIO_BASE_PATH</span><span class="o">=</span>/mnt/nas_mygest
+</code></pre></div>
+
+<p>⚠️ <strong>IMPORTANTE</strong>: Non committare mai file <code>.env</code> su Git! È già in <code>.gitignore</code>.</p>
+<hr />
+<h2 id="3-deployment-applicazione">3. Deployment Applicazione</h2>
+<h3 id="31-deployment-automatico-github-actions">3.1 Deployment Automatico (GitHub Actions)</h3>
+<p>Il metodo <strong>consigliato</strong> per deployment è GitHub Actions.</p>
+<h4 id="311-come-funziona">3.1.1 Come Funziona</h4>
+<div class="codehilite"><pre><span></span><code>┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Sviluppo   │────▶│    GitHub    │────▶│     VPS      │
+│  git push    │     │   Actions    │     │   Deploy     │
+└──────────────┘     └──────────────┘     └──────────────┘
+                           │
+                           ├─ Checkout code
+                           ├─ Run tests
+                           ├─ SSH to VPS
+                           ├─ Pull code
+                           ├─ pip install
+                           ├─ npm build
+                           ├─ collectstatic
+                           ├─ migrate
+                           └─ restart gunicorn
+</code></pre></div>
+
+<h4 id="312-procedura-step-by-step">3.1.2 Procedura Step-by-Step</h4>
+<p><strong>Passo 1: Sviluppare in locale</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>/home/sandro/mygest
+
+<span class="c1"># Attivare virtualenv</span>
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+
+<span class="c1"># Creare/modificare codice</span>
+<span class="c1"># ... modifiche ai file ...</span>
+
+<span class="c1"># Test locale</span>
+python<span class="w"> </span>manage.py<span class="w"> </span><span class="nb">test</span>
+pytest
+
+<span class="c1"># Test server dev</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>runserver
+<span class="c1"># Verificare http://localhost:8000</span>
+</code></pre></div>
+
+<p><strong>Passo 2: Commit e Push</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Verificare modifiche</span>
+git<span class="w"> </span>status
+git<span class="w"> </span>diff
+
+<span class="c1"># Aggiungere file modificati</span>
+git<span class="w"> </span>add<span class="w"> </span>.
+
+<span class="c1"># Commit con messaggio descrittivo</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;feat: aggiunta nuova funzionalità X&quot;</span>
+
+<span class="c1"># Push su GitHub (branch main)</span>
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
+</code></pre></div>
+
+<p><strong>Passo 3: Monitorare GitHub Actions</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Aprire browser su:</span>
+<span class="c1"># https://github.com/sandro6917/mygest/actions</span>
+
+<span class="c1"># Verrai reindirizzato automaticamente all&#39;ultimo workflow</span>
+<span class="c1"># Osservare i vari step:</span>
+<span class="c1"># - Checkout code ✓</span>
+<span class="c1"># - Run tests ✓</span>
+<span class="c1"># - Deploy to VPS ✓</span>
+
+<span class="c1"># Tempo medio: 3-5 minuti</span>
+</code></pre></div>
+
+<p><strong>Passo 4: Verificare Deploy</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Aprire browser su:</span>
+https://mygest.sandro.cloud
+
+<span class="c1"># Verificare:</span>
+<span class="c1"># ✓ Applicazione risponde</span>
+<span class="c1"># ✓ Login funzionante</span>
+<span class="c1"># ✓ Nuove modifiche visibili</span>
+
+<span class="c1"># Log server (se necessario)</span>
+ssh<span class="w"> </span>mygest-vps
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>-f
+</code></pre></div>
+
+<h4 id="313-cosa-fa-github-actions">3.1.3 Cosa Fa GitHub Actions</h4>
+<p>Il workflow definito in <code>.github/workflows/deploy.yml</code>:</p>
+<ol>
+<li><strong>Checkout</strong>: Scarica ultimo codice da GitHub</li>
+<li><strong>Tests</strong>: Esegue test suite (<code>pytest</code>)</li>
+<li><strong>SSH Deploy</strong>: Si connette al VPS e esegue:<br />
+<code>bash
+   cd /srv/mygest/app
+   git pull origin main
+   source /srv/mygest/venv/bin/activate
+   pip install -r requirements.txt
+   cd frontend &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; cd ..
+   python manage.py collectstatic --noinput
+   python manage.py migrate --noinput
+   sudo systemctl restart mygest</code></li>
+</ol>
+<h4 id="314-gestione-errori-deploy-automatico">3.1.4 Gestione Errori Deploy Automatico</h4>
+<p><strong>Se GitHub Actions fallisce</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Controllare log su GitHub</span>
+<span class="c1"># https://github.com/sandro6917/mygest/actions</span>
+<span class="c1"># Clicca sul workflow fallito → Espandi step con errore</span>
+
+<span class="c1"># 2. Errori comuni:</span>
+
+<span class="c1"># a) Test failure</span>
+<span class="c1"># Soluzione: Fixare test in locale, riprovare</span>
+pytest
+git<span class="w"> </span>add<span class="w"> </span>-A
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: correggi test&quot;</span>
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
+
+<span class="c1"># b) SSH connection failed</span>
+<span class="c1"># Soluzione: Verificare chiave SSH su GitHub Secrets</span>
+<span class="c1"># Settings &gt; Secrets &gt; Actions &gt; SSH_PRIVATE_KEY</span>
+
+<span class="c1"># c) Migration error</span>
+<span class="c1"># Soluzione: Deploy manuale (vedi sezione successiva)</span>
+
+<span class="c1"># 3. Forzare re-run workflow</span>
+<span class="c1"># Su GitHub Actions &gt; Workflow fallito &gt; Re-run failed jobs</span>
+</code></pre></div>
+
+<h3 id="32-deployment-manuale-ssh">3.2 Deployment Manuale (SSH)</h3>
+<p>Quando GitHub Actions non è disponibile o serve controllo completo.</p>
+<h4 id="321-script-di-deploy-automatico">3.2.1 Script di Deploy Automatico</h4>
+<p><strong>Uso dello script <code>scripts/deploy.sh</code></strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su PC locale, nella directory mygest</span>
+<span class="nb">cd</span><span class="w"> </span>/home/sandro/mygest
+
+<span class="c1"># Eseguire script (richiede password sudo VPS)</span>
+./scripts/deploy.sh
+
+<span class="c1"># Output:</span>
+<span class="c1"># 🚀 MyGest Deployment Script</span>
+<span class="c1"># ================================</span>
+<span class="c1"># </span>
+<span class="c1"># 📡 Connecting to VPS...</span>
+<span class="c1"># ✓ Connected to mygest@72.62.34.249</span>
+<span class="c1"># </span>
+<span class="c1"># 📥 Pulling latest code...</span>
+<span class="c1"># ✓ Code updated</span>
+<span class="c1"># </span>
+<span class="c1"># 📦 Installing dependencies...</span>
+<span class="c1"># ✓ Python packages installed</span>
+<span class="c1"># ✓ NPM packages installed</span>
+<span class="c1"># </span>
+<span class="c1"># 🏗️  Building frontend...</span>
+<span class="c1"># ✓ Frontend built</span>
+<span class="c1"># </span>
+<span class="c1"># 📂 Collecting static files...</span>
+<span class="c1"># ✓ Static files collected</span>
+<span class="c1"># </span>
+<span class="c1"># 🗄️  Running migrations...</span>
+<span class="c1"># ✓ Migrations applied</span>
+<span class="c1"># </span>
+<span class="c1"># 🔄 Restarting services...</span>
+<span class="c1"># ✓ Gunicorn restarted</span>
+<span class="c1"># </span>
+<span class="c1"># ✅ Deployment completed successfully!</span>
+</code></pre></div>
+
+<p><strong>Cosa fa lo script</strong>:<br />
+- Si connette al VPS via SSH<br />
+- Esegue <code>git pull</code> per aggiornare codice<br />
+- Installa dipendenze Python e NPM<br />
+- Builda frontend React<br />
+- Raccoglie static files<br />
+- Applica migrations database<br />
+- Riavvia Gunicorn</p>
+<h4 id="322-deployment-manuale-passo-passo">3.2.2 Deployment Manuale Passo-Passo</h4>
+<p><strong>Se lo script automatico fallisce o serve debugging</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Connessione SSH al VPS</span>
+ssh<span class="w"> </span>mygest-vps
+
+<span class="c1"># 2. Navigare nella directory applicazione</span>
+<span class="nb">cd</span><span class="w"> </span>/srv/mygest/app
+
+<span class="c1"># 3. Verificare branch Git</span>
+git<span class="w"> </span>branch
+<span class="c1"># Output: * main</span>
+
+git<span class="w"> </span>status
+<span class="c1"># Deve essere clean, altrimenti:</span>
+git<span class="w"> </span>stash<span class="w">  </span><span class="c1"># Salva modifiche locali</span>
+
+<span class="c1"># 4. Pull codice aggiornato</span>
+git<span class="w"> </span>pull<span class="w"> </span>origin<span class="w"> </span>main
+<span class="c1"># Output: Updating abc1234..def5678</span>
+
+<span class="c1"># 5. Attivare virtualenv</span>
+<span class="nb">source</span><span class="w"> </span>/srv/mygest/venv/bin/activate
+
+<span class="c1"># 6. Aggiornare dipendenze Python</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>--upgrade
+
+<span class="c1"># 7. Frontend: installare dipendenze e build</span>
+<span class="nb">cd</span><span class="w"> </span>frontend
+npm<span class="w"> </span>install
+npm<span class="w"> </span>run<span class="w"> </span>build
+<span class="nb">cd</span><span class="w"> </span>..
+
+<span class="c1"># 8. Collect static files</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--noinput
+<span class="c1"># Output: X static files copied</span>
+
+<span class="c1"># 9. Verificare migrations</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations
+<span class="c1"># Verificare che tutte abbiano [X]</span>
+
+<span class="c1"># 10. Applicare migrations (se necessario)</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+<span class="c1"># Output: Operations to perform: ...</span>
+
+<span class="c1"># 11. Riavviare Gunicorn</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>mygest
+
+<span class="c1"># 12. Verificare stato servizio</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>mygest
+<span class="c1"># Output: ● mygest.service - MyGest Gunicorn daemon</span>
+<span class="c1">#         Active: active (running) since ...</span>
+
+<span class="c1"># 13. Verificare log real-time</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>-f
+<span class="c1"># Premi Ctrl+C per uscire</span>
+
+<span class="c1"># 14. Test applicazione</span>
+curl<span class="w"> </span>http://localhost:8000/api/v1/health/
+<span class="c1"># Output: {&quot;status&quot;:&quot;ok&quot;,...}</span>
+
+<span class="c1"># 15. Exit SSH</span>
+<span class="nb">exit</span>
+</code></pre></div>
+
+<h4 id="323-verifiche-post-deploy">3.2.3 Verifiche Post-Deploy</h4>
+<p><strong>Checklist di verifica</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ✓ 1. Applicazione risponde</span>
+curl<span class="w"> </span>-I<span class="w"> </span>https://mygest.sandro.cloud
+<span class="c1"># Output: HTTP/2 200 OK</span>
+
+<span class="c1"># ✓ 2. Login funziona</span>
+<span class="c1"># Aprire browser: https://mygest.sandro.cloud/login</span>
+<span class="c1"># Inserire credenziali admin</span>
+
+<span class="c1"># ✓ 3. API rispondono</span>
+curl<span class="w"> </span>https://mygest.sandro.cloud/api/v1/health/
+<span class="c1"># Output: {&quot;status&quot;:&quot;ok&quot;,&quot;database&quot;:&quot;ok&quot;,&quot;redis&quot;:&quot;ok&quot;}</span>
+
+<span class="c1"># ✓ 4. Static files caricati</span>
+curl<span class="w"> </span>-I<span class="w"> </span>https://mygest.sandro.cloud/static/admin/css/base.css
+<span class="c1"># Output: HTTP/2 200 OK</span>
+
+<span class="c1"># ✓ 5. Frontend React funziona</span>
+<span class="c1"># Aprire browser: https://mygest.sandro.cloud</span>
+<span class="c1"># Verificare che React app si carichi (non errori console)</span>
+
+<span class="c1"># ✓ 6. Database migrations applicate</span>
+ssh<span class="w"> </span>mygest-vps
+<span class="nb">cd</span><span class="w"> </span>/srv/mygest/app
+<span class="nb">source</span><span class="w"> </span>/srv/mygest/venv/bin/activate
+python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s1">&#39;\[ \]&#39;</span>
+<span class="c1"># Output vuoto = tutte applicate</span>
+
+<span class="c1"># ✓ 7. Log senza errori</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>--since<span class="w"> </span><span class="s2">&quot;5 minutes ago&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ERROR
+<span class="c1"># Output vuoto = nessun errore recente</span>
+</code></pre></div>
+
+<h3 id="33-rollback-del-deploy">3.3 Rollback del Deploy</h3>
+<p>Se il deploy causa problemi, tornare alla versione precedente.</p>
+<h4 id="331-rollback-git">3.3.1 Rollback Git</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Connessione SSH</span>
+ssh<span class="w"> </span>mygest-vps
+<span class="nb">cd</span><span class="w"> </span>/srv/mygest/app
+
+<span class="c1"># 2. Vedere commit recenti</span>
+git<span class="w"> </span>log<span class="w"> </span>--oneline<span class="w"> </span>-10
+<span class="c1"># Output:</span>
+<span class="c1"># abc1234 (HEAD -&gt; main, origin/main) feat: nuova funzione</span>
+<span class="c1"># def5678 fix: correzione bug</span>
+<span class="c1"># ghi9012 feat: altra modifica</span>
+
+<span class="c1"># 3. Identificare commit precedente (es: def5678)</span>
+<span class="c1"># Vedere dettagli:</span>
+git<span class="w"> </span>show<span class="w"> </span>def5678
+
+<span class="c1"># 4. Rollback a commit precedente</span>
+git<span class="w"> </span>reset<span class="w"> </span>--hard<span class="w"> </span>def5678
+<span class="c1"># ATTENZIONE: Questo elimina modifiche non committate!</span>
+
+<span class="c1"># 5. Reinstallare dipendenze (potrebbero essere cambiate)</span>
+<span class="nb">source</span><span class="w"> </span>/srv/mygest/venv/bin/activate
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+
+<span class="c1"># 6. Rebuild frontend</span>
+<span class="nb">cd</span><span class="w"> </span>frontend
+npm<span class="w"> </span>install
+npm<span class="w"> </span>run<span class="w"> </span>build
+<span class="nb">cd</span><span class="w"> </span>..
+
+<span class="c1"># 7. Collectstatic</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--noinput
+
+<span class="c1"># 8. Rollback migrations (SE NECESSARIO)</span>
+<span class="c1"># Solo se il commit aveva migrations che causano problemi</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>showmigrations<span class="w"> </span>app_name
+<span class="c1"># Identificare ultima migration da mantenere (es: 0008)</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate<span class="w"> </span>app_name<span class="w"> </span><span class="m">0008</span>
+
+<span class="c1"># 9. Riavviare servizio</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>mygest
+
+<span class="c1"># 10. Verificare</span>
+curl<span class="w"> </span>http://localhost:8000/api/v1/health/
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>mygest
+</code></pre></div>
+
+<h4 id="332-rollback-database">3.3.2 Rollback Database</h4>
+<p><strong>Se le migrations causano problemi critici</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. BACKUP IMMEDIATO (prima di rollback)</span>
+ssh<span class="w"> </span>mygest-vps
+<span class="nb">cd</span><span class="w"> </span>/srv/mygest/backups
+pg_dump<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-F<span class="w"> </span>c<span class="w"> </span>mygest<span class="w"> </span>&gt;<span class="w"> </span>pre_rollback_<span class="k">$(</span>date<span class="w"> </span>+%Y%m%d_%H%M%S<span class="k">)</span>.dump
+
+<span class="c1"># 2. Elencare backup disponibili</span>
+ls<span class="w"> </span>-lh<span class="w"> </span>/srv/mygest/backups/*.dump
+<span class="c1"># Scegliere backup prima del deploy problematico</span>
+
+<span class="c1"># 3. ATTENZIONE: Questo sovrascrive il database!</span>
+<span class="c1"># Confermare che è l&#39;azione corretta</span>
+
+<span class="c1"># 4. Restore database</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>mygest
+pg_restore<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-d<span class="w"> </span>mygest<span class="w"> </span>--clean<span class="w"> </span>--if-exists<span class="w"> </span>/srv/mygest/backups/backup_YYYYMMDD.dump
+
+<span class="c1"># 5. Riavviare</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>mygest
+
+<span class="c1"># 6. Verificare dati</span>
+psql<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-d<span class="w"> </span>mygest<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;SELECT COUNT(*) FROM anagrafiche_anagrafica;&quot;</span>
+</code></pre></div>
+
+<h4 id="333-procedure-di-emergenza">3.3.3 Procedure di Emergenza</h4>
+<p><strong>Sistema completamente non funzionante</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># PIANO A: Rollback completo</span>
+ssh<span class="w"> </span>mygest-vps
+<span class="nb">cd</span><span class="w"> </span>/srv/mygest/app
+
+<span class="c1"># 1. Git rollback (vedi sopra)</span>
+git<span class="w"> </span>reset<span class="w"> </span>--hard<span class="w"> </span>&lt;commit_precedente_funzionante&gt;
+
+<span class="c1"># 2. Database restore (vedi sopra)</span>
+pg_restore<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-d<span class="w"> </span>mygest<span class="w"> </span>--clean<span class="w"> </span>/srv/mygest/backups/ultimo_backup.dump
+
+<span class="c1"># 3. Rebuild tutto</span>
+<span class="nb">source</span><span class="w"> </span>/srv/mygest/venv/bin/activate
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="nb">cd</span><span class="w"> </span>frontend<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>install<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>..
+python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--noinput
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+
+<span class="c1"># 4. Restart</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>mygest<span class="w"> </span>nginx
+
+<span class="c1"># PIANO B: Ripristino da snapshot VPS</span>
+<span class="c1"># Se hai snapshot VPS su Hostinger:</span>
+<span class="c1"># 1. Login Hostinger panel</span>
+<span class="c1"># 2. VPS &gt; Snapshots</span>
+<span class="c1"># 3. Restore snapshot pre-deploy</span>
+<span class="c1"># Tempo: 10-30 minuti</span>
+</code></pre></div>
+
+<hr />
+<h2 id="4-sincronizzazione-database">4. Sincronizzazione Database</h2>
+<h3 id="41-overview-e-casi-duso">4.1 Overview e Casi d'Uso</h3>
+<p><strong>Quando sincronizzare</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Direzione</th>
+<th>Comando</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Testare con dati reali</td>
+<td>prod → dev</td>
+<td><code>./scripts/sync_prod_to_dev.sh</code></td>
+</tr>
+<tr>
+<td>Deploy dati di setup</td>
+<td>dev → prod</td>
+<td><code>./scripts/sync_dev_to_prod.sh</code></td>
+</tr>
+<tr>
+<td>Backup pre-modifica</td>
+<td>prod → backup</td>
+<td><code>pg_dump</code></td>
+</tr>
+<tr>
+<td>Ripristino emergenza</td>
+<td>backup → prod</td>
+<td><code>pg_restore</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>⚠️ ATTENZIONE</strong>: La sincronizzazione sovrascrive dati! Backup sempre prima.</p>
+<h3 id="42-sincronizzazione-dev-prod">4.2 Sincronizzazione Dev → Prod</h3>
+<p><strong>Quando usare</strong>:<br />
+- Setup iniziale produzione con dati di configurazione<br />
+- Importare anagrafiche/clienti da sviluppo<br />
+- Aggiornare nomenclatori/tabelle di sistema</p>
+<h4 id="421-sync-merge-consigliato">4.2.1 Sync Merge (Consigliato)</h4>
+<p><strong>Merge</strong> = Inserisce nuovi record + aggiorna esistenti (match su PK)</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su PC locale</span>
+<span class="nb">cd</span><span class="w"> </span>/home/sandro/mygest
+
+<span class="c1"># Dry-run (simulazione, non modifica)</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--dry-run
+
+<span class="c1"># Output:</span>
+<span class="c1"># 🔄 MyGest Database Sync: DEV → PROD</span>
+<span class="c1"># ====================================</span>
+<span class="c1"># </span>
+<span class="c1"># 📊 Exporting from DEV...</span>
+<span class="c1"># ✓ Exported 1886 records to fixtures/sync/dev_export_20260221_143022.json</span>
+<span class="c1"># </span>
+<span class="c1"># 📤 Uploading to VPS...</span>
+<span class="c1"># ✓ Uploaded (245 KB)</span>
+<span class="c1"># </span>
+<span class="c1"># 🔍 DRY RUN - Simulating import...</span>
+<span class="c1"># </span>
+<span class="c1"># Model                  | Create | Update | Delete | Skip  | Errors</span>
+<span class="c1"># ------------------------------------------------------------------</span>
+<span class="c1"># anagrafiche.Anagrafica |   15   |   230  |   0    |   0   |   0</span>
+<span class="c1"># anagrafiche.Cliente    |    5   |    96  |   0    |   0   |   0</span>
+<span class="c1"># documenti.Documento    |   87   |   413  |   0    |   0   |   0</span>
+<span class="c1"># fascicoli.Fascicolo    |   12   |   349  |   0    |   0   |   0</span>
+<span class="c1"># pratiche.Pratica       |    3   |    94  |   0    |   0   |   0</span>
+<span class="c1"># ------------------------------------------------------------------</span>
+<span class="c1"># TOTALS                 |  122   |  1182  |   0    |   0   |   0</span>
+<span class="c1"># </span>
+<span class="c1"># ⚠️  DRY RUN: No changes applied to database</span>
+<span class="c1"># </span>
+<span class="c1"># To apply changes, run without --dry-run</span>
+
+<span class="c1"># Se tutto OK, eseguire sync reale</span>
+./scripts/sync_dev_to_prod.sh
+
+<span class="c1"># Confermare quando richiesto:</span>
+<span class="c1"># ⚠️  This will modify production database!</span>
+<span class="c1"># Continue? (yes/no): yes</span>
+
+<span class="c1"># Output:</span>
+<span class="c1"># 🔄 Sync completed successfully!</span>
+<span class="c1"># ✓ 122 records created</span>
+<span class="c1"># ✓ 1182 records updated</span>
+<span class="c1"># ✓ Backup saved: /srv/mygest/backups/sync/pre_sync_20260221_143045.sql</span>
+</code></pre></div>
+
+<h4 id="422-sync-full-replace-uso-avanzato">4.2.2 Sync Full Replace (Uso Avanzato)</h4>
+<p><strong>Full Replace</strong> = Elimina tutti i dati esistenti e ricrea da dev</p>
+<p>⚠️ <strong>MOLTO PERICOLOSO</strong> - Usare solo se:<br />
+- Database produzione vuoto o corrotto<br />
+- Reset completo necessario<br />
+- Hai backup verificato</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># SEMPRE dry-run prima!</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--full-replace<span class="w"> </span>--dry-run
+
+<span class="c1"># Leggere attentamente output:</span>
+<span class="c1"># Model                  | Create | Update | Delete | Skip  | Errors</span>
+<span class="c1"># ------------------------------------------------------------------</span>
+<span class="c1"># anagrafiche.Anagrafica |  245   |    0   |  230   |   0   |   0</span>
+<span class="c1"># documenti.Documento    |  500   |    0   |  489   |   0   |   0</span>
+<span class="c1">#                           ^^^^             ^^^^</span>
+<span class="c1">#                        Crea tutti      Elimina tutti esistenti!</span>
+
+<span class="c1"># Se sicuro, eseguire:</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--full-replace<span class="w"> </span>--force
+
+<span class="c1"># Richiede doppia conferma:</span>
+<span class="c1"># ⚠️  FULL REPLACE MODE - Will delete existing data!</span>
+<span class="c1"># Type &#39;DELETE ALL DATA&#39; to confirm: DELETE ALL DATA</span>
+<span class="c1"># Are you absolutely sure? (yes/no): yes</span>
+</code></pre></div>
+
+<h4 id="423-sync-selettivo-per-model">4.2.3 Sync Selettivo per Model</h4>
+<p><strong>Sincronizzare solo alcuni modelli</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Solo anagrafiche</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--models<span class="w"> </span>anagrafiche
+
+<span class="c1"># Output:</span>
+<span class="c1"># 📊 Exporting only: anagrafiche.Anagrafica, anagrafiche.Cliente, ...</span>
+<span class="c1"># ✓ Exported 346 records</span>
+
+<span class="c1"># Più modelli</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--models<span class="w"> </span>anagrafiche,fascicoli
+
+<span class="c1"># Vedere modelli disponibili:</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>export_data<span class="w"> </span>--help<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;Available models&quot;</span>
+</code></pre></div>
+
+<h3 id="43-sincronizzazione-prod-dev">4.3 Sincronizzazione Prod → Dev</h3>
+<p><strong>Quando usare</strong>:<br />
+- Testare nuove feature con dati reali<br />
+- Debugging problemi segnalati in produzione<br />
+- Sviluppo con dataset aggiornato</p>
+<h4 id="431-procedura-standard">4.3.1 Procedura Standard</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su PC locale</span>
+<span class="nb">cd</span><span class="w"> </span>/home/sandro/mygest
+
+<span class="c1"># Dry-run</span>
+./scripts/sync_prod_to_dev.sh<span class="w"> </span>--dry-run
+
+<span class="c1"># Output simile a dev→prod ma in direzione inversa</span>
+<span class="c1"># ⚠️  Mostrerà quanti record locali saranno modificati</span>
+
+<span class="c1"># Eseguire sync</span>
+./scripts/sync_prod_to_dev.sh
+
+<span class="c1"># Confermare:</span>
+<span class="c1"># ⚠️  This will modify local development database!</span>
+<span class="c1"># Continue? (yes/no): yes</span>
+
+<span class="c1"># Verifica locale dopo sync</span>
+<span class="nb">source</span><span class="w"> </span>venv/bin/activate
+python<span class="w"> </span>manage.py<span class="w"> </span>shell
+
+&gt;&gt;&gt;<span class="w"> </span>from<span class="w"> </span>anagrafiche.models<span class="w"> </span>import<span class="w"> </span>Cliente
+&gt;&gt;&gt;<span class="w"> </span>Cliente.objects.count<span class="o">()</span>
+<span class="m">101</span><span class="w">  </span><span class="c1"># Numero da produzione</span>
+
+&gt;&gt;&gt;<span class="w"> </span>from<span class="w"> </span>documenti.models<span class="w"> </span>import<span class="w"> </span>Documento
+&gt;&gt;&gt;<span class="w"> </span>Documento.objects.count<span class="o">()</span>
+<span class="m">500</span><span class="w">  </span><span class="c1"># Allineato con prod</span>
+</code></pre></div>
+
+<h4 id="432-sync-con-anonimizzazione-privacy">4.3.2 Sync con Anonimizzazione (Privacy)</h4>
+<p><strong>Per testare senza dati sensibili</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># TODO: Feature da implementare</span>
+<span class="c1"># Permetterebbe di:</span>
+<span class="c1"># - Anonimizzare nomi/CF/P.IVA</span>
+<span class="c1"># - Mantenere struttura dati</span>
+<span class="c1"># - Offuscare documenti sensibili</span>
+
+<span class="c1"># Workaround attuale:</span>
+<span class="c1"># 1. Sync normale</span>
+./scripts/sync_prod_to_dev.sh
+
+<span class="c1"># 2. Script Python per anonimizzare</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>shell
+&gt;&gt;&gt;<span class="w"> </span>from<span class="w"> </span>anagrafiche.models<span class="w"> </span>import<span class="w"> </span>Anagrafica
+&gt;&gt;&gt;<span class="w"> </span><span class="k">for</span><span class="w"> </span>a<span class="w"> </span><span class="k">in</span><span class="w"> </span>Anagrafica.objects.all<span class="o">()</span>:
+...<span class="w">     </span><span class="k">if</span><span class="w"> </span>a.tipo<span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">&#39;PF&#39;</span>:
+...<span class="w">         </span>a.nome<span class="w"> </span><span class="o">=</span><span class="w"> </span>f<span class="s2">&quot;Cliente {a.pk}&quot;</span>
+...<span class="w">         </span>a.cognome<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Test&quot;</span>
+...<span class="w">         </span>a.codice_fiscale<span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;TSTCLI80A01H501X&quot;</span>
+...<span class="w">     </span>a.save<span class="o">()</span>
+</code></pre></div>
+
+<h3 id="44-rollback-database">4.4 Rollback Database</h3>
+<p>Se la sincronizzazione causa problemi.</p>
+<h4 id="441-rollback-automatico-script">4.4.1 Rollback Automatico (Script)</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su PC locale (per rollback DEV)</span>
+<span class="nb">cd</span><span class="w"> </span>/home/sandro/mygest
+./scripts/rollback_last_sync.sh
+
+<span class="c1"># Output:</span>
+<span class="c1"># 🔙 MyGest Database Sync Rollback</span>
+<span class="c1"># =================================</span>
+<span class="c1"># </span>
+<span class="c1"># 📋 Available backups:</span>
+<span class="c1"># 1. pre_sync_20260221_143045.sql  (245 MB) - 10 minutes ago</span>
+<span class="c1"># 2. pre_sync_20260220_162222.sql  (242 MB) - 1 day ago</span>
+<span class="c1"># 3. pre_sync_20260215_091530.sql  (238 MB) - 6 days ago</span>
+<span class="c1"># </span>
+<span class="c1"># Select backup number (or &#39;q&#39; to quit): 1</span>
+<span class="c1"># </span>
+<span class="c1"># ⚠️  This will restore database to state before last sync!</span>
+<span class="c1"># Current data will be LOST!</span>
+<span class="c1"># Continue? (yes/no): yes</span>
+<span class="c1"># </span>
+<span class="c1"># 🔄 Restoring backup...</span>
+<span class="c1"># ✓ Database restored successfully!</span>
+
+<span class="c1"># Su VPS (per rollback PROD)</span>
+ssh<span class="w"> </span>mygest-vps
+<span class="nb">cd</span><span class="w"> </span>/srv/mygest/app
+./scripts/rollback_last_sync.sh
+<span class="c1"># Procedura identica</span>
+</code></pre></div>
+
+<h4 id="442-rollback-manuale">4.4.2 Rollback Manuale</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Esempio su DEV (stesso procedimento su PROD)</span>
+
+<span class="c1"># 1. Vedere backup disponibili</span>
+ls<span class="w"> </span>-lh<span class="w"> </span>/home/sandro/mygest/backups/sync/
+<span class="c1"># -rw-r--r-- 1 sandro sandro 245M Feb 21 14:30 pre_sync_20260221_143045.sql</span>
+
+<span class="c1"># 2. Stopare applicazione (se in uso)</span>
+<span class="c1"># Su DEV non necessario, su PROD:</span>
+ssh<span class="w"> </span>mygest-vps
+sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>mygest
+
+<span class="c1"># 3. Drop database attuale</span>
+dropdb<span class="w"> </span>mygest_dev<span class="w">  </span><span class="c1"># Su DEV</span>
+<span class="c1"># dropdb mygest     # Su PROD</span>
+
+<span class="c1"># 4. Ricreare database vuoto</span>
+createdb<span class="w"> </span>mygest_dev<span class="w">  </span><span class="c1"># Su DEV</span>
+<span class="c1"># createdb mygest     # Su PROD</span>
+
+<span class="c1"># 5. Restore da backup</span>
+pg_restore<span class="w"> </span>-U<span class="w"> </span>sandro<span class="w"> </span>-d<span class="w"> </span>mygest_dev<span class="w"> </span>/home/sandro/mygest/backups/sync/pre_sync_20260221_143045.sql
+
+<span class="c1"># Su PROD:</span>
+<span class="c1"># pg_restore -U mygest -d mygest /srv/mygest/backups/sync/pre_sync_20260221_143045.sql</span>
+
+<span class="c1"># 6. Verificare</span>
+psql<span class="w"> </span>mygest_dev<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;SELECT COUNT(*) FROM anagrafiche_anagrafica;&quot;</span>
+
+<span class="c1"># 7. Riavviare (su PROD)</span>
+<span class="c1"># sudo systemctl start mygest</span>
+</code></pre></div>
+
+<h3 id="45-best-practices-sincronizzazione">4.5 Best Practices Sincronizzazione</h3>
+<h4 id="451-checklist-pre-sync">4.5.1 Checklist Pre-Sync</h4>
+<div class="codehilite"><pre><span></span><code><span class="err">□</span><span class="w"> </span><span class="n">Backup</span><span class="w"> </span><span class="n">database</span><span class="w"> </span><span class="n">destinazione</span><span class="w"> </span><span class="n">eseguito</span>
+<span class="err">□</span><span class="w"> </span><span class="n">Dry</span><span class="o">-</span><span class="n">run</span><span class="w"> </span><span class="n">verificato</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="n">output</span><span class="w"> </span><span class="n">confermato</span>
+<span class="err">□</span><span class="w"> </span><span class="n">Nessun</span><span class="w"> </span><span class="n">utente</span><span class="w"> </span><span class="n">sta</span><span class="w"> </span><span class="n">lavorando</span><span class="w"> </span><span class="p">(</span><span class="n">per</span><span class="w"> </span><span class="n">prod</span><span class="err">→</span><span class="n">dev</span><span class="p">)</span>
+<span class="err">□</span><span class="w"> </span><span class="n">Applicazione</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">manutenzione</span><span class="w"> </span><span class="p">(</span><span class="n">per</span><span class="w"> </span><span class="n">sync</span><span class="w"> </span><span class="n">prod</span><span class="p">)</span>
+<span class="err">□</span><span class="w"> </span><span class="n">Spazio</span><span class="w"> </span><span class="n">disco</span><span class="w"> </span><span class="n">sufficiente</span><span class="w"> </span><span class="p">(</span><span class="n">backup</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="k">export</span><span class="p">)</span>
+<span class="err">□</span><span class="w"> </span><span class="n">Connessione</span><span class="w"> </span><span class="n">internet</span><span class="w"> </span><span class="n">stabile</span>
+</code></pre></div>
+
+<h4 id="452-quando-non-sincronizzare">4.5.2 Quando NON Sincronizzare</h4>
+<p>❌ <strong>MAI sincronizzare se</strong>:<br />
+- Utenti stanno lavorando in produzione (sync dev→prod)<br />
+- Ci sono migrations non applicate su destinazione<br />
+- Database destinazione ha schema diverso<br />
+- Non hai backup verificato<br />
+- Durante orario di punta (8-18)</p>
+<p>✅ <strong>Orari consigliati</strong>:<br />
+- Sync dev→prod: Sera (19-22) o weekend<br />
+- Sync prod→dev: Qualsiasi (solo tu usi DEV)</p>
+<h4 id="453-retention-policy-backup">4.5.3 Retention Policy Backup</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># I backup sync sono in:</span>
+<span class="c1"># DEV: /home/sandro/mygest/backups/sync/</span>
+<span class="c1"># PROD: /srv/mygest/backups/sync/</span>
+
+<span class="c1"># Retention automatica (ultimi 10 backup):</span>
+<span class="c1"># - Script mantiene automaticamente 10 backup più recenti</span>
+<span class="c1"># - Backup più vecchi eliminati automaticamente</span>
+
+<span class="c1"># Backup manuali importanti:</span>
+<span class="c1"># Creare in /backups/manual/ per conservazione permanente</span>
+pg_dump<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-F<span class="w"> </span>c<span class="w"> </span>mygest<span class="w"> </span>&gt;<span class="w"> </span>/srv/mygest/backups/manual/pre_upgrade_v2.0.dump
+</code></pre></div>
+
+<hr />
+<h2 id="5-gestione-archivio-nas">5. Gestione Archivio NAS</h2>
+<h3 id="51-struttura-directory">5.1 Struttura Directory</h3>
+<p>L'archivio documenti è su NAS locale con backup cloud.</p>
+<h4 id="511-path-e-mount-point">5.1.1 Path e Mount Point</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Mount point NAS</span>
+/mnt/nas_mygest/
+
+<span class="c1"># Struttura directory:</span>
+/mnt/nas_mygest/
+├──<span class="w"> </span>clienti/<span class="w">                    </span><span class="c1"># Documenti per cliente</span>
+│<span class="w">   </span>├──<span class="w"> </span>CLI001_ROSSI_MARIO/
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>01_CONTABILITA/
+│<span class="w">   </span>│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span><span class="m">2024</span>/
+│<span class="w">   </span>│<span class="w">   </span>│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>FAT-2024-001.pdf
+│<span class="w">   </span>│<span class="w">   </span>│<span class="w">   </span>│<span class="w">   </span>└──<span class="w"> </span>FAT-2024-002.pdf
+│<span class="w">   </span>│<span class="w">   </span>│<span class="w">   </span>└──<span class="w"> </span><span class="m">2025</span>/
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>02_FISCALE/
+│<span class="w">   </span>│<span class="w">   </span>├──<span class="w"> </span>03_LAVORO/
+│<span class="w">   </span>│<span class="w">   </span>└──<span class="w"> </span>...
+│<span class="w">   </span>└──<span class="w"> </span>CLI002_BIANCHI_SRL/
+├──<span class="w"> </span>archivio_fisico/<span class="w">            </span><span class="c1"># Ubicazioni fisiche</span>
+│<span class="w">   </span>├──<span class="w"> </span>UF001_UFFICIO_PRINCIPALE/
+│<span class="w">   </span>├──<span class="w"> </span>UF002_ARCHIVIO_SEMINTERRATO/
+│<span class="w">   </span>└──<span class="w"> </span>...
+└──<span class="w"> </span>temp/<span class="w">                       </span><span class="c1"># Upload temporanei</span>
+<span class="w">    </span>└──<span class="w"> </span>pending_uploads/
+</code></pre></div>
+
+<h4 id="512-convenzioni-naming">5.1.2 Convenzioni Naming</h4>
+<p><strong>Clienti</strong>: <code>CLI{codice}_{cognome}_{nome}</code> oppure <code>CLI{codice}_{ragione_sociale}</code></p>
+<div class="codehilite"><pre><span></span><code>CLI001_ROSSI_MARIO
+CLI042_ACME_SRL
+</code></pre></div>
+
+<p><strong>Titolario</strong>: <code>{codice}_{descrizione}</code></p>
+<div class="codehilite"><pre><span></span><code><span class="mf">01</span><span class="n">_CONTABILITA</span>
+<span class="mf">02</span><span class="n">_FISCALE</span>
+<span class="mf">03</span><span class="n">_LAVORO</span>
+<span class="mf">04</span><span class="n">_SOCIETARIO</span>
+</code></pre></div>
+
+<p><strong>Documenti</strong>: <code>{tipo}-{anno}-{sequenza}-{descrizione}.{ext}</code></p>
+<div class="codehilite"><pre><span></span><code>FAT-2024-001-Fattura_fornitore_X.pdf
+CEDU-2024-12-Dicembre_2024.pdf
+UNILAV-2025-003-Assunzione_Rossi.pdf
+</code></pre></div>
+
+<h3 id="52-configurazione-nas">5.2 Configurazione NAS</h3>
+<h4 id="521-mount-nas-su-sistemi-linux">5.2.1 Mount NAS su Sistemi Linux</h4>
+<p><strong>Verifica mount attuale</strong>:</p>
+<div class="codehilite"><pre><span></span><code>mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>nas_mygest
+<span class="c1"># Output: //192.168.1.100/mygest on /mnt/nas_mygest type cifs (rw,...)</span>
+
+df<span class="w"> </span>-h<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>nas_mygest
+<span class="c1"># Output: //192.168.1.100/mygest  2.0T  1.2T  800G  61% /mnt/nas_mygest</span>
+</code></pre></div>
+
+<p><strong>Se non montato, mount manuale</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Creare mount point (se non esiste)</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># Mount (CIFS/SMB)</span>
+sudo<span class="w"> </span>mount<span class="w"> </span>-t<span class="w"> </span>cifs<span class="w"> </span>//192.168.1.100/mygest<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-o<span class="w"> </span><span class="nv">username</span><span class="o">=</span>mygest,password<span class="o">=</span>password,uid<span class="o">=</span><span class="m">1000</span>,gid<span class="o">=</span><span class="m">1000</span>,file_mode<span class="o">=</span><span class="m">0664</span>,dir_mode<span class="o">=</span><span class="m">0775</span>
+
+<span class="c1"># Verificare accesso</span>
+ls<span class="w"> </span>-la<span class="w"> </span>/mnt/nas_mygest
+touch<span class="w"> </span>/mnt/nas_mygest/test.txt
+rm<span class="w"> </span>/mnt/nas_mygest/test.txt
+</code></pre></div>
+
+<p><strong>Mount automatico al boot</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Creare file credenziali</span>
+sudo<span class="w"> </span>nano<span class="w"> </span>/root/.nascreds
+
+<span class="c1"># Contenuto:</span>
+<span class="nv">username</span><span class="o">=</span>mygest
+<span class="nv">password</span><span class="o">=</span>password_nas
+<span class="nv">domain</span><span class="o">=</span>WORKGROUP
+
+<span class="c1"># Proteggere file</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span><span class="m">600</span><span class="w"> </span>/root/.nascreds
+
+<span class="c1"># Editare /etc/fstab</span>
+sudo<span class="w"> </span>nano<span class="w"> </span>/etc/fstab
+
+<span class="c1"># Aggiungere riga:</span>
+//192.168.1.100/mygest<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span>cifs<span class="w"> </span><span class="nv">credentials</span><span class="o">=</span>/root/.nascreds,uid<span class="o">=</span><span class="m">1000</span>,gid<span class="o">=</span><span class="m">1000</span>,file_mode<span class="o">=</span><span class="m">0664</span>,dir_mode<span class="o">=</span><span class="m">0775</span>,_netdev<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="m">0</span>
+
+<span class="c1"># Testare mount senza reboot</span>
+sudo<span class="w"> </span>mount<span class="w"> </span>-a
+
+<span class="c1"># Verificare</span>
+df<span class="w"> </span>-h<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>nas_mygest
+</code></pre></div>
+
+<h4 id="522-permessi-e-ownership">5.2.2 Permessi e Ownership</h4>
+<p><strong>Permessi corretti per MyGest</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># User/group che esegue Django (su VPS)</span>
+id<span class="w"> </span>mygest
+<span class="c1"># uid=1001(mygest) gid=1001(mygest)</span>
+
+<span class="c1"># Verificare permessi directory</span>
+ls<span class="w"> </span>-ld<span class="w"> </span>/mnt/nas_mygest
+<span class="c1"># drwxrwxr-x 5 mygest mygest 4096 Feb 21 14:00 /mnt/nas_mygest</span>
+
+<span class="c1"># Correggere se necessario</span>
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX,o+rX<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># Test scrittura</span>
+sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>touch<span class="w"> </span>/mnt/nas_mygest/test_permissions.txt
+<span class="c1"># Deve avere successo</span>
+sudo<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>rm<span class="w"> </span>/mnt/nas_mygest/test_permissions.txt
+</code></pre></div>
+
+<p><strong>Verifica permessi da Django</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su shell Django</span>
+<span class="n">python</span> <span class="n">manage</span><span class="o">.</span><span class="n">py</span> <span class="n">shell</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">nas_path</span> <span class="o">=</span> <span class="s1">&#39;/mnt/nas_mygest&#39;</span>
+<span class="o">&gt;&gt;&gt;</span> 
+<span class="o">&gt;&gt;&gt;</span> <span class="c1"># Test lettura</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">nas_path</span><span class="p">)</span>
+<span class="p">[</span><span class="s1">&#39;clienti&#39;</span><span class="p">,</span> <span class="s1">&#39;archivio_fisico&#39;</span><span class="p">,</span> <span class="s1">&#39;temp&#39;</span><span class="p">]</span>
+<span class="o">&gt;&gt;&gt;</span> 
+<span class="o">&gt;&gt;&gt;</span> <span class="c1"># Test scrittura</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">test_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">nas_path</span><span class="p">,</span> <span class="s1">&#39;test_django.txt&#39;</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">test_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+<span class="o">...</span>     <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;Test Django write access&#39;</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> 
+<span class="o">&gt;&gt;&gt;</span> <span class="c1"># Test cancellazione</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">test_file</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> 
+<span class="o">&gt;&gt;&gt;</span> <span class="c1"># Success = permessi OK</span>
+</code></pre></div>
+
+<h3 id="53-backup-automatici-con-rclone">5.3 Backup Automatici con rclone</h3>
+<p>rclone sincronizza NAS → Google Drive per backup cloud.</p>
+<h4 id="531-configurazione-rclone">5.3.1 Configurazione rclone</h4>
+<p><strong>Verifica configurazione esistente</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su VPS</span>
+ssh<span class="w"> </span>mygest-vps
+
+<span class="c1"># Verificare config rclone</span>
+cat<span class="w"> </span>~/.config/rclone/rclone.conf
+
+<span class="c1"># Output:</span>
+<span class="c1"># [gdrive_mygest]</span>
+<span class="c1"># type = drive</span>
+<span class="c1"># client_id = ...</span>
+<span class="c1"># client_secret = ...</span>
+<span class="c1"># token = {&quot;access_token&quot;:&quot;...&quot;,&quot;token_type&quot;:&quot;Bearer&quot;,...}</span>
+<span class="c1"># root_folder_id = 1A2B3C4D5E6F7G8H9I0J</span>
+
+<span class="c1"># Testare accesso Google Drive</span>
+rclone<span class="w"> </span>lsd<span class="w"> </span>gdrive_mygest:
+<span class="c1"># Output:</span>
+<span class="c1"># 0 2026-02-21 10:30:00        -1 MyGest_Backup</span>
+</code></pre></div>
+
+<p><strong>Se non configurato, setup iniziale</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Installare rclone (se non presente)</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>rclone
+
+<span class="c1"># Configurazione interattiva</span>
+rclone<span class="w"> </span>config
+
+<span class="c1"># Seguire wizard:</span>
+<span class="c1"># n) New remote</span>
+<span class="c1"># name&gt; gdrive_mygest</span>
+<span class="c1"># Storage&gt; drive (Google Drive)</span>
+<span class="c1"># client_id&gt; (premere Enter per default o inserire)</span>
+<span class="c1"># client_secret&gt; (premere Enter per default o inserire)</span>
+<span class="c1"># scope&gt; drive (accesso completo)</span>
+<span class="c1"># root_folder_id&gt; (lasciare vuoto o inserire folder ID)</span>
+<span class="c1"># service_account_file&gt; (lasciare vuoto)</span>
+<span class="c1"># Edit advanced config? n</span>
+<span class="c1"># Use auto config? n (su server senza GUI)</span>
+
+<span class="c1"># Seguire URL per autorizzazione:</span>
+<span class="c1"># 1. Copiare URL mostrato</span>
+<span class="c1"># 2. Aprire in browser</span>
+<span class="c1"># 3. Autorizzare accesso Google Drive</span>
+<span class="c1"># 4. Copiare codice autorizzazione</span>
+<span class="c1"># 5. Incollare nel terminale</span>
+
+<span class="c1"># Confermare e salvare config</span>
+</code></pre></div>
+
+<h4 id="532-script-backup-automatico">5.3.2 Script Backup Automatico</h4>
+<p><strong>Backup manuale test</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Sync dry-run (simulazione)</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--dry-run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--progress<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;temp/**&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;.DS_Store&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--log-file<span class="o">=</span>/var/log/rclone_sync.log
+
+<span class="c1"># Output:</span>
+<span class="c1"># 2024/02/21 15:00:00 NOTICE: MyGest_Backup/: 0 differences, 0 copies, 0 deletions, 0 new, 0 errors</span>
+<span class="c1"># 2024/02/21 15:00:01 NOTICE: Transferred: 0 B / 0 B, -, 0 B/s, ETA -</span>
+
+<span class="c1"># Sync reale</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--progress<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;temp/**&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--log-file<span class="o">=</span>/var/log/rclone_sync.log
+
+<span class="c1"># Progress bar:</span>
+<span class="c1"># Transferred:        1.234 GiB / 1.234 GiB, 100%, 5.123 MiB/s, ETA 0s</span>
+<span class="c1"># Checks:         1234 / 1234, 100%</span>
+<span class="c1"># Elapsed time:   4m30s</span>
+</code></pre></div>
+
+<p><strong>Cron job per backup automatico</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su VPS</span>
+ssh<span class="w"> </span>mygest-vps
+
+<span class="c1"># Creare script backup</span>
+sudo<span class="w"> </span>nano<span class="w"> </span>/usr/local/bin/mygest_backup.sh
+
+<span class="c1"># Contenuto:</span>
+<span class="c1">#!/bin/bash</span>
+<span class="c1"># MyGest NAS → Google Drive Backup Script</span>
+
+<span class="nv">LOG_FILE</span><span class="o">=</span><span class="s2">&quot;/var/log/mygest_backup.log&quot;</span>
+<span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+<span class="s2">&quot;%Y-%m-%d %H:%M:%S&quot;</span><span class="k">)</span>
+
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$DATE</span><span class="s2">] Starting backup...&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$LOG_FILE</span>
+
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;temp/**&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--exclude<span class="w"> </span><span class="s2">&quot;.DS_Store&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--log-file<span class="o">=</span><span class="nv">$LOG_FILE</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--log-level<span class="w"> </span>INFO<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--stats<span class="w"> </span>1m
+
+<span class="nv">RESULT</span><span class="o">=</span><span class="nv">$?</span>
+
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$RESULT</span><span class="w"> </span>-eq<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$DATE</span><span class="s2">] Backup completed successfully&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$LOG_FILE</span>
+<span class="k">else</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;[</span><span class="nv">$DATE</span><span class="s2">] Backup failed with error code </span><span class="nv">$RESULT</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$LOG_FILE</span>
+<span class="k">fi</span>
+
+<span class="c1"># Rendere eseguibile</span>
+sudo<span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/mygest_backup.sh
+
+<span class="c1"># Testare script</span>
+sudo<span class="w"> </span>/usr/local/bin/mygest_backup.sh
+
+<span class="c1"># Configurare cron job (esecuzione notturna)</span>
+sudo<span class="w"> </span>crontab<span class="w"> </span>-e
+
+<span class="c1"># Aggiungere:</span>
+<span class="c1"># Backup NAS ogni notte alle 2:00 AM</span>
+<span class="m">0</span><span class="w"> </span><span class="m">2</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>/usr/local/bin/mygest_backup.sh
+
+<span class="c1"># Verificare cron job</span>
+sudo<span class="w"> </span>crontab<span class="w"> </span>-l
+</code></pre></div>
+
+<h4 id="533-monitoraggio-backup">5.3.3 Monitoraggio Backup</h4>
+<p><strong>Verificare log backup</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Ultimi backup</span>
+tail<span class="w"> </span>-50<span class="w"> </span>/var/log/mygest_backup.log
+
+<span class="c1"># Errori recenti</span>
+grep<span class="w"> </span>ERROR<span class="w"> </span>/var/log/mygest_backup.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-20
+
+<span class="c1"># Statistiche ultimo backup</span>
+grep<span class="w"> </span><span class="s2">&quot;Transferred&quot;</span><span class="w"> </span>/var/log/mygest_backup.log<span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-1
+<span class="c1"># Output: Transferred:        1.234 GiB / 1.234 GiB, 100%</span>
+</code></pre></div>
+
+<p><strong>Verificare spazio Google Drive</strong>:</p>
+<div class="codehilite"><pre><span></span><code>rclone<span class="w"> </span>about<span class="w"> </span>gdrive_mygest:
+
+<span class="c1"># Output:</span>
+<span class="c1"># Total:   15.0 GiB</span>
+<span class="c1"># Used:     8.5 GiB</span>
+<span class="c1"># Free:     6.5 GiB</span>
+<span class="c1"># Trashed:  0.1 GiB</span>
+</code></pre></div>
+
+<p><strong>Alert email su errori</strong> (opzionale):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Modificare script backup per inviare email su errore</span>
+sudo<span class="w"> </span>nano<span class="w"> </span>/usr/local/bin/mygest_backup.sh
+
+<span class="c1"># Aggiungere dopo RESULT=$?:</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$RESULT</span><span class="w"> </span>-ne<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;MyGest backup failed on </span><span class="k">$(</span>hostname<span class="k">)</span><span class="s2"> at </span><span class="k">$(</span>date<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>mail<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;ALERT: MyGest Backup Failed&quot;</span><span class="w"> </span>admin@example.com
+<span class="k">fi</span>
+
+<span class="c1"># Installare mailutils se necessario</span>
+sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>mailutils
+</code></pre></div>
+
+<h3 id="54-recovery-da-backup">5.4 Recovery da Backup</h3>
+<h4 id="541-restore-completo">5.4.1 Restore Completo</h4>
+<p><strong>Scenario</strong>: NAS locale danneggiato, restore da Google Drive</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Su VPS o PC locale</span>
+
+<span class="c1"># 1. Verificare spazio disco disponibile</span>
+df<span class="w"> </span>-h<span class="w"> </span>/mnt/nas_mygest
+<span class="c1"># Deve avere almeno spazio = dimensione backup</span>
+
+<span class="c1"># 2. Creare directory temporanea restore</span>
+sudo<span class="w"> </span>mkdir<span class="w"> </span>-p<span class="w"> </span>/mnt/nas_restore
+sudo<span class="w"> </span>chown<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_restore
+
+<span class="c1"># 3. Download da Google Drive</span>
+rclone<span class="w"> </span>copy<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span>/mnt/nas_restore/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--progress<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--log-file<span class="o">=</span>/var/log/rclone_restore.log
+
+<span class="c1"># Progress bar:</span>
+<span class="c1"># Transferred:        8.5 GiB / 8.5 GiB, 100%, 10 MiB/s, ETA 0s</span>
+<span class="c1"># Elapsed time:   15m30s</span>
+
+<span class="c1"># 4. Verificare integrità dati</span>
+du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_restore
+<span class="c1"># 8.5G    /mnt/nas_restore</span>
+
+tree<span class="w"> </span>/mnt/nas_restore<span class="w"> </span>-L<span class="w"> </span><span class="m">2</span>
+<span class="c1"># Verificare struttura directory corretta</span>
+
+<span class="c1"># 5. Stopare applicazione (per evitare scritture)</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>stop<span class="w"> </span>mygest
+
+<span class="c1"># 6. Backup NAS corrente (se parzialmente recuperabile)</span>
+sudo<span class="w"> </span>mv<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span>/mnt/nas_mygest.old
+
+<span class="c1"># 7. Spostare restore in produzione</span>
+sudo<span class="w"> </span>mv<span class="w"> </span>/mnt/nas_restore<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># 8. Ripristinare permessi</span>
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX,o+rX<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># 9. Riavviare applicazione</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>mygest
+
+<span class="c1"># 10. Verificare accesso documenti</span>
+curl<span class="w"> </span>https://mygest.sandro.cloud/api/v1/documenti/1/
+<span class="c1"># Verificare che &quot;file&quot; URL sia accessibile</span>
+</code></pre></div>
+
+<h4 id="542-restore-selettivo">5.4.2 Restore Selettivo</h4>
+<p><strong>Recuperare solo alcuni file/directory</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Esempio: restore solo documenti cliente CLI042</span>
+
+<span class="c1"># 1. Elencare contenuto backup remoto</span>
+rclone<span class="w"> </span>lsf<span class="w"> </span>gdrive_mygest:MyGest_Backup/clienti/
+
+<span class="c1"># Output:</span>
+<span class="c1"># CLI001_ROSSI_MARIO/</span>
+<span class="c1"># CLI042_ACME_SRL/</span>
+<span class="c1"># CLI089_VERDI_GIUSEPPE/</span>
+
+<span class="c1"># 2. Download singola directory</span>
+rclone<span class="w"> </span>copy<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>gdrive_mygest:MyGest_Backup/clienti/CLI042_ACME_SRL/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>/tmp/restore_cli042/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--progress
+
+<span class="c1"># 3. Verificare file</span>
+ls<span class="w"> </span>-lR<span class="w"> </span>/tmp/restore_cli042/
+
+<span class="c1"># 4. Copiare in NAS produzione</span>
+sudo<span class="w"> </span>cp<span class="w"> </span>-r<span class="w"> </span>/tmp/restore_cli042/*<span class="w"> </span>/mnt/nas_mygest/clienti/CLI042_ACME_SRL/
+
+<span class="c1"># 5. Correggere permessi</span>
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest/clienti/CLI042_ACME_SRL/
+</code></pre></div>
+
+<h4 id="543-restore-point-in-time">5.4.3 Restore Point-in-Time</h4>
+<p><strong>Recuperare file da versione specifica</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># rclone tiene versioni Google Drive (se attivato)</span>
+
+<span class="c1"># 1. Vedere versioni file</span>
+rclone<span class="w"> </span>lsl<span class="w"> </span>gdrive_mygest:MyGest_Backup/clienti/CLI001_ROSSI_MARIO/01_CONTABILITA/2024/FAT-2024-001.pdf<span class="w"> </span>--drive-v2-download-min-size<span class="w"> </span><span class="m">0</span>
+
+<span class="c1"># 2. Restore con versione specifica</span>
+<span class="c1"># Google Drive tiene automaticamente versioni ultimi 30-100 giorni</span>
+
+<span class="c1"># Metodo alternativo: snapshot NAS periodici</span>
+<span class="c1"># Configurare snapshot giornalieri su NAS per point-in-time recovery</span>
+</code></pre></div>
+
+<h3 id="55-manutenzione-archivio">5.5 Manutenzione Archivio</h3>
+<h4 id="551-pulizia-file-temporanei">5.5.1 Pulizia File Temporanei</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># File temp più vecchi di 7 giorni</span>
+find<span class="w"> </span>/mnt/nas_mygest/temp/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-mtime<span class="w"> </span>+7<span class="w"> </span>-delete
+
+<span class="c1"># Verificare spazio liberato</span>
+du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_mygest/temp/
+
+<span class="c1"># Cron job pulizia automatica</span>
+sudo<span class="w"> </span>crontab<span class="w"> </span>-e
+
+<span class="c1"># Aggiungere:</span>
+<span class="c1"># Pulizia temp ogni domenica alle 3 AM</span>
+<span class="m">0</span><span class="w"> </span><span class="m">3</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span><span class="m">0</span><span class="w"> </span>find<span class="w"> </span>/mnt/nas_mygest/temp/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-mtime<span class="w"> </span>+7<span class="w"> </span>-delete
+</code></pre></div>
+
+<h4 id="552-verifica-integrita-file">5.5.2 Verifica Integrità File</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Verificare file corrotti (PDF)</span>
+find<span class="w"> </span>/mnt/nas_mygest/clienti/<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.pdf&quot;</span><span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>pdf<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span>pdfinfo<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$pdf</span><span class="s2">&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>/dev/null<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Corrupt: </span><span class="nv">$pdf</span><span class="s2">&quot;</span>
+<span class="k">done</span>
+
+<span class="c1"># Log file problematici</span>
+<span class="c1"># Manualmente verificare e risolvere</span>
+</code></pre></div>
+
+<h4 id="553-report-utilizzo-spazio">5.5.3 Report Utilizzo Spazio</h4>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Spazio per cliente (top 20)</span>
+du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_mygest/clienti/*/<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-hr<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+
+<span class="c1"># Output:</span>
+<span class="c1"># 450M    /mnt/nas_mygest/clienti/CLI042_ACME_SRL/</span>
+<span class="c1"># 320M    /mnt/nas_mygest/clienti/CLI001_ROSSI_MARIO/</span>
+<span class="c1"># 280M    /mnt/nas_mygest/clienti/CLI089_VERDI_GIUSEPPE/</span>
+<span class="c1"># ...</span>
+
+<span class="c1"># File più grandi (top 50)</span>
+find<span class="w"> </span>/mnt/nas_mygest/clienti/<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span>-exec<span class="w"> </span>du<span class="w"> </span>-h<span class="w"> </span><span class="o">{}</span><span class="w"> </span>+<span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span>-hr<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-50
+
+<span class="c1"># Trend crescita (da monitorare)</span>
+df<span class="w"> </span>-h<span class="w"> </span>/mnt/nas_mygest<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $5}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tail<span class="w"> </span>-1
+<span class="c1"># Output: 61% (uso attuale)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-troubleshooting">6. Troubleshooting</h2>
+<h3 id="61-problemi-deploy">6.1 Problemi Deploy</h3>
+<h4 id="611-github-actions-fallito">6.1.1 GitHub Actions Fallito</h4>
+<p><strong>Errore: SSH connection failed</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">Connection</span><span class="w"> </span><span class="n">timed</span><span class="w"> </span><span class="n">out</span>
+<span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">Could</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">connect</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="mf">72.62</span><span class="o">.</span><span class="mf">34.249</span><span class="o">:</span><span class="mi">22</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Verificare VPS online</span>
+ping<span class="w"> </span><span class="m">72</span>.62.34.249
+
+<span class="c1"># 2. Verificare SSH manuale</span>
+ssh<span class="w"> </span>mygest@72.62.34.249
+
+<span class="c1"># 3. Verificare GitHub Secret SSH_PRIVATE_KEY</span>
+<span class="c1"># Settings &gt; Secrets &gt; Actions &gt; SSH_PRIVATE_KEY</span>
+<span class="c1"># Deve contenere chiave privata completa:</span>
+<span class="c1"># -----BEGIN OPENSSH PRIVATE KEY-----</span>
+<span class="c1"># ...</span>
+<span class="c1"># -----END OPENSSH PRIVATE KEY-----</span>
+
+<span class="c1"># 4. Verificare authorized_keys su VPS</span>
+ssh<span class="w"> </span>mygest-vps
+cat<span class="w"> </span>~/.ssh/authorized_keys
+<span class="c1"># Deve contenere chiave pubblica corrispondente</span>
+</code></pre></div>
+
+<p><strong>Errore: Tests failed</strong></p>
+<div class="codehilite"><pre><span></span><code>FAILED tests/test_models.py::TestModel::test_validation
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Eseguire test in locale</span>
+pytest<span class="w"> </span>tests/test_models.py::TestModel::test_validation<span class="w"> </span>-vv
+
+<span class="c1"># 2. Fixare errore</span>
+<span class="c1"># ... modifiche codice ...</span>
+
+<span class="c1"># 3. Re-commit e push</span>
+git<span class="w"> </span>add<span class="w"> </span>-A
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: risolto test validation&quot;</span>
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
+</code></pre></div>
+
+<h4 id="612-deployment-manuale-fallito">6.1.2 Deployment Manuale Fallito</h4>
+<p><strong>Errore: pip install requirements failed</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">ERROR</span><span class="o">:</span><span class="w"> </span><span class="n">Could</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">find</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">satisfies</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">requirement</span><span class="w"> </span><span class="kd">package</span><span class="o">==</span><span class="mf">1.2</span><span class="o">.</span><span class="mi">3</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Verificare Python version</span>
+python<span class="w"> </span>--version
+<span class="c1"># Deve essere &gt;= 3.10</span>
+
+<span class="c1"># 2. Aggiornare pip</span>
+pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>pip<span class="w"> </span>setuptools<span class="w"> </span>wheel
+
+<span class="c1"># 3. Verificare package disponibile</span>
+pip<span class="w"> </span>search<span class="w"> </span>package
+
+<span class="c1"># 4. Installare con verbose</span>
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt<span class="w"> </span>-v
+</code></pre></div>
+
+<p><strong>Errore: npm build failed</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">ENOSPC</span><span class="o">:</span><span class="w"> </span><span class="n">System</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">number</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="n">watchers</span><span class="w"> </span><span class="n">reached</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Aumentare limite watchers Linux</span>
+<span class="nb">echo</span><span class="w"> </span>fs.inotify.max_user_watches<span class="o">=</span><span class="m">524288</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>-a<span class="w"> </span>/etc/sysctl.conf
+sudo<span class="w"> </span>sysctl<span class="w"> </span>-p
+</code></pre></div>
+
+<p><strong>Errore: collectstatic failed</strong></p>
+<div class="codehilite"><pre><span></span><code>OSError: [Errno 28] No space left on device
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Verificare spazio disco</span>
+df<span class="w"> </span>-h
+
+<span class="c1"># Pulire cache vecchi static</span>
+rm<span class="w"> </span>-rf<span class="w"> </span>/srv/mygest/app/staticfiles/*
+python<span class="w"> </span>manage.py<span class="w"> </span>collectstatic<span class="w"> </span>--noinput<span class="w"> </span>--clear
+
+<span class="c1"># Pulire log vecchi</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>--vacuum-time<span class="o">=</span>7d
+</code></pre></div>
+
+<h4 id="613-servizio-non-parte">6.1.3 Servizio Non Parte</h4>
+<p><strong>Errore: Gunicorn failed to start</strong></p>
+<div class="codehilite"><pre><span></span><code>sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>mygest
+
+<span class="c1"># Output:</span>
+<span class="c1"># ● mygest.service - MyGest Gunicorn daemon</span>
+<span class="c1">#    Loaded: loaded</span>
+<span class="c1">#    Active: failed (Result: exit-code)</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Vedere log dettagliato</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>mygest<span class="w"> </span>-n<span class="w"> </span><span class="m">100</span><span class="w"> </span>--no-pager
+
+<span class="c1"># Errori comuni:</span>
+
+<span class="c1"># a) ModuleNotFoundError: No module named &#39;X&#39;</span>
+<span class="c1"># Soluzione: pip install mancante</span>
+<span class="nb">source</span><span class="w"> </span>/srv/mygest/venv/bin/activate
+pip<span class="w"> </span>install<span class="w"> </span>X
+
+<span class="c1"># b) django.db.utils.OperationalError: FATAL: database &quot;mygest&quot; does not exist</span>
+<span class="c1"># Soluzione: ricreare database</span>
+createdb<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>mygest
+python<span class="w"> </span>manage.py<span class="w"> </span>migrate
+
+<span class="c1"># c) PermissionError: [Errno 13] Permission denied: &#39;/srv/mygest/...&#39;</span>
+<span class="c1"># Soluzione: correggere ownership</span>
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/srv/mygest/
+
+<span class="c1"># 2. Riavviare servizio</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>mygest
+
+<span class="c1"># 3. Verificare OK</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>mygest
+curl<span class="w"> </span>http://localhost:8000/api/v1/health/
+</code></pre></div>
+
+<h3 id="62-problemi-sincronizzazione-db">6.2 Problemi Sincronizzazione DB</h3>
+<h4 id="621-sync-script-failed">6.2.1 Sync Script Failed</h4>
+<p><strong>Errore: SSH connection to VPS failed</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">ssh</span><span class="o">:</span><span class="w"> </span><span class="n">connect</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">host</span><span class="w"> </span><span class="mf">72.62</span><span class="o">.</span><span class="mf">34.249</span><span class="w"> </span><span class="n">port</span><span class="w"> </span><span class="mi">22</span><span class="o">:</span><span class="w"> </span><span class="n">Connection</span><span class="w"> </span><span class="n">refused</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>: Vedi 6.1.1</p>
+<p><strong>Errore: Export failed - Database query timeout</strong></p>
+<div class="codehilite"><pre><span></span><code>django.db.utils.OperationalError: canceling statement due to statement timeout
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Database troppo grande, export selettivo</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--models<span class="w"> </span>anagrafiche,clienti
+
+<span class="c1"># Oppure aumentare timeout PostgreSQL</span>
+psql<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-d<span class="w"> </span>mygest<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;ALTER DATABASE mygest SET statement_timeout = &#39;600s&#39;;&quot;</span>
+</code></pre></div>
+
+<p><strong>Errore: Import failed - IntegrityError</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">django</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">IntegrityError</span><span class="p">:</span><span class="w"> </span><span class="n">duplicate</span><span class="w"> </span><span class="n">key</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="n">violates</span><span class="w"> </span><span class="n">unique</span><span class="w"> </span><span class="n">constraint</span><span class="w"> </span><span class="s2">&quot;anagrafiche_anagrafica_codice_fiscale_key&quot;</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Verificare dati duplicati in sorgente</span>
+python<span class="w"> </span>manage.py<span class="w"> </span>shell
+&gt;&gt;&gt;<span class="w"> </span>from<span class="w"> </span>anagrafiche.models<span class="w"> </span>import<span class="w"> </span>Anagrafica
+&gt;&gt;&gt;<span class="w"> </span>Anagrafica.objects.values<span class="o">(</span><span class="s1">&#39;codice_fiscale&#39;</span><span class="o">)</span>.annotate<span class="o">(</span><span class="nv">count</span><span class="o">=</span>models.Count<span class="o">(</span><span class="s1">&#39;id&#39;</span><span class="o">))</span>.filter<span class="o">(</span><span class="nv">count__gt</span><span class="o">=</span><span class="m">1</span><span class="o">)</span>
+
+<span class="c1"># 2. Risolvere duplicati manualmente o:</span>
+
+<span class="c1"># 3. Usare --full-replace per reset completo (ATTENZIONE)</span>
+./scripts/sync_dev_to_prod.sh<span class="w"> </span>--full-replace<span class="w"> </span>--dry-run
+</code></pre></div>
+
+<h4 id="622-rollback-failed">6.2.2 Rollback Failed</h4>
+<p><strong>Errore: Backup file not found</strong></p>
+<div class="codehilite"><pre><span></span><code>Error: /srv/mygest/backups/sync/pre_sync_20260221_143045.sql not found
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Vedere backup disponibili</span>
+ls<span class="w"> </span>-lh<span class="w"> </span>/srv/mygest/backups/sync/
+
+<span class="c1"># 2. Usare backup più recente disponibile</span>
+pg_restore<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-d<span class="w"> </span>mygest<span class="w"> </span>/srv/mygest/backups/sync/pre_sync_&lt;altra_data&gt;.sql
+
+<span class="c1"># 3. Se nessun backup sync, usare backup giornaliero</span>
+ls<span class="w"> </span>-lh<span class="w"> </span>/srv/mygest/backups/daily/
+pg_restore<span class="w"> </span>-U<span class="w"> </span>mygest<span class="w"> </span>-d<span class="w"> </span>mygest<span class="w"> </span>/srv/mygest/backups/daily/backup_&lt;data&gt;.dump
+</code></pre></div>
+
+<h3 id="63-problemi-archivio-nas">6.3 Problemi Archivio NAS</h3>
+<h4 id="631-nas-non-montato">6.3.1 NAS Non Montato</h4>
+<p><strong>Errore: ls /mnt/nas_mygest: Input/output error</strong></p>
+<div class="codehilite"><pre><span></span><code>ls<span class="w"> </span>/mnt/nas_mygest
+<span class="c1"># ls: cannot access &#39;/mnt/nas_mygest&#39;: Input/output error</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Unmount forzato</span>
+sudo<span class="w"> </span>umount<span class="w"> </span>-f<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># 2. Verificare NAS accessibile</span>
+ping<span class="w"> </span><span class="m">192</span>.168.1.100
+
+<span class="c1"># 3. Testare connessione SMB</span>
+smbclient<span class="w"> </span>-L<span class="w"> </span>//192.168.1.100<span class="w"> </span>-U<span class="w"> </span>mygest
+
+<span class="c1"># 4. Remount</span>
+sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># 5. Verificare</span>
+ls<span class="w"> </span>-la<span class="w"> </span>/mnt/nas_mygest
+</code></pre></div>
+
+<h4 id="632-permessi-negati">6.3.2 Permessi Negati</h4>
+<p><strong>Errore: Django cannot write to NAS</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="ne">PermissionError</span><span class="p">:</span> <span class="p">[</span><span class="n">Errno</span> <span class="mi">13</span><span class="p">]</span> <span class="n">Permission</span> <span class="n">denied</span><span class="p">:</span> <span class="s1">&#39;/mnt/nas_mygest/clienti/CLI001/test.pdf&#39;</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Verificare ownership</span>
+ls<span class="w"> </span>-ld<span class="w"> </span>/mnt/nas_mygest
+<span class="c1"># Deve essere: drwxrwxr-x mygest mygest</span>
+
+<span class="c1"># 2. Correggere</span>
+sudo<span class="w"> </span>chown<span class="w"> </span>-R<span class="w"> </span>mygest:mygest<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>u+rwX,g+rwX<span class="w"> </span>/mnt/nas_mygest
+
+<span class="c1"># 3. Verificare mount options in /etc/fstab</span>
+<span class="c1"># Deve avere: uid=1001,gid=1001 (id user mygest)</span>
+
+<span class="c1"># 4. Remount con opzioni corrette</span>
+sudo<span class="w"> </span>umount<span class="w"> </span>/mnt/nas_mygest
+sudo<span class="w"> </span>mount<span class="w"> </span>/mnt/nas_mygest
+</code></pre></div>
+
+<h4 id="633-backup-rclone-failed">6.3.3 Backup rclone Failed</h4>
+<p><strong>Errore: rclone sync failed - 403 Forbidden</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">ERROR</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Failed</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">copy</span><span class="o">:</span><span class="w"> </span><span class="n">googleapi</span><span class="o">:</span><span class="w"> </span><span class="n">Error</span><span class="w"> </span><span class="mi">403</span><span class="o">:</span><span class="w"> </span><span class="n">User</span><span class="w"> </span><span class="n">rate</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="n">exceeded</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Google Drive quota exceeded, attendere o:</span>
+
+<span class="c1"># 2. Usare --drive-chunk-size più piccolo</span>
+rclone<span class="w"> </span>sync<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>gdrive_mygest:MyGest_Backup/<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--drive-chunk-size<span class="w"> </span>32M<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--transfers<span class="w"> </span><span class="m">1</span>
+
+<span class="c1"># 3. Oppure aumentare quota Google Drive (Google One)</span>
+</code></pre></div>
+
+<p><strong>Errore: Token expired</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="n">ERROR</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">Failed</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">create</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="n">system</span><span class="o">:</span><span class="w"> </span><span class="n">token</span><span class="w"> </span><span class="n">refresh</span><span class="w"> </span><span class="n">failed</span>
+</code></pre></div>
+
+<p><strong>Soluzione</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Refresh token rclone</span>
+rclone<span class="w"> </span>config<span class="w"> </span>reconnect<span class="w"> </span>gdrive_mygest:
+
+<span class="c1"># Seguire URL per re-autorizzare</span>
+
+<span class="c1"># 2. Testare</span>
+rclone<span class="w"> </span>lsd<span class="w"> </span>gdrive_mygest:
+</code></pre></div>
+
+<h3 id="64-errori-comuni-e-quick-fix">6.4 Errori Comuni e Quick Fix</h3>
+<table>
+<thead>
+<tr>
+<th>Errore</th>
+<th>Causa</th>
+<th>Quick Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>502 Bad Gateway</code></td>
+<td>Gunicorn down</td>
+<td><code>sudo systemctl restart mygest</code></td>
+</tr>
+<tr>
+<td><code>500 Internal Server Error</code></td>
+<td>Exception Python</td>
+<td><code>sudo journalctl -u mygest -n 50</code></td>
+</tr>
+<tr>
+<td><code>404 Not Found</code> static</td>
+<td>collectstatic mancante</td>
+<td><code>python manage.py collectstatic</code></td>
+</tr>
+<tr>
+<td><code>Connection refused :8000</code></td>
+<td>Gunicorn non in ascolto</td>
+<td>Verificare gunicorn.service</td>
+</tr>
+<tr>
+<td><code>CSRF token missing</code></td>
+<td>Cookie non impostati</td>
+<td>Verificare ALLOWED_HOSTS</td>
+</tr>
+<tr>
+<td><code>Database locked</code> SQLite</td>
+<td>Usare PostgreSQL</td>
+<td>Migrare a PostgreSQL</td>
+</tr>
+<tr>
+<td><code>No space left on device</code></td>
+<td>Disco pieno</td>
+<td><code>df -h &amp;&amp; sudo apt clean</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-faq">7. FAQ</h2>
+<h3 id="71-deploy-e-git">7.1 Deploy e Git</h3>
+<p><strong>Q: Posso fare deploy di un branch diverso da main?</strong></p>
+<p>A: Sì, modificando GitHub Actions:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># .github/workflows/deploy.yml</span>
+<span class="nt">on</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">push</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="nv">main</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">staging</span><span class="w"> </span><span class="p p-Indicator">]</span><span class="w">  </span><span class="c1"># Aggiungi branch</span>
+</code></pre></div>
+
+<p><strong>Q: Come annullo un commit già pushato?</strong></p>
+<p>A:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Revert ultimo commit (crea nuovo commit)</span>
+git<span class="w"> </span>revert<span class="w"> </span>HEAD
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
+
+<span class="c1"># Oppure reset hard (PERICOLOSO, riscrive storia)</span>
+git<span class="w"> </span>reset<span class="w"> </span>--hard<span class="w"> </span>HEAD~1
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main<span class="w"> </span>--force
+</code></pre></div>
+
+<p><strong>Q: Posso fare deploy senza GitHub Actions?</strong></p>
+<p>A: Sì, usa <code>./scripts/deploy.sh</code> o procedura manuale (vedi 3.2)</p>
+<h3 id="72-database-e-sincronizzazione">7.2 Database e Sincronizzazione</h3>
+<p><strong>Q: Con che frequenza sincronizzare dev→prod?</strong></p>
+<p>A: Dipende:<br />
+- Setup iniziale: 1 volta<br />
+- Aggiornamento nomenclatori: quando necessario<br />
+- <strong>Mai</strong> per dati utente (usare prod→dev invece)</p>
+<p><strong>Q: Posso sincronizzare solo una app Django?</strong></p>
+<p>A: Sì:</p>
+<div class="codehilite"><pre><span></span><code>./scripts/sync_dev_to_prod.sh<span class="w"> </span>--models<span class="w"> </span>anagrafiche
+</code></pre></div>
+
+<p><strong>Q: I backup sync vengono eliminati?</strong></p>
+<p>A: Automaticamente dopo 10 sync (retention policy). Backup importanti salvare in <code>/backups/manual/</code></p>
+<p><strong>Q: Come sincronizzo anche i file NAS insieme al DB?</strong></p>
+<p>A: Attualmente manuale:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Sync DB</span>
+./scripts/sync_dev_to_prod.sh
+
+<span class="c1"># Sync file (da implementare script dedicato)</span>
+rsync<span class="w"> </span>-avz<span class="w"> </span>/mnt/nas_mygest/<span class="w"> </span>mygest-vps:/mnt/nas_mygest/
+</code></pre></div>
+
+<h3 id="73-archivio-e-backup">7.3 Archivio e Backup</h3>
+<p><strong>Q: Quanto spazio serve per backup Google Drive?</strong></p>
+<p>A: Dipende da dimensione archivio. Verificare:</p>
+<div class="codehilite"><pre><span></span><code>du<span class="w"> </span>-sh<span class="w"> </span>/mnt/nas_mygest/
+rclone<span class="w"> </span>about<span class="w"> </span>gdrive_mygest:
+</code></pre></div>
+
+<p><strong>Q: Google Drive gratuito basta?</strong></p>
+<p>A: 15 GB gratis. Se superi, considera Google One (100GB €2/mese)</p>
+<p><strong>Q: Posso usare altri cloud invece di Google Drive?</strong></p>
+<p>A: Sì, rclone supporta 40+ provider:</p>
+<div class="codehilite"><pre><span></span><code>rclone<span class="w"> </span>config
+<span class="c1"># Scegliere: Dropbox, OneDrive, AWS S3, etc.</span>
+</code></pre></div>
+
+<p><strong>Q: Come recupero un file cancellato per errore?</strong></p>
+<p>A:<br />
+1. Verificare Google Drive (tiene versioni 30 gg)<br />
+2. Restore da backup sync più recente<br />
+3. Snapshot NAS (se configurato)</p>
+<h3 id="74-troubleshooting">7.4 Troubleshooting</h3>
+<p><strong>Q: Il sito è lento dopo deploy, perché?</strong></p>
+<p>A: Possibili cause:<br />
+- Cache Redis da svuotare: <code>redis-cli FLUSHALL</code><br />
+- Query N+1: Ottimizzare con select_related/prefetch_related<br />
+- Static files non compressati: Verificare Nginx gzip</p>
+<p><strong>Q: Dopo sync il login non funziona più</strong></p>
+<p>A: Password hashate diverse. Soluzione:</p>
+<div class="codehilite"><pre><span></span><code>python<span class="w"> </span>manage.py<span class="w"> </span>changepassword<span class="w"> </span>admin
+<span class="c1"># Reimpostare password conosciuta</span>
+</code></pre></div>
+
+<p><strong>Q: Deploy bloccato, come sbloccare?</strong></p>
+<p>A:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Killare processo gunicorn appeso</span>
+sudo<span class="w"> </span>pkill<span class="w"> </span>-9<span class="w"> </span>gunicorn
+
+<span class="c1"># Riavviare servizio</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>restart<span class="w"> </span>mygest
+</code></pre></div>
+
+<hr />
+<h2 id="supporto">📞 Supporto</h2>
+<p>Per problemi non coperti da questa guida:</p>
+<ol>
+<li><strong>Log applicazione</strong>: <code>sudo journalctl -u mygest -f</code></li>
+<li><strong>Log Nginx</strong>: <code>sudo tail -f /var/log/nginx/error.log</code></li>
+<li><strong>Log PostgreSQL</strong>: <code>sudo tail -f /var/log/postgresql/postgresql-14-main.log</code></li>
+<li><strong>Issue GitHub</strong>: https://github.com/sandro6917/mygest/issues</li>
+</ol>
+<hr />
+<h2 id="riferimenti">📚 Riferimenti</h2>
+<ul>
+<li><a href="https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/">Django Deployment Checklist</a></li>
+<li><a href="https://www.postgresql.org/docs/current/backup.html">PostgreSQL Backup &amp; Restore</a></li>
+<li><a href="https://rclone.org/docs/">rclone Documentation</a></li>
+<li><a href="https://docs.github.com/actions">GitHub Actions Documentation</a></li>
+</ul>
+<hr />
+<p><strong>Fine della Guida</strong></p>
+<p><em>MyGest Development Team - Febbraio 2026</em></p>
+        </div>
+        
+        <div class="footer">
+            <p><strong>MyGest Development Team</strong></p>
+            <p>© 2026 - Tutti i diritti riservati</p>
+            <p style="margin-top: 1rem; font-size: 0.9rem;">
+                Per supporto: <a href="https://github.com/sandro6917/mygest/issues" style="color: #60a5fa;">GitHub Issues</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

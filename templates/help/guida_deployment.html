@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+{% block title %}Guida Deployment e Sincronizzazione{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="card shadow-sm mb-4 border-primary">
+    <div class="card-header bg-primary text-white">
+      <h1 class="h3 mb-0">
+        <i class="bi bi-rocket-takeoff me-2"></i>
+        Guida Operativa: Deployment e Sincronizzazione
+      </h1>
+    </div>
+    <div class="card-body">
+      <p class="lead">
+        Questa guida fornisce istruzioni complete per il deployment dell'applicazione MyGest, 
+        la sincronizzazione dei database e la gestione dell'archivio documentale su NAS.
+      </p>
+      
+      <div class="alert alert-info d-flex align-items-center" role="alert">
+        <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+        <div>
+          <strong>Versione 1.0</strong> - Febbraio 2026<br>
+          Pensata per utenti con conoscenze di base di Linux, Git e linea di comando.
+        </div>
+      </div>
+
+      <div class="row mt-4">
+        <div class="col-md-6 mb-3">
+          <div class="card h-100 border-success">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="bi bi-file-earmark-richtext text-success me-2"></i>
+                Versione HTML
+              </h5>
+              <p class="card-text">
+                Consultazione online con navigazione facilitata, ideale per seguire 
+                le procedure step-by-step da browser.
+              </p>
+              <a href="{% url 'guide-deployment-html' %}" 
+                 class="btn btn-success w-100" 
+                 target="_blank">
+                <i class="bi bi-box-arrow-up-right me-2"></i>
+                Apri Guida HTML
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 mb-3">
+          <div class="card h-100 border-danger">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                Versione PDF
+              </h5>
+              <p class="card-text">
+                Download per consultazione offline, stampa o archiviazione. 
+                Perfetto per avere sempre a portata di mano.
+              </p>
+              <a href="{% url 'guide-deployment-pdf' %}" 
+                 class="btn btn-danger w-100" 
+                 target="_blank">
+                <i class="bi bi-download me-2"></i>
+                Scarica PDF (160 KB)
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="card mb-4">
+    <div class="card-header bg-light">
+      <h2 class="h5 mb-0">📑 Contenuti della Guida</h2>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6">
+          <h6 class="fw-bold">
+            <i class="bi bi-1-circle text-primary me-2"></i>
+            Introduzione e Prerequisiti
+          </h6>
+          <ul class="mb-4">
+            <li>Architettura del sistema</li>
+            <li>Software necessario</li>
+            <li>Configurazione SSH e Git</li>
+            <li>Variabili d'ambiente</li>
+          </ul>
+
+          <h6 class="fw-bold">
+            <i class="bi bi-2-circle text-primary me-2"></i>
+            Deployment Applicazione
+          </h6>
+          <ul class="mb-4">
+            <li>Deployment automatico (GitHub Actions)</li>
+            <li>Deployment manuale (SSH)</li>
+            <li>Script di deploy</li>
+            <li>Verifiche post-deploy</li>
+            <li>Rollback e procedure di emergenza</li>
+          </ul>
+
+          <h6 class="fw-bold">
+            <i class="bi bi-3-circle text-primary me-2"></i>
+            Sincronizzazione Database
+          </h6>
+          <ul class="mb-4">
+            <li>Sync Dev → Prod (merge e full replace)</li>
+            <li>Sync Prod → Dev (testing con dati reali)</li>
+            <li>Rollback database</li>
+            <li>Best practices e retention policy</li>
+          </ul>
+        </div>
+
+        <div class="col-md-6">
+          <h6 class="fw-bold">
+            <i class="bi bi-4-circle text-primary me-2"></i>
+            Gestione Archivio NAS
+          </h6>
+          <ul class="mb-4">
+            <li>Struttura directory e naming conventions</li>
+            <li>Configurazione mount NAS</li>
+            <li>Permessi e ownership</li>
+            <li>Backup automatici con rclone</li>
+            <li>Recovery da backup</li>
+            <li>Manutenzione archivio</li>
+          </ul>
+
+          <h6 class="fw-bold">
+            <i class="bi bi-5-circle text-primary me-2"></i>
+            Troubleshooting
+          </h6>
+          <ul class="mb-4">
+            <li>Problemi deploy (GitHub Actions, SSH, servizi)</li>
+            <li>Problemi sincronizzazione DB</li>
+            <li>Problemi archivio NAS</li>
+            <li>Errori comuni e quick fix</li>
+          </ul>
+
+          <h6 class="fw-bold">
+            <i class="bi bi-6-circle text-primary me-2"></i>
+            FAQ e Riferimenti
+          </h6>
+          <ul class="mb-0">
+            <li>Domande frequenti</li>
+            <li>Comandi di riferimento rapido</li>
+            <li>Link documentazione ufficiale</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mb-4 border-warning">
+    <div class="card-header bg-warning">
+      <h2 class="h5 mb-0">
+        <i class="bi bi-lightbulb me-2"></i>
+        Highlights Principali
+      </h2>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <div class="p-3 bg-light rounded">
+            <h6 class="fw-bold text-success">
+              <i class="bi bi-check-circle me-2"></i>
+              GitHub Actions
+            </h6>
+            <p class="small mb-0">
+              Deploy automatico ad ogni <code>git push</code> su branch main. 
+              Test automatici e rollback facilitato.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+          <div class="p-3 bg-light rounded">
+            <h6 class="fw-bold text-info">
+              <i class="bi bi-arrow-left-right me-2"></i>
+              Sync Bidirezionale
+            </h6>
+            <p class="small mb-0">
+              Sincronizza database dev↔prod con merge intelligente o 
+              full replace. Backup automatici prima di ogni sync.
+            </p>
+          </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+          <div class="p-3 bg-light rounded">
+            <h6 class="fw-bold text-primary">
+              <i class="bi bi-cloud-upload me-2"></i>
+              Backup Cloud
+            </h6>
+            <p class="small mb-0">
+              Backup automatico giornaliero NAS → Google Drive con rclone. 
+              Recovery point-in-time disponibile.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mb-4">
+    <div class="card-header bg-light">
+      <h2 class="h5 mb-0">
+        <i class="bi bi-terminal me-2"></i>
+        Quick Reference
+      </h2>
+    </div>
+    <div class="card-body">
+      <h6 class="fw-bold">Comandi Deployment</h6>
+      <pre class="bg-dark text-light p-3 rounded"><code># Deploy automatico
+git push origin main
+
+# Deploy manuale
+./scripts/deploy.sh
+
+# Rollback Git
+ssh mygest-vps
+cd /srv/mygest/app
+git reset --hard &lt;commit_id&gt;
+sudo systemctl restart mygest</code></pre>
+
+      <h6 class="fw-bold mt-4">Comandi Sincronizzazione</h6>
+      <pre class="bg-dark text-light p-3 rounded"><code># Sync dev → prod (dry-run)
+./scripts/sync_dev_to_prod.sh --dry-run
+
+# Sync prod → dev
+./scripts/sync_prod_to_dev.sh
+
+# Rollback ultimo sync
+./scripts/rollback_last_sync.sh</code></pre>
+
+      <h6 class="fw-bold mt-4">Comandi Backup NAS</h6>
+      <pre class="bg-dark text-light p-3 rounded"><code># Backup manuale
+rclone sync /mnt/nas_mygest/ gdrive_mygest:MyGest_Backup/ --progress
+
+# Restore directory
+rclone copy gdrive_mygest:MyGest_Backup/clienti/CLI042/ /tmp/restore/
+
+# Verificare spazio
+rclone about gdrive_mygest:</code></pre>
+    </div>
+  </section>
+
+  <section class="card border-info">
+    <div class="card-header bg-info text-white">
+      <h2 class="h5 mb-0">
+        <i class="bi bi-question-circle me-2"></i>
+        Supporto e Documentazione
+      </h2>
+    </div>
+    <div class="card-body">
+      <p>Per problemi non coperti da questa guida:</p>
+      <ul>
+        <li>
+          <strong>Log applicazione:</strong> 
+          <code>sudo journalctl -u mygest -f</code>
+        </li>
+        <li>
+          <strong>Log Nginx:</strong> 
+          <code>sudo tail -f /var/log/nginx/error.log</code>
+        </li>
+        <li>
+          <strong>Log PostgreSQL:</strong> 
+          <code>sudo tail -f /var/log/postgresql/postgresql-14-main.log</code>
+        </li>
+        <li>
+          <strong>Issue GitHub:</strong> 
+          <a href="https://github.com/sandro6917/mygest/issues" target="_blank">
+            https://github.com/sandro6917/mygest/issues
+            <i class="bi bi-box-arrow-up-right ms-1"></i>
+          </a>
+        </li>
+      </ul>
+
+      <div class="alert alert-light mt-3 mb-0">
+        <strong>Riferimenti aggiuntivi:</strong>
+        <ul class="mb-0 mt-2">
+          <li>
+            <a href="https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/" target="_blank">
+              Django Deployment Checklist
+            </a>
+          </li>
+          <li>
+            <a href="https://www.postgresql.org/docs/current/backup.html" target="_blank">
+              PostgreSQL Backup & Restore
+            </a>
+          </li>
+          <li>
+            <a href="https://rclone.org/docs/" target="_blank">
+              rclone Documentation
+            </a>
+          </li>
+          <li>
+            <a href="https://docs.github.com/actions" target="_blank">
+              GitHub Actions Documentation
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="text-center mt-4">
+    <a href="{% url 'help-index' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-2"></i>
+      Torna all'Indice Help
+    </a>
+  </div>
+</div>
+{% endblock %}

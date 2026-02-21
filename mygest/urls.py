@@ -3,7 +3,14 @@ from django.urls import path, include, re_path
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.conf.urls.static import static
-from mygest.views import home, help_index, help_topic, react_spa
+from mygest.views import (
+    home, 
+    help_index, 
+    help_topic, 
+    react_spa,
+    serve_deployment_guide_html,
+    serve_deployment_guide_pdf,
+)
 from graphene_django.views import GraphQLView
 
 urlpatterns = [
@@ -27,6 +34,8 @@ urlpatterns = [
     path("whatsapp/", include(("whatsapp.urls", "whatsapp"), namespace="whatsapp")),
     path("help/", help_index, name="help-index"),
     path("help/<slug:slug>/", help_topic, name="help-topic"),
+    path("guide/deployment.html", serve_deployment_guide_html, name="guide-deployment-html"),
+    path("guide/deployment.pdf", serve_deployment_guide_pdf, name="guide-deployment-pdf"),
     path("graphql/", login_required(GraphQLView.as_view(graphiql=True))),
     
     # Home page (for reverse('home') in tests and templates)

@@ -63,6 +63,12 @@ HELP_TOPICS = {
         "template": "help/guida_scadenze.html",
         "order": 1,
     },
+    "guida-deployment": {
+        "name": "Guida Deployment e Sincronizzazione",
+        "summary": "Deployment automatico/manuale, sincronizzazione DB e gestione archivio NAS.",
+        "template": "help/guida_deployment.html",
+        "order": 2,
+    },
 }
 
 ORDER_CANDIDATES = ["updated_at", "modified", "updated", "data_modifica", "created_at", "created", "data"]
@@ -255,3 +261,30 @@ def anagrafica_detail(request, pk: int):
         ],
     )
     return render(request, "anagrafiche/detail.html", ctx)
+
+def serve_deployment_guide_html(request):
+    """Serve la guida deployment come HTML"""
+    html_path = os.path.join(settings.BASE_DIR, 'docs', 'GUIDA_DEPLOYMENT_SYNC.html')
+    
+    if not os.path.exists(html_path):
+        raise Http404("Guida non trovata")
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    return HttpResponse(content, content_type='text/html')
+
+
+def serve_deployment_guide_pdf(request):
+    """Serve la guida deployment come PDF"""
+    pdf_path = os.path.join(settings.BASE_DIR, 'docs', 'GUIDA_DEPLOYMENT_SYNC.pdf')
+    
+    if not os.path.exists(pdf_path):
+        raise Http404("Guida PDF non trovata")
+    
+    with open(pdf_path, 'rb') as f:
+        content = f.read()
+    
+    response = HttpResponse(content, content_type='application/pdf')
+    response['Content-Disposition'] = 'inline; filename="MyGest_Guida_Deployment.pdf"'
+    return response
