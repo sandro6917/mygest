@@ -582,8 +582,57 @@ a:hover {
   color: #6b7280;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Responsive Design - Mobile First Approach */
+/* Breakpoints seguono Material-UI: xs: 0, sm: 600px, md: 900px, lg: 1200px, xl: 1536px */
+
+/* Base styles (mobile) già definiti sopra */
+
+/* Small devices (landscape phones, 600px and up) */
+@media (min-width: 600px) {
+  .navbar {
+    padding: 0 var(--spacing-lg);
+  }
+  
+  .main-content {
+    padding: var(--spacing-lg);
+  }
+}
+
+/* Medium devices (tablets, 900px and up) */
+@media (min-width: 900px) {
+  .navbar {
+    padding: 0 var(--spacing-xl);
+  }
+  
+  .main-content {
+    padding: var(--spacing-xl);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Large devices (desktops, 1200px and up) */
+@media (min-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .navbar-container {
+    max-width: 1400px;
+  }
+}
+
+/* Extra large devices (large desktops, 1536px and up) */
+@media (min-width: 1536px) {
+  .navbar-container {
+    max-width: 1600px;
+  }
+}
+
+/* Mobile specific (max-width overrides) */
+@media (max-width: 599px) {
   .navbar-menu {
     display: none;
   }
@@ -593,11 +642,33 @@ a:hover {
   }
 
   .login-card {
-    padding: 2rem;
+    padding: 1.5rem;
+    margin: 1rem;
   }
 
   .main-content {
-    padding: 1rem;
+    padding: var(--spacing-md);
+  }
+  
+  /* Riduci font su mobile */
+  :root {
+    --font-size-base: 0.875rem;
+    --font-size-lg: 1rem;
+    --font-size-xl: 1.125rem;
+    --font-size-2xl: 1.25rem;
+    --font-size-3xl: 1.5rem;
+  }
+  
+  /* Nascondi colonne non essenziali nelle tabelle */
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
+
+/* Tablet specific */
+@media (min-width: 600px) and (max-width: 899px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
