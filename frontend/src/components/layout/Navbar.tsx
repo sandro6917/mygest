@@ -214,24 +214,41 @@ export function Navbar() {
           </Typography>
 
           {!isMobile && (
-            <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
-              {navItems.slice(0, 8).map((item) => (
-                <Button
-                  key={item.path}
-                  component={Link}
-                  to={item.path}
-                  startIcon={item.icon}
-                  sx={{
-                    color: 'text.primary',
-                    '&:hover': {
-                      backgroundColor: 'action.hover',
-                    },
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </Box>
+            <>
+              <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+                {navItems.slice(0, 7).map((item) => (
+                  <Button
+                    key={item.path}
+                    component={Link}
+                    to={item.path}
+                    startIcon={item.icon}
+                    sx={{
+                      color: 'text.primary',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </Box>
+              
+              {/* Help sempre visibile */}
+              <Button
+                component={Link}
+                to="/help"
+                startIcon={<HelpIcon />}
+                sx={{
+                  color: 'text.primary',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                  },
+                }}
+              >
+                Help
+              </Button>
+            </>
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
