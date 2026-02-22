@@ -1,16 +1,41 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { 
-  DashboardIcon, 
-  PraticheIcon, 
-  DocumentiIcon, 
-  AnagraficheIcon,
-  CalendarIcon,
-  UserIcon,
-  LogoutIcon,
-  ThemeIcon
-} from '@/components/icons/Icons';
+import { useResponsive } from '@/hooks/useResponsive';
+import {
+  AppBar,
+  Toolbar,
+  IconButton,
+  Typography,
+  Box,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Button,
+  Menu,
+  MenuItem,
+} from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import DescriptionIcon from '@mui/icons-material/Description';
+import FolderIcon from '@mui/icons-material/Folder';
+import PeopleIcon from '@mui/icons-material/People';
+import EventIcon from '@mui/icons-material/Event';
+import EmailIcon from '@mui/icons-material/Email';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import HelpIcon from '@mui/icons-material/Help';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import LogoutIcon from '@mui/icons-material/Logout';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
+import WorkIcon from '@mui/icons-material/Work';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
+import InventoryIcon from '@mui/icons-material/Inventory';
 
 const getInitialTheme = (): 'light' | 'dark' => {
   if (typeof window === 'undefined') {
@@ -24,14 +49,42 @@ const getInitialTheme = (): 'light' | 'dark' => {
   return initialTheme;
 };
 
+interface NavItem {
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+}
+
+const navItems: NavItem[] = [
+  { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
+  { label: 'Pratiche', path: '/pratiche', icon: <WorkIcon /> },
+  { label: 'Fascicoli', path: '/fascicoli', icon: <FolderIcon /> },
+  { label: 'Documenti', path: '/documenti', icon: <DescriptionIcon /> },
+  { label: 'Anagrafiche', path: '/anagrafiche', icon: <PeopleIcon /> },
+  { label: 'Scadenze', path: '/scadenze', icon: <EventIcon /> },
+  { label: 'Comunicazioni', path: '/comunicazioni', icon: <EmailIcon /> },
+  { label: 'Archivio', path: '/archivio', icon: <ArchiveIcon /> },
+  { label: 'Operazioni', path: '/archivio-fisico/operazioni', icon: <InventoryIcon /> },
+  { label: 'Help', path: '/help', icon: <HelpIcon /> },
+  { label: 'AI Classifier', path: '/ai-classifier/jobs', icon: <SmartToyIcon /> },
+];
+
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+    setAnchorEl(null);
   };
 
   const toggleTheme = () => {
@@ -41,111 +94,206 @@ export function Navbar() {
     localStorage.setItem('theme', newTheme);
   };
 
+  const handleUserMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const drawer = (
+    <Box sx={{ width: 280 }}>
+      <Box
+        sx={{
+          p: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Typography variant="h6" component="div" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          MyGest
+        </Typography>
+        <IconButton onClick={handleDrawerToggle}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <List>
+        {navItems.map((item) => (
+          <ListItem key={item.path} disablePadding>
+            <ListItemButton
+              component={Link}
+              to={item.path}
+              onClick={handleDrawerToggle}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: 'primary.main' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <Box sx={{ p: 2 }}>
+        <Button
+          fullWidth
+          variant="outlined"
+          startIcon={theme === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
+          onClick={toggleTheme}
+          sx={{ mb: 1 }}
+        >
+          {theme === 'light' ? 'Modalità Scura' : 'Modalità Chiara'}
+        </Button>
+        <Button
+          fullWidth
+          variant="contained"
+          color="error"
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+        >
+          Logout
+        </Button>
+      </Box>
+    </Box>
+  );
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        <Link to="/" className="navbar-brand">
-          <span className="brand-icon">
-            <DashboardIcon size={32} />
-          </span>
-          <span className="brand-name">MyGest</span>
-        </Link>
+    <>
+      <AppBar
+        position="sticky"
+        elevation={1}
+        sx={{
+          backgroundColor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Toolbar>
+          {isMobile && (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, color: 'text.primary' }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
 
-        {isAuthenticated && (
-          <>
-            <div className="navbar-menu">
-              <Link to="/" className="nav-link">
-                <DashboardIcon size={20} />
-                <span>Dashboard</span>
-              </Link>
-              <Link to="/pratiche" className="nav-link">
-                <PraticheIcon size={20} />
-                <span>Pratiche</span>
-              </Link>
-              <Link to="/fascicoli" className="nav-link">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Fascicoli</span>
-              </Link>
-              <Link to="/documenti" className="nav-link">
-                <DocumentiIcon size={20} />
-                <span>Documenti</span>
-              </Link>
-              <Link to="/anagrafiche" className="nav-link">
-                <AnagraficheIcon size={20} />
-                <span>Anagrafiche</span>
-              </Link>
-              <Link to="/scadenze" className="nav-link">
-                <CalendarIcon size={20} />
-                <span>Scadenze</span>
-              </Link>
-              <Link to="/comunicazioni" className="nav-link">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                  <polyline points="22,6 12,13 2,6"></polyline>
-                </svg>
-                <span>Comunicazioni</span>
-              </Link>
-              <Link to="/archivio" className="nav-link">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="7" rx="2"></rect>
-                  <rect x="3" y="14" width="18" height="7" rx="2"></rect>
-                  <line x1="9" y1="6.5" x2="9" y2="6.51"></line>
-                  <line x1="9" y1="17.5" x2="9" y2="17.51"></line>
-                </svg>
-                <span>Archivio</span>
-              </Link>
-              <Link to="/archivio-fisico/operazioni" className="nav-link">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="5" rx="2"></rect>
-                  <rect x="2" y="10" width="20" height="5" rx="2"></rect>
-                  <rect x="2" y="17" width="20" height="5" rx="2"></rect>
-                </svg>
-                <span>Operazioni</span>
-              </Link>
-              <Link to="/help" className="nav-link">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-                <span>Help</span>
-              </Link>
-              <Link to="/ai-classifier/jobs" className="nav-link">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-                  <line x1="6" y1="6" x2="6.01" y2="6"></line>
-                  <line x1="6" y1="18" x2="6.01" y2="18"></line>
-                </svg>
-                <span>AI Classifier</span>
-              </Link>
-            </div>
+          <Typography
+            variant="h6"
+            component={Link}
+            to="/"
+            sx={{
+              flexGrow: isMobile ? 1 : 0,
+              textDecoration: 'none',
+              color: 'primary.main',
+              fontWeight: 600,
+              mr: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <DashboardIcon />
+            MyGest
+          </Typography>
 
-            <div className="navbar-right">
-              <button
-                onClick={toggleTheme}
-                className="btn-icon"
-                title={theme === 'light' ? 'Modalità scura' : 'Modalità chiara'}
-              >
-                <ThemeIcon size={20} />
-              </button>
+          {!isMobile && (
+            <Box sx={{ flexGrow: 1, display: 'flex', gap: 1 }}>
+              {navItems.slice(0, 8).map((item) => (
+                <Button
+                  key={item.path}
+                  component={Link}
+                  to={item.path}
+                  startIcon={item.icon}
+                  sx={{
+                    color: 'text.primary',
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Box>
+          )}
 
-              <div className="user-menu">
-                <UserIcon size={18} />
-                <span className="user-name">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {!isMobile && (
+              <IconButton onClick={toggleTheme} color="inherit" sx={{ color: 'text.primary' }}>
+                {theme === 'light' ? <Brightness4Icon /> : <Brightness7Icon />}
+              </IconButton>
+            )}
+
+            <IconButton
+              onClick={handleUserMenuClick}
+              color="inherit"
+              sx={{ color: 'text.primary' }}
+            >
+              <AccountCircleIcon />
+            </IconButton>
+
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleUserMenuClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+            >
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
                   {user?.first_name || user?.username}
-                </span>
-                <button onClick={handleLogout} className="btn-icon-text">
-                  <LogoutIcon size={18} />
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </nav>
+                </Typography>
+              </MenuItem>
+              <Divider />
+              <MenuItem onClick={handleLogout}>
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Logout</ListItemText>
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <Drawer
+        variant="temporary"
+        anchor="left"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile
+        }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 280 },
+        }}
+      >
+        {drawer}
+      </Drawer>
+    </>
   );
 }
