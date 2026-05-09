@@ -47,15 +47,19 @@ urlpatterns = [
     
     # Home page (for reverse('home') in tests and templates)
     path("", home, name="home"),
-    
-    # React SPA catch-all (must be last!)
-    # Matches all routes not matched above and serves React frontend
+]
+
+# MEDIA files serving (deve essere PRIMA del catch-all React!)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.ARCHIVIO_BASE_PATH)
+
+# React SPA catch-all (MUST BE LAST!)
+# Matches all routes not matched above and serves React frontend
+urlpatterns += [
     re_path(r'^.*$', react_spa, name="react-spa"),
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.ARCHIVIO_BASE_PATH)
-    
     # Django Debug Toolbar
     try:
         import debug_toolbar

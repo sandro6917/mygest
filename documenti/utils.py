@@ -35,18 +35,57 @@ def _parse_iso_date(val: str) -> Optional[datetime.date]:
         return None
 
 def _format_value(value: Any, fmt: Optional[str]) -> str:
+    """
+    Formatta un valore secondo il formato specificato.
+    
+    Supporta:
+    - Formati strftime per date (%Y%m%d, %Y-%m-%d, etc.)
+    - Formati Python per numeri (02d, .2f, etc.)
+    - Nessun formato: converte a stringa
+    
+    Args:
+        value: valore da formattare
+        fmt: formato opzionale (strftime per date, formato Python per numeri)
+    
+    Returns:
+        stringa formattata
+    """
     if value is None:
         return ""
+    
     if fmt:
-        # data/datetime o stringa data ISO
+        # 1. Prova formato data/datetime (strftime)
         if isinstance(value, (datetime.date, datetime.datetime)):
             d = value.date() if isinstance(value, datetime.datetime) else value
             return d.strftime(fmt)
+        
+        # 2. Prova parsing stringa ISO date
         if isinstance(value, str):
             d = _parse_iso_date(value)
             if d:
                 return d.strftime(fmt)
-        # fallback: ignora il fmt su tipi non data
+        
+        # 3. Prova formato Python per numeri (es. 02d, .2f, etc.)
+        # Formato Python: deve iniziare con 0 o . o terminare con d/f/e/x/o/etc.
+        if fmt and (fmt[0].isdigit() or fmt[0] == '.' or fmt[-1] in 'dfeExXobgGnsc'):
+            try:
+                # Converti valore a tipo appropriato
+                if fmt[-1] in 'dxXob':  # Formati interi
+                    val_int = int(value) if not isinstance(value, int) else value
+                    return f"{val_int:{fmt}}"
+                elif fmt[-1] in 'fFeEgGn':  # Formati float
+                    val_float = float(value) if not isinstance(value, float) else value
+                    return f"{val_float:{fmt}}"
+                else:  # Altri formati stringa
+                    return f"{value:{fmt}}"
+            except (ValueError, TypeError):
+                # Se il formato fallisce, usa il valore originale
+                logger.debug(
+                    f"_format_value: impossibile applicare formato '{fmt}' a valore '{value}' "
+                    f"(tipo {type(value).__name__}), uso str(value)"
+                )
+                pass
+    
     return str(value)
 
 

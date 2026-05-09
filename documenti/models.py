@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from django.db import models, transaction, IntegrityError
 from django.db.models import F
@@ -485,8 +485,8 @@ class Documento(models.Model):
         storage = self.file.storage
         current_name = self.file.name  # percorso relativo nello storage (es. tmp/2021/BOCBRU/...)
         
-        # Ottieni l'operazione scelta dall'utente (default: copy per retrocompatibilità)
-        file_operation = getattr(self, '_file_operation', 'copy')
+        # Ottieni l'operazione scelta dall'utente (default: move per evitare accumulo tmp)
+        file_operation = getattr(self, '_file_operation', 'move')
         logger.info(
             "_move_file_into_archivio: documento id=%s, file_operation=%s, hasattr=%s",
             self.pk,
@@ -645,6 +645,50 @@ class Documento(models.Model):
             )
             self.codice = nuovo_codice
             self.save(update_fields=['codice'])
+    
+    def applica_rename_con_attributi(self, attrs: Optional[Dict[str, Any]] = None):
+        """
+        Applica il rename del file utilizzando gli attributi dinamici.
+        
+        Questo metodo è utile quando:
+        - Il documento viene creato con _skip_auto_rename=True
+        - Gli attributi vengono salvati DOPO la creazione del documento
+        - Il nome_file_pattern del tipo documento utilizza token {attr:...}
+        
+        NOTA: Deve essere chiamato DOPO che il documento è stato salvato
+        e gli attributi sono stati creati.
+        
+        :param attrs: dizionario opzionale di attributi (codice -> valore).
+                     Se None, vengono letti automaticamente dal DB.
+        """
+        if not self.pk:
+            raise ValueError("Il documento deve essere salvato prima di applicare il rename")
+        
+        if not self.file:
+            logger.debug(f"applica_rename_con_attributi: documento {self.pk} senza file, skip")
+            return
+        
+        original_name = os.path.basename(self.file.name)
+        
+        logger.info(
+            f"applica_rename_con_attributi: documento {self.pk}, "
+            f"original_name={original_name}, attrs_passed={'YES' if attrs else 'NO'}"
+        )
+        
+        # Rename con attributi
+        self._rename_file_if_needed(
+            original_name,
+            only_new=False,  # Forza il rename anche se non è nuovo
+            attrs=attrs
+        )
+        
+        # Move in archivio con attributi
+        self._move_file_into_archivio(attrs=attrs)
+        
+        logger.info(
+            f"applica_rename_con_attributi completato: documento {self.pk}, "
+            f"nuovo_percorso={self.file.name}"
+        )
     
     @property
     def is_cartaceo(self) -> bool:
@@ -815,6 +859,7 @@ class ImportSession(models.Model):
     
     TIPO_CHOICES = [
         ('cedolini', 'Cedolini Paga'),
+        ('certificazioni_uniche', 'Certificazioni Uniche'),
         ('unilav', 'Comunicazioni UNILAV'),
         ('f24', 'Modelli F24'),
         ('dichiarazioni_fiscali', 'Dichiarazioni Fiscali'),

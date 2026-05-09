@@ -62,7 +62,20 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Logout action
-      logout: () => {
+      logout: async () => {
+        const { refreshToken } = get();
+        
+        // Try to invalidate token on backend
+        if (refreshToken) {
+          try {
+            await apiClient.post('/auth/logout/', { refresh: refreshToken });
+          } catch (error) {
+            // Logout localmente anche se backend fallisce
+            console.warn('Backend logout failed, clearing local tokens:', error);
+          }
+        }
+        
+        // Clear local storage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
 

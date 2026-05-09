@@ -7,7 +7,23 @@ __pycache__/
 
 # Virtual environments
 venv/
+.venv/
 .env/
+
+# ML models (binary files)
+ml_models/
+
+# Test data / extracted texts
+testi_pdf/
+testi_estratti_per_tipo/
+testi_per_tipo/
+testi_estratti_training_*.zip
+TESTI_ESTRATTI_*.zip
+TESTI_ESTRATTI_OCR_*.md
+TESTO_ESTRATTO_*.txt
+feature_extraction_output.txt
+feature_extraction_COMPLETE_OUTPUT.txt
+attributi_choice_report.pdf
 
 # Logs and caches
 *.log

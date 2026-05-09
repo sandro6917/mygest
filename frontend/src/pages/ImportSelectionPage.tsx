@@ -41,6 +41,7 @@ import type { ImporterType, TipoImportazione } from '@/api/import';
 // Icone per tipo importazione
 const TIPO_ICONS: Record<TipoImportazione, React.ReactElement> = {
   cedolini: <WorkIcon fontSize="large" />,
+  certificazioni_uniche: <ArticleIcon fontSize="large" />,
   unilav: <AssignmentIcon fontSize="large" />,
   f24: <MoneyIcon fontSize="large" />,
   dichiarazioni_fiscali: <ArticleIcon fontSize="large" />,
@@ -51,6 +52,7 @@ const TIPO_ICONS: Record<TipoImportazione, React.ReactElement> = {
 // Descrizioni tipo importazione
 const TIPO_DESCRIPTIONS: Record<TipoImportazione, string> = {
   cedolini: 'Importa cedolini paga in formato PDF o ZIP contenente multipli cedolini',
+  certificazioni_uniche: 'Importa Certificazioni Uniche (CU) - ZIP contenente CU di dipendenti dello stesso datore',
   unilav: 'Importa comunicazioni UNILAV (assunzioni, proroghe, trasformazioni, cessazioni)',
   f24: 'Importa modelli F24 per versamenti fiscali e contributivi',
   dichiarazioni_fiscali: 'Importa dichiarazioni fiscali (730, Unico, IVA, etc.)',
@@ -261,6 +263,27 @@ export const ImportSelectionPage: React.FC = () => {
                     </CardActionArea>
                   </Card>
                 ))}
+
+              {/* Card statica: Archivio CU (importazione ZIP diretta come documento unico) */}
+              <Card variant="outlined" sx={{ height: '100%', border: 1, borderColor: 'divider' }}>
+                <CardActionArea onClick={() => navigate('/import-archivio-cu')} sx={{ height: '100%' }}>
+                  <CardContent>
+                    <Box display="flex" alignItems="center" mb={2}>
+                      <Box sx={{ color: 'action.active', mr: 2 }}>
+                        <ZipIcon fontSize="large" />
+                      </Box>
+                      <Typography variant="h6">Archivio CU</Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Importa l'intero ZIP come documento unico (CU-ZIP) associato al committente
+                    </Typography>
+                    <Box mt={2}>
+                      <Chip label="Singolo" size="small" variant="outlined" sx={{ mr: 1 }} />
+                      <Chip label=".zip" size="small" variant="outlined" />
+                    </Box>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
               </Box>
             </Paper>
 

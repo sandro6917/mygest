@@ -407,7 +407,7 @@ export const documentiApi = {
   
   // Importa ZIP come Libro Unico
   async importaZipLibroUnico(
-    file: File,
+    fileOrSessionUuid: File | string,
     azioneDuplicati: 'sostituisci' | 'duplica' | 'skip' = 'duplica'
   ): Promise<{
     success: boolean;
@@ -427,12 +427,60 @@ export const documentiApi = {
     errori: string[];
   }> {
     const formData = new FormData();
-    formData.append('file', file);
+    
+    if (typeof fileOrSessionUuid === 'string') {
+      // UUID della sessione
+      formData.append('session_uuid', fileOrSessionUuid);
+    } else {
+      // File uploadato
+      formData.append('file', fileOrSessionUuid);
+    }
+    
     formData.append('azione_duplicati', azioneDuplicati);
 
     const response = await apiClient.post(
       `${BASE_URL}/importa-zip-libro-unico/`,
       formData
+    );
+    return response.data;
+  },
+
+  // Importa ZIP come Archivio Certificazioni Uniche (CU-ZIP)
+  async importaZipCU(
+    fileOrSessionUuid: File | string,
+    azioneDuplicati: 'sostituisci' | 'duplica' | 'skip' = 'duplica'
+  ): Promise<{
+    success: boolean;
+    documento_id?: number;
+    duplicato: boolean;
+    duplicato_id?: number;
+    azione: string;
+    metadati: {
+      titolo: string;
+      anno_imposta: number;
+      datore: string;
+      datore_cf: string;
+      num_certificazioni: number;
+      dipendenti: string[];
+    };
+    errori: string[];
+  }> {
+    const formData = new FormData();
+    
+    if (typeof fileOrSessionUuid === 'string') {
+      // UUID della sessione
+      formData.append('session_uuid', fileOrSessionUuid);
+    } else {
+      // File uploadato
+      formData.append('file', fileOrSessionUuid);
+    }
+    
+    formData.append('azione_duplicati', azioneDuplicati);
+
+    const response = await apiClient.post(
+      `${BASE_URL}/importa-zip-cu/`,
+      formData,
+      { timeout: 180000 } // 3 minuti: estrazione AI di N PDF richiede tempo
     );
     return response.data;
   },

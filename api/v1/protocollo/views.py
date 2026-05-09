@@ -5,6 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from core.permissions import RBACPermission
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
@@ -25,7 +26,7 @@ class MovimentoProtocolloViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet per gestione movimenti protocollo
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -36,6 +37,14 @@ class MovimentoProtocolloViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = MovimentoProtocollo.objects.select_related(
             'documento', 'fascicolo', 'cliente', 'operatore', 'ubicazione', 'destinatario_anagrafica'
         ).all()
+        
+        # RBAC: filtra per clienti accessibili
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    queryset = queryset.filter(cliente_id__in=accessible_clients_ids)
         
         # Filtri
         documento_id = self.request.query_params.get('documento')

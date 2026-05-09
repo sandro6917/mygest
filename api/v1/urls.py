@@ -45,8 +45,8 @@ urlpatterns = [
     # Archivio Fisico
     path('archivio-fisico/', include('api.v1.archivio_fisico.urls')),
     
-    # AI Classifier
-    path('ai-classifier/', include('ai_classifier.urls')),
+    # AI Classifier (ML local models)
+    path('ai-classifier/', include('api.v1.ai_classifier.urls')),
     
     # TODO: Add more API endpoints
 ]

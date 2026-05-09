@@ -8,6 +8,7 @@ from .base import BaseImporter, ParseResult, ImporterRegistry
 
 # Importatori registrati (auto-register tramite decorator)
 from .cedolini import CedoliniImporter
+from .certificazioni_uniche import CertificazioniUnicheImporter
 from .unilav import UNILAVImporter
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     'ParseResult',
     'ImporterRegistry',
     'CedoliniImporter',
+    'CertificazioniUnicheImporter',
     'UNILAVImporter',
 ]
 

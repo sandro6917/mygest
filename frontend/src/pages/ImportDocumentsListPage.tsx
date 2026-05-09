@@ -184,8 +184,8 @@ export const ImportDocumentsListPage: React.FC = () => {
   };
 
   const handleSalvaZipLibroUnico = async () => {
-    if (!session || !session.file_originale) {
-      toast.error('File ZIP non disponibile');
+    if (!session || !sessionUuid) {
+      toast.error('Sessione non disponibile');
       return;
     }
     
@@ -199,13 +199,8 @@ export const ImportDocumentsListPage: React.FC = () => {
     setProcessingBatch(true);
     
     try {
-      // Fetch del file ZIP originale dalla sessione
-      const response = await fetch(session.file_originale);
-      const blob = await response.blob();
-      const file = new File([blob], session.file_originale_nome || 'cedolini.zip', { type: 'application/zip' });
-      
-      // Chiama l'API per creare il Libro Unico
-      const result = await documentiApi.importaZipLibroUnico(file, 'duplica');
+      // Passa l'UUID della sessione invece di fare fetch del file
+      const result = await documentiApi.importaZipLibroUnico(sessionUuid, 'duplica');
       
       if (result.success) {
         toast.success(

@@ -653,26 +653,20 @@ class UNILAVImporter(BaseImporter):
         
         logger.info(f"Creato documento UNILAV #{documento.id}: {descrizione}")
         
-        # 7. Salva file PDF
-        file_path = kwargs.get('file_path')
-        if file_path and os.path.exists(file_path):
-            with open(file_path, 'rb') as f:
-                documento.file.save(
-                    os.path.basename(file_path),
-                    File(f),
-                    save=True
-                )
-        
-        # 8. Salva Attributi Dinamici
+        # 7. ✅ Salva Attributi Dinamici PRIMA di allegare il file
+        # Così il sistema di naming dei file potrà usare gli attributi
         attributi_map = {
             'codice_comunicazione': valori_editati.get('codice_comunicazione'),
-            'dipendente': anagrafica_lavoratore.id,
+            'dipendente': anagrafica_lavoratore.id,  # ✅ ID anagrafica (non nome)
             'tipo': tipo_comunicazione,
             'data_comunicazione': valori_editati.get('data_comunicazione'),
             'data_da': valori_editati.get('data_da'),
             'data_a': valori_editati.get('data_a'),
             'data_proroga': valori_editati.get('data_proroga'),
         }
+        
+        # Mappa per build_document_filename (mantieni tipi nativi per formattazione)
+        attrs_map_for_rename = {}
         
         for codice_attr, valore in attributi_map.items():
             if valore is not None:
@@ -685,13 +679,36 @@ class UNILAVImporter(BaseImporter):
                     AttributoValore.objects.update_or_create(
                         documento=documento,
                         definizione=definizione,
-                        defaults={'valore': str(valore)}
+                        defaults={'valore': valore}  # ✅ Preserva tipo nativo per pattern template
                     )
+                    
+                    # ✅ Aggiungi alla mappa per rename (tipo nativo)
+                    attrs_map_for_rename[codice_attr] = valore
                     
                     logger.debug(f"Salvato attributo '{codice_attr}': {valore}")
                     
                 except AttributoDefinizione.DoesNotExist:
                     logger.warning(f"Attributo '{codice_attr}' non configurato, saltato")
+        
+        # 8. ✅ Allega file PDF DOPO aver salvato gli attributi
+        file_path = kwargs.get('file_path')
+        if file_path and os.path.exists(file_path):
+            # ✅ Imposta flag per saltare rename automatico durante save()
+            documento._skip_auto_rename = True
+            
+            with open(file_path, 'rb') as f:
+                documento.file.save(
+                    os.path.basename(file_path),
+                    File(f),
+                    save=True  # ✅ save=True per salvare il file
+                )
+            
+            # ✅ Applica rename con attributi disponibili
+            logger.info(
+                f"applica_rename_con_attributi: documento {documento.id}, "
+                f"attrs_map: {attrs_map_for_rename}"
+            )
+            documento.applica_rename_con_attributi(attrs=attrs_map_for_rename)
         
         # 9. Salva dati aggiuntivi in NOTE
         note_extra = []

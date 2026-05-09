@@ -232,7 +232,7 @@ class DocumentoDetailSerializer(serializers.ModelSerializer):
 class DocumentoCreateUpdateSerializer(serializers.ModelSerializer):
     file_operation = serializers.ChoiceField(
         choices=[('copy', 'Copy'), ('move', 'Move')],
-        default='copy',
+        default='move',  # Cambiato da 'copy' a 'move' per evitare accumulo in tmp
         write_only=True,
         required=False
     )
@@ -1047,6 +1047,13 @@ class ImportDocumentCreateSerializer(serializers.Serializer):
         allow_null=True,
         help_text="ID fascicolo a cui associare il documento (opzionale)"
     )
+    duplicate_policy = serializers.ChoiceField(
+        choices=['skip', 'replace', 'add'],
+        required=False,
+        allow_null=True,
+        default='skip',
+        help_text="Policy gestione duplicati: skip=annulla, replace=sostituisci, add=importa comunque"
+    )
     
     def validate_cliente_id(self, value):
         """Valida che il cliente esista"""
@@ -1079,8 +1086,12 @@ class ImportaZipLibroUnicoSerializer(serializers.Serializer):
     Endpoint: POST /api/v1/documenti/importa-zip-libro-unico/
     """
     file = serializers.FileField(
-        required=True,
+        required=False,
         help_text="File ZIP contenente i cedolini"
+    )
+    session_uuid = serializers.UUIDField(
+        required=False,
+        help_text="UUID della sessione di import da cui recuperare il file ZIP originale"
     )
     azione_duplicati = serializers.ChoiceField(
         choices=['sostituisci', 'duplica', 'skip'],
@@ -1088,6 +1099,18 @@ class ImportaZipLibroUnicoSerializer(serializers.Serializer):
         default='duplica',
         help_text="Azione in caso di duplicati: sostituisci, duplica o skip"
     )
+    
+    def validate(self, attrs):
+        """Valida che sia presente file o session_uuid"""
+        if not attrs.get('file') and not attrs.get('session_uuid'):
+            raise serializers.ValidationError(
+                "Deve essere fornito il file ZIP o l'UUID della sessione di import"
+            )
+        if attrs.get('file') and attrs.get('session_uuid'):
+            raise serializers.ValidationError(
+                "Fornire solo uno tra file ZIP e UUID sessione, non entrambi"
+            )
+        return attrs
     
     def validate_file(self, value):
         """Valida che il file sia un ZIP"""
@@ -1099,6 +1122,53 @@ class ImportaZipLibroUnicoSerializer(serializers.Serializer):
         if value.size > max_size:
             raise serializers.ValidationError(
                 f"Il file ZIP supera la dimensione massima di 100MB (dimensione: {value.size / 1024 / 1024:.1f}MB)"
+            )
+        
+        return value
+
+
+class ImportaZipCUSerializer(serializers.Serializer):
+    """
+    Serializer per importazione ZIP come documento Archivio CU (CU-ZIP).
+    Endpoint: POST /api/v1/documenti/importa-zip-cu/
+    """
+    file = serializers.FileField(
+        required=False,
+        help_text="File ZIP contenente le certificazioni uniche"
+    )
+    session_uuid = serializers.UUIDField(
+        required=False,
+        help_text="UUID della sessione di import da cui recuperare il file ZIP originale"
+    )
+    azione_duplicati = serializers.ChoiceField(
+        choices=['sostituisci', 'duplica', 'skip'],
+        required=False,
+        default='duplica',
+        help_text="Azione in caso di duplicati: sostituisci, duplica o skip"
+    )
+    
+    def validate(self, attrs):
+        """Valida che sia presente file o session_uuid"""
+        if not attrs.get('file') and not attrs.get('session_uuid'):
+            raise serializers.ValidationError(
+                "Deve essere fornito il file ZIP o l'UUID della sessione di import"
+            )
+        if attrs.get('file') and attrs.get('session_uuid'):
+            raise serializers.ValidationError(
+                "Fornire solo uno tra file ZIP e UUID sessione, non entrambi"
+            )
+        return attrs
+    
+    def validate_file(self, value):
+        """Valida che il file sia un ZIP"""
+        if not value.name.lower().endswith('.zip'):
+            raise serializers.ValidationError("Il file deve essere in formato ZIP")
+        
+        # Limite dimensione: 200MB (CU ZIP può essere più grande di cedolini)
+        max_size = 200 * 1024 * 1024  # 200MB
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                f"Il file ZIP supera la dimensione massima di 200MB (dimensione: {value.size / 1024 / 1024:.1f}MB)"
             )
         
         return value

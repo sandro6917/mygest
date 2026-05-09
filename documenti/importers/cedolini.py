@@ -503,22 +503,37 @@ class CedoliniImporter(BaseImporter):
             tracciabile=True,  # Cedolini sono sempre tracciabili
         )
         
+        # Crea attributi dinamici PRIMA di allegare il file
+        # Così il sistema di naming dei file potrà usare gli attributi
+        attrs_map = self._create_attributi(documento, tipo_bpag, anno, mese, mensilita, parsed_data, anagrafica_dipendente)
+        
         # Allega file PDF se fornito
+        # Imposta _skip_auto_rename per evitare rename prematuro senza attributi
         file_path = kwargs.get('file_path')
         if file_path and os.path.exists(file_path):
             from django.core.files import File as DjangoFile
             filename = os.path.basename(file_path)
+            
+            # ✅ Imposta flag per saltare rename automatico durante save()
+            documento._skip_auto_rename = True
             
             with open(file_path, 'rb') as f:
                 django_file = DjangoFile(f, name=filename)
                 documento.file.save(filename, django_file, save=True)
             
             logger.info(f"File PDF allegato: {filename}")
+            
+            # ✅ Log debug per verificare attrs_map prima del rename
+            logger.info(
+                f"applica_rename_con_attributi: documento {documento.id}, "
+                f"attrs_map keys: {list(attrs_map.keys())}, "
+                f"attrs_map values: {attrs_map}"
+            )
+            
+            # ✅ Ora applica il rename con gli attributi disponibili
+            documento.applica_rename_con_attributi(attrs=attrs_map)
         
         logger.info(f"Creato documento {documento.id}: {documento.descrizione} (fascicolo: {fascicolo or 'da assegnare'})")
-        
-        # Crea attributi dinamici
-        self._create_attributi(documento, tipo_bpag, anno, mese, mensilita, parsed_data)
         
         return documento
     
@@ -529,9 +544,18 @@ class CedoliniImporter(BaseImporter):
         anno: int,
         mese: int,
         mensilita: str,
-        parsed_data: Dict
-    ):
-        """Crea AttributoValore per il documento"""
+        parsed_data: Dict,
+        anagrafica_dipendente: Anagrafica = None
+    ) -> Dict[str, Any]:
+        """
+        Crea AttributoValore per il documento.
+        
+        Args:
+            anagrafica_dipendente: Anagrafica del dipendente (se disponibile)
+        
+        Returns:
+            Dict con mapping codice_attributo -> valore (per passare a build_document_filename)
+        """
         
         # Estrai numero e data/ora dal parsed_data
         numero_cedolino = parsed_data['cedolino'].get('numero_cedolino')
@@ -542,16 +566,30 @@ class CedoliniImporter(BaseImporter):
             ('anno_riferimento', 'Anno riferimento', 'int', anno),
             ('mese_riferimento', 'Mese riferimento', 'int', mese),
             ('mensilita', 'Mensilità', 'string', mensilita),  # ✅ CORRETTO: 'string' invece di 'str'
-            (
-                'dipendente',
-                'Dipendente',
-                'string',  # ✅ CORRETTO: 'string' invece di 'str'
-                f"{parsed_data['lavoratore']['cognome']} {parsed_data['lavoratore']['nome']}"
-            ),
             # ✅ NUOVI ATTRIBUTI per rilevamento duplicati
             ('numero_cedolino', 'Numero cedolino', 'string', numero_cedolino),  # ✅ CORRETTO: 'string' invece di 'str'
             ('data_ora_cedolino', 'Data/Ora cedolino', 'string', data_ora_cedolino),  # ✅ CORRETTO: 'string' invece di 'str'
         ]
+        
+        # ✅ CORREZIONE: Usa l'ID dell'anagrafica dipendente se disponibile
+        if anagrafica_dipendente:
+            attributi_config.append((
+                'dipendente',
+                'Dipendente',
+                'int',  # ✅ INT per ID anagrafica
+                anagrafica_dipendente.id
+            ))
+        else:
+            # Fallback: salva il nome (compatibilità)
+            attributi_config.append((
+                'dipendente',
+                'Dipendente',
+                'string',
+                f"{parsed_data['lavoratore']['cognome']} {parsed_data['lavoratore']['nome']}"
+            ))
+        
+        # Mappa da restituire per build_document_filename
+        attrs_map = {}
         
         for codice, nome, tipo_campo, valore in attributi_config:
             # Salta se valore è None (attributi opzionali)
@@ -570,13 +608,19 @@ class CedoliniImporter(BaseImporter):
             )
             
             # Create valore
+            # NOTA: valore rimane nel tipo originale (int/str) perché JSONField preserva i tipi
             AttributoValore.objects.create(
                 documento=documento,
                 definizione=definizione,
-                valore=str(valore)
+                valore=valore  # ✅ Preserva tipo nativo per pattern template
             )
+            
+            # ✅ Aggiungi alla mappa per build_document_filename
+            attrs_map[codice] = valore
         
-        logger.debug(f"Creati attributi per documento {documento.id}")
+        logger.debug(f"Creati attributi per documento {documento.id}: {list(attrs_map.keys())}")
+        
+        return attrs_map
     
     def _create_or_get_dipendente_anagrafica(self, lavoratore_data: Dict) -> Anagrafica:
         """

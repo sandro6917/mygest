@@ -8,6 +8,8 @@ Questo strumento consente di gestire facilmente i server Django, Frontend e SSH 
 
 - ✅ Avvio/Arresto/Riavvio dei server Django e Frontend con un click
 - 🔐 Gestione completa del server SSH per accesso remoto
+- 📷 Gestione servizio Scanner per scansioni documenti
+- 🤖 Gestione MyGest Agent per auto-detection ed eliminazione file
 - 🎨 Interfaccia grafica e a menu interattiva
 - 📊 Monitoraggio dello stato dei servizi in tempo reale
 - 🪟 Apertura automatica di terminali separati per ogni server
@@ -29,6 +31,9 @@ windows_manager/
 ├── Quick_Start_SSH.bat              # Avvio rapido SSH
 ├── Quick_Stop_SSH.bat               # Arresto rapido SSH
 ├── Quick_Restart_SSH.bat            # Riavvio rapido SSH
+├── Quick_Start_Scanner.bat          # Avvio rapido Scanner Service
+├── Quick_Start_Agent.bat            # Avvio rapido MyGest Agent
+├── Quick_Stop_Agent.bat             # Arresto rapido MyGest Agent
 ├── Setup_SSH_PortForward.ps1        # Configurazione port forwarding SSH
 ├── SSH_SETUP_GUIDE.md               # Guida completa configurazione SSH
 └── README.md                        # Questa guida
@@ -271,6 +276,85 @@ I server sono configurati per essere accessibili da Windows:
 - Frontend: `http://localhost:5173`
 
 L'opzione `0.0.0.0` negli script fa sì che i server siano accessibili dall'host Windows.
+
+## 📷 Gestione Servizio Scanner
+
+Il servizio scanner gestisce le scansioni documenti con scanner Brother e Kyocera.
+
+### Avvio Rapido Scanner
+
+```batch
+Quick_Start_Scanner.bat   # Avvia scanner service su porta 8765
+```
+
+### Funzionalità Scanner
+
+- ✅ Supporto scanner Brother ADS-2400N (192.168.1.7)
+- ✅ Supporto scanner Kyocera ECOSYS M2540dn (192.168.1.151)
+- ✅ Scansione duplex automatica
+- ✅ PDF/A, 300 DPI, grayscale
+- ✅ Ottimizzazione B/N con compressione
+- ✅ Health check endpoint: `http://localhost:8765/health`
+
+### Dal Menu Interattivo
+
+```
+D. Avvia Scanner    - Avvia servizio scanner
+E. Ferma Scanner    - Arresta servizio scanner
+F. Riavvia Scanner  - Riavvia servizio scanner
+```
+
+## 🤖 Gestione MyGest Agent (Auto-Detection)
+
+Il MyGest Agent monitora le cartelle e elimina automaticamente i file dopo l'upload su MyGest.
+
+### Prima Configurazione
+
+1. **Copia template configurazione**:
+   ```bash
+   wsl cp /home/sandro/mygest/config/mygest-agent.conf.example ~/.mygest-agent.conf
+   ```
+
+2. **Modifica configurazione** (inserisci token API):
+   ```bash
+   wsl nano ~/.mygest-agent.conf
+   ```
+
+3. **Verifica configurazione**:
+   ```batch
+   wsl cd /home/sandro/mygest && source venv/bin/activate && python scripts/mygest_agent_config.py --show-config
+   ```
+
+### Avvio Rapido Agent
+
+```batch
+Quick_Start_Agent.bat     # Avvia agent con auto-detection
+Quick_Stop_Agent.bat      # Arresta agent con statistiche
+```
+
+### Dal Menu Interattivo
+
+```
+G. Avvia Agent          - Avvia agent auto-detection
+H. Ferma Agent          - Arresta agent (con statistiche)
+I. Riavvia Agent        - Riavvia agent
+J. Statistiche Agent    - Mostra statistiche e log dettagliati
+```
+
+### Funzionalità Agent
+
+- ✅ **Auto-Detection**: Trova automaticamente file per nome+dimensione (95%+ accuracy)
+- ✅ **Real-time**: Monitora cartelle con watchdog (no polling overhead)
+- ✅ **Cache 24h**: Mantiene traccia file recenti
+- ✅ **Sicurezza**: Path protetti (impossibile eliminare file sistema)
+- ✅ **Statistiche**: Report dettagliato operazioni
+- ✅ **Log**: `~/.mygest-agent.log` con rotazione
+
+### Documentazione Agent
+
+- `AGENT_AUTODETECTION_READY.md` - Quick start
+- `GUIDA_CONFIGURAZIONE_CARTELLE_AGENT.md` - Configurazione completa
+- `GESTIONE_FILE_DOCUMENTI.md` - Workflow file management
 
 ## 🎨 Personalizzazione Icona (Opzionale)
 

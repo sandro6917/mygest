@@ -13,6 +13,7 @@ $PROJECT_PATH = "/home/sandro/mygest"
 $DJANGO_PORT = 8000
 $FRONTEND_PORT = 5173
 $SSH_PORT = 22  # Porta SSH standard
+$SCANNER_PORT = 8765  # Porta servizio scanner
 
 # Variabili globali per tracciare i PID delle finestre PowerShell
 $Global:DjangoWindowPID = $null
@@ -50,6 +51,11 @@ function Get-FrontendProcessId {
 function Get-SSHStatus {
     $result = wsl -d $WSL_DISTRO bash -c "systemctl is-active ssh 2>/dev/null || service ssh status 2>/dev/null | grep -q 'running' && echo 'active' || echo 'inactive'"
     return ($result -eq "active")
+}
+
+function Get-ScannerProcessId {
+    $result = wsl -d $WSL_DISTRO bash -c "pgrep -f 'scanner_service.py'"
+    return $result
 }
 
 function Start-DjangoServer {
@@ -270,6 +276,237 @@ function Restart-SSHServer {
     }
 }
 
+function Start-ScannerServer {
+    Write-ColorOutput Yellow "Avvio del servizio Scanner..."
+    
+    $processId = Get-ScannerProcessId
+    if ($processId) {
+        Write-ColorOutput Red "Il servizio Scanner e' gia' in esecuzione (PID: $processId)"
+        return $false
+    }
+    
+    # Avvia il servizio scanner usando script daemon wrapper
+    $result = wsl -d $WSL_DISTRO bash -c "$PROJECT_PATH/scripts/start_scanner_daemon.sh" 2>$null
+    Start-Sleep -Seconds 4
+    
+    $processId = Get-ScannerProcessId
+    if ($processId) {
+        Write-ColorOutput Green "Servizio Scanner avviato con successo (PID: $processId)"
+        Write-ColorOutput Green "  URL: http://localhost:$SCANNER_PORT"
+        Write-ColorOutput Cyan "  Log: logs/scanner_service.log"
+        
+        # Verifica che il servizio risponda
+        try {
+            $response = Invoke-WebRequest -Uri "http://localhost:$SCANNER_PORT/health" -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue
+            if ($response.StatusCode -eq 200) {
+                Write-ColorOutput Green "  Health check: OK"
+            }
+        } catch {
+            Write-ColorOutput Yellow "  Health check non disponibile (il servizio potrebbe essere ancora in fase di avvio)"
+        }
+        
+        return $true
+    } else {
+        Write-ColorOutput Red "Errore nell'avvio del servizio Scanner"
+        Write-ColorOutput Yellow "  Verifica i log in logs/scanner_service.log"
+        return $false
+    }
+}
+
+function Stop-ScannerServer {
+    Write-ColorOutput Yellow "Arresto del servizio Scanner..."
+    
+    $processId = Get-ScannerProcessId
+    if (-not $processId) {
+        Write-ColorOutput Red "Il servizio Scanner non e' in esecuzione"
+        return $false
+    }
+    
+    $result = wsl -d $WSL_DISTRO bash -c "pkill -f 'scanner_service.py'"
+    Start-Sleep -Seconds 2
+    
+    $processId = Get-ScannerProcessId
+    if (-not $processId) {
+        Write-ColorOutput Green "Servizio Scanner arrestato con successo"
+        return $true
+    } else {
+        Write-ColorOutput Red "Errore nell'arresto del servizio Scanner"
+        return $false
+    }
+}
+
+function Restart-ScannerServer {
+    Write-ColorOutput Yellow "Riavvio del servizio Scanner..."
+    
+    Stop-ScannerServer
+    Start-Sleep -Seconds 2
+    Start-ScannerServer
+}
+
+# === AGENT AUTO-DETECTION FUNCTIONS ===
+
+function Get-AgentProcessId {
+    $result = wsl -d $WSL_DISTRO bash -c "pgrep -f 'mygest_agent_autodetect.py'"
+    return $result
+}
+
+function Start-AgentServer {
+    Write-ColorOutput Yellow "Avvio MyGest Agent con Auto-Detection..."
+    
+    $processId = Get-AgentProcessId
+    if ($processId) {
+        Write-ColorOutput Red "MyGest Agent e' gia' in esecuzione (PID: $processId)"
+        return $false
+    }
+    
+    # Verifica che la configurazione esista
+    $configExists = wsl -d $WSL_DISTRO bash -c "test -f ~/.mygest-agent.conf && echo 'exists' || echo 'missing'"
+    if ($configExists -ne "exists") {
+        Write-ColorOutput Red "File configurazione non trovato: ~/.mygest-agent.conf"
+        Write-ColorOutput Yellow "  Crea la configurazione con:"
+        Write-ColorOutput Yellow "  cp $PROJECT_PATH/config/mygest-agent.conf.example ~/.mygest-agent.conf"
+        return $false
+    }
+    
+    # Verifica che watchdog sia installato
+    $watchdogInstalled = wsl -d $WSL_DISTRO bash -c "cd $PROJECT_PATH && source venv/bin/activate 2>/dev/null && python -c 'import watchdog' 2>/dev/null && echo 'ok' || echo 'missing'"
+    if ($watchdogInstalled -ne "ok") {
+        Write-ColorOutput Yellow "  Installazione watchdog in corso..."
+        wsl -d $WSL_DISTRO bash -c "cd $PROJECT_PATH && source venv/bin/activate 2>/dev/null && pip install -q watchdog"
+        Write-ColorOutput Green "  Watchdog installato"
+    }
+    
+    # Crea directory log se non esiste
+    wsl -d $WSL_DISTRO bash -c "mkdir -p $PROJECT_PATH/logs"
+    
+    # Avvia agent usando script daemon wrapper
+    $result = wsl -d $WSL_DISTRO bash -c "$PROJECT_PATH/scripts/start_agent_daemon.sh" 2>$null
+    Start-Sleep -Seconds 4
+    
+    $processId = Get-AgentProcessId
+    if ($processId) {
+        Write-ColorOutput Green "MyGest Agent avviato con successo (PID: $processId)"
+        
+        # Mostra info configurazione
+        $cartelle = wsl -d $WSL_DISTRO bash -c "grep '^monitor_' ~/.mygest-agent.conf 2>/dev/null | grep -v '^#' | wc -l" 2>$null
+        Write-ColorOutput Cyan "  Cartelle monitorate: $cartelle"
+        Write-ColorOutput Cyan "  Log servizio: logs/agent_autodetect.log"
+        
+        # Mostra ultimi log (attendi che si popolino)
+        Start-Sleep -Seconds 3
+        Write-ColorOutput Yellow "`n  Ultimi log agent:"
+        wsl -d $WSL_DISTRO bash -c "tail -n 8 $PROJECT_PATH/logs/agent_autodetect.log 2>/dev/null | sed 's/^/    /'" 2>$null
+        
+        return $true
+    } else {
+        Write-ColorOutput Red "Errore nell'avvio di MyGest Agent"
+        Write-ColorOutput Yellow "  Verifica i log in:"
+        Write-ColorOutput Yellow "    - ~/.mygest-agent.log"
+        Write-ColorOutput Yellow "    - logs/agent_autodetect.log"
+        return $false
+    }
+}
+
+function Stop-AgentServer {
+    Write-ColorOutput Yellow "Arresto MyGest Agent..."
+    
+    $processId = Get-AgentProcessId
+    if (-not $processId) {
+        Write-ColorOutput Red "MyGest Agent non e' in esecuzione"
+        return $false
+    }
+    
+    # Usa SIGTERM per arresto pulito (agent gestisce segnale)
+    $result = wsl -d $WSL_DISTRO bash -c "pkill -TERM -f 'mygest_agent_autodetect.py'"
+    Start-Sleep -Seconds 3
+    
+    # Verifica arresto
+    $processId = Get-AgentProcessId
+    if (-not $processId) {
+        Write-ColorOutput Green "MyGest Agent arrestato con successo"
+        
+        # Mostra statistiche finali dall'ultimo log agent_autodetect.log
+        Write-ColorOutput Yellow "`n  Statistiche sessione (se disponibili):"
+        wsl -d $WSL_DISTRO bash -c "tail -n 20 $PROJECT_PATH/logs/agent_autodetect.log 2>/dev/null | grep -E 'Statistiche|File eliminati|Fallimenti|Auto-detected|manuale' | sed 's/^/    /'" 2>$null
+        
+        return $true
+    } else {
+        Write-ColorOutput Yellow "  Arresto normale fallito, forzatura in corso..."
+        # Force kill se necessario
+        wsl -d $WSL_DISTRO bash -c "pkill -9 -f 'mygest_agent_autodetect.py'"
+        Start-Sleep -Seconds 1
+        Write-ColorOutput Green "MyGest Agent arrestato forzatamente"
+        return $true
+    }
+}
+
+function Restart-AgentServer {
+    Write-ColorOutput Yellow "Riavvio MyGest Agent..."
+    
+    Stop-AgentServer
+    Start-Sleep -Seconds 2
+    Start-AgentServer
+}
+
+function Show-AgentStats {
+    Write-ColorOutput Cyan "`n======================================="
+    Write-ColorOutput Cyan "     STATISTICHE MYGEST AGENT"
+    Write-ColorOutput Cyan "======================================="
+    
+    $processId = Get-AgentProcessId
+    if (-not $processId) {
+        Write-ColorOutput Red "MyGest Agent non e' in esecuzione"
+        Write-Output ""
+        return
+    }
+    
+    Write-ColorOutput Green "Agent attivo (PID: $processId)"
+    Write-Output ""
+    
+    # Mostra configurazione
+    Write-ColorOutput Yellow "Configurazione:"
+    $serverUrl = wsl -d $WSL_DISTRO bash -c "grep '^url' ~/.mygest-agent.conf 2>/dev/null | cut -d'=' -f2 | xargs"
+    $pollInterval = wsl -d $WSL_DISTRO bash -c "grep '^poll_interval' ~/.mygest-agent.conf 2>/dev/null | cut -d'=' -f2 | xargs"
+    $cacheRetention = wsl -d $WSL_DISTRO bash -c "grep '^cache_retention_hours' ~/.mygest-agent.conf 2>/dev/null | cut -d'=' -f2 | xargs"
+    
+    Write-Output "  Server: $serverUrl"
+    Write-Output "  Poll interval: $pollInterval secondi"
+    Write-Output "  Cache retention: $cacheRetention ore"
+    Write-Output ""
+    
+    # Mostra cartelle monitorate
+    Write-ColorOutput Yellow "Cartelle monitorate:"
+    wsl -d $WSL_DISTRO bash -c "grep '^monitor_' ~/.mygest-agent.conf 2>/dev/null | grep -v '^#' | cut -d'=' -f2 | xargs -I {} echo '  - {}'" 2>$null
+    Write-Output ""
+    
+    # Mostra statistiche da log attuale (agent_autodetect.log)
+    Write-ColorOutput Yellow "Stato Agent:"
+    $logExists = wsl -d $WSL_DISTRO bash -c "test -f $PROJECT_PATH/logs/agent_autodetect.log && echo 'exists' || echo 'missing'" 2>$null
+    
+    if ($logExists -eq "exists") {
+        # Estrai info dalla scansione iniziale
+        $fileTracciati = wsl -d $WSL_DISTRO bash -c "grep 'file unici tracciati' $PROJECT_PATH/logs/agent_autodetect.log 2>/dev/null | tail -1 | grep -oP '\d+(?= file)'" 2>$null
+        if ($fileTracciati) {
+            Write-Output "  File tracciati in cache: $fileTracciati"
+        }
+        
+        # Mostra data/ora avvio
+        $avvioAgent = wsl -d $WSL_DISTRO bash -c "grep 'Agent avviato con auto-detection' $PROJECT_PATH/logs/agent_autodetect.log 2>/dev/null | tail -1 | cut -d' ' -f1-2" 2>$null
+        if ($avvioAgent) {
+            Write-Output "  Avviato: $avvioAgent"
+        }
+        
+        Write-Output ""
+        Write-ColorOutput Yellow "Ultimi log (15 righe):"
+        wsl -d $WSL_DISTRO bash -c "tail -n 15 $PROJECT_PATH/logs/agent_autodetect.log 2>/dev/null | sed 's/^/  /'" 2>$null
+    } else {
+        Write-ColorOutput Red "  Log agent_autodetect.log non trovato"
+    }
+    
+    Write-Output ""
+    Write-ColorOutput Cyan "======================================="
+}
+
 function Show-ServerStatus {
     Write-ColorOutput Cyan "======================================="
     Write-ColorOutput Cyan "         STATO DEI SERVIZI"
@@ -308,6 +545,31 @@ function Show-ServerStatus {
     }
     
     Write-Output ""
+    
+    # Scanner Status
+    $scannerProcessId = Get-ScannerProcessId
+    if ($scannerProcessId) {
+        Write-ColorOutput Green "Scanner Service:  IN ESECUZIONE (PID: $scannerProcessId)"
+        Write-Output "                  http://localhost:$SCANNER_PORT"
+    } else {
+        Write-ColorOutput Red "Scanner Service:  FERMO"
+    }
+    
+    Write-Output ""
+    
+    # Agent Status
+    $agentProcessId = Get-AgentProcessId
+    if ($agentProcessId) {
+        Write-ColorOutput Green "MyGest Agent:     IN ESECUZIONE (PID: $agentProcessId)"
+        $cartelle = wsl -d $WSL_DISTRO bash -c "grep '^monitor_' ~/.mygest-agent.conf 2>/dev/null | grep -v '^#' | wc -l" 2>$null
+        $fileTracciati = wsl -d $WSL_DISTRO bash -c "grep 'file unici tracciati' $PROJECT_PATH/logs/agent_autodetect.log 2>/dev/null | tail -1 | grep -oP '\d+(?= file)'" 2>$null
+        Write-Output "                  $cartelle cartelle, $fileTracciati file tracciati"
+        Write-Output "                  Log: logs/agent_autodetect.log"
+    } else {
+        Write-ColorOutput Red "MyGest Agent:     FERMO"
+    }
+    
+    Write-Output ""
     Write-ColorOutput Cyan "======================================="
 }
 
@@ -332,6 +594,17 @@ function Show-Menu {
     Write-Output "  A. Avvia SSH"
     Write-Output "  B. Ferma SSH"
     Write-Output "  C. Riavvia SSH"
+    Write-Output ""
+    Write-Output "  === Servizio Scanner ==="
+    Write-Output "  D. Avvia Scanner"
+    Write-Output "  E. Ferma Scanner"
+    Write-Output "  F. Riavvia Scanner"
+    Write-Output ""
+    Write-Output "  === MyGest Agent (Auto-Detection) ==="
+    Write-Output "  G. Avvia Agent"
+    Write-Output "  H. Ferma Agent"
+    Write-Output "  I. Riavvia Agent"
+    Write-Output "  J. Statistiche Agent"
     Write-Output ""
     Write-Output "  === Generale ==="
     Write-Output "  S. Mostra stato"
@@ -431,6 +704,55 @@ function Show-Menu {
         "C" {
             Write-Output ""
             Restart-SSHServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "D" {
+            Write-Output ""
+            Start-ScannerServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "E" {
+            Write-Output ""
+            Stop-ScannerServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "F" {
+            Write-Output ""
+            Restart-ScannerServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "G" {
+            Write-Output ""
+            Start-AgentServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "H" {
+            Write-Output ""
+            Stop-AgentServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "I" {
+            Write-Output ""
+            Restart-AgentServer
+            Write-Output ""
+            Read-Host "Premi INVIO per continuare"
+            Show-Menu
+        }
+        "J" {
+            Write-Output ""
+            Show-AgentStats
             Write-Output ""
             Read-Host "Premi INVIO per continuare"
             Show-Menu

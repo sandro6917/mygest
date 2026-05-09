@@ -102,3 +102,59 @@ export interface JobStats {
   total_files_processed: number;
   total_documents_imported: number;
 }
+
+// Tipi per ML Prediction API
+
+export interface ParsedFields {
+  parser_type: string;
+  parsed_successfully: boolean;
+  attributi: Record<string, any>;
+  anagrafiche?: {
+    datore?: {
+      codice_fiscale: string;
+      tipo: 'PF' | 'PG';
+      denominazione: string;
+    };
+    lavoratore?: {
+      codice_fiscale: string;
+      tipo: 'PF';
+      denominazione: string;
+    };
+  };
+  descrizione_suggerita?: string;
+}
+
+export interface PredictResponse {
+  success: boolean;
+  predictions: {
+    tipo: {
+      top_prediction: string;
+      confidence: number;
+      all_predictions: Array<[string, number]>;
+      meets_threshold: boolean;
+    };
+  };
+  metadata: {
+    extracted_features: {
+      codici_fiscali: string[];
+      partite_iva: string[];
+      importi: string[];
+      date: string[];
+      entities_persone: number;
+      entities_org: number;
+      word_count: number;
+    };
+    ocr_method: string;
+    ocr_pages: number;
+    text_length: number;
+    filename: string;
+    parsed_fields?: ParsedFields;  // Campi specifici estratti (UNILAV, etc.)
+  };
+  model_info: {
+    version: string;
+    accuracy: number;
+    trained_at: string;
+  };
+  error?: string;
+  prediction_id?: number;
+}

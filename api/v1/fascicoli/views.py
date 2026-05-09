@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from core.permissions import RBACPermission
 
 from fascicoli.models import Fascicolo
 from titolario.models import TitolarioVoce
@@ -22,7 +23,11 @@ from .serializers import (
 
 class FascicoloViewSet(viewsets.ModelViewSet):
     """
-    ViewSet per gestione fascicoli
+    ViewSet per gestione fascicoli con RBAC.
+    
+    Isolamento dati:
+    - ADMIN/MANAGER: tutti i fascicoli
+    - OPERATORE/VIEWER: solo fascicoli dei clienti assegnati
     
     list: Lista fascicoli con filtri
     retrieve: Dettaglio fascicolo
@@ -34,7 +39,7 @@ class FascicoloViewSet(viewsets.ModelViewSet):
     - sottofascicoli: Lista sottofascicoli di un fascicolo
     - stats: Statistiche generali sui fascicoli
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['id', 'codice', 'titolo', 'note']
     ordering_fields = ['anno', 'progressivo', 'codice', 'created_at']
@@ -46,6 +51,19 @@ class FascicoloViewSet(viewsets.ModelViewSet):
             'cliente', 'cliente__anagrafica', 'titolario_voce', 
             'parent', 'ubicazione'
         ).prefetch_related('pratiche', 'sottofascicoli')
+        
+        # RBAC Filtering
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            
+            # ADMIN/MANAGER: vedono tutto
+            if profile.can_view_all:
+                pass  # Nessun filtro
+            else:
+                # OPERATORE/VIEWER: solo fascicoli clienti assegnati
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    qs = qs.filter(cliente_id__in=accessible_clients_ids)
         
         # Filtro per fascicoli radice (parent is null)
         parent_param = self.request.query_params.get('parent')

@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from core.permissions import RBACPermission
 from django.http import HttpResponse, FileResponse
 from django.core.exceptions import ValidationError
 
@@ -29,7 +30,11 @@ from .serializers import (
 
 class AnagraficaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet per CRUD Anagrafiche
+    ViewSet per CRUD Anagrafiche con RBAC.
+    
+    Isolamento dati:
+    - ADMIN/MANAGER: tutte le anagrafiche
+    - OPERATORE/VIEWER: solo anagrafiche dei clienti assegnati
     
     list: GET /api/v1/anagrafiche/
     retrieve: GET /api/v1/anagrafiche/{id}/
@@ -38,7 +43,7 @@ class AnagraficaViewSet(viewsets.ModelViewSet):
     partial_update: PATCH /api/v1/anagrafiche/{id}/
     destroy: DELETE /api/v1/anagrafiche/{id}/
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     queryset = Anagrafica.objects.all()
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['ragione_sociale', 'nome', 'cognome', 'codice_fiscale', 'partita_iva', 'email', 'pec']
@@ -55,11 +60,24 @@ class AnagraficaViewSet(viewsets.ModelViewSet):
         return AnagraficaDetailSerializer
     
     def get_queryset(self):
-        """Filtra queryset in base ai parametri"""
+        """Filtra queryset con RBAC + parametri"""
         from django.db.models import Case, When, Value, CharField
         from django.db.models.functions import Concat
         
         queryset = super().get_queryset()
+        
+        # RBAC Filtering
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            
+            # ADMIN/MANAGER: vedono tutto
+            if profile.can_view_all:
+                pass  # Nessun filtro
+            else:
+                # OPERATORE/VIEWER: solo anagrafiche dei clienti assegnati
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    queryset = queryset.filter(cliente__id__in=accessible_clients_ids)
         
         # Filtro per clienti
         is_cliente = self.request.query_params.get('is_cliente')
@@ -670,10 +688,23 @@ class ClienteViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet read-only per Clienti
     """
-    permission_classes = [IsAuthenticated]
-    queryset = Cliente.objects.select_related('anagrafica').all()
+    permission_classes = [RBACPermission]
     serializer_class = ClienteSerializer
     pagination_class = None  # Disabilita paginazione per avere tutti i clienti nelle select
+    
+    def get_queryset(self):
+        qs = Cliente.objects.select_related('anagrafica').all()
+        
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if profile.can_view_all:
+                return qs
+            
+            accessible_clients_ids = profile.get_accessible_clients_ids()
+            if accessible_clients_ids is not None:
+                qs = qs.filter(id__in=accessible_clients_ids)
+        
+        return qs
 
 
 class ClientiTipoViewSet(viewsets.ReadOnlyModelViewSet):

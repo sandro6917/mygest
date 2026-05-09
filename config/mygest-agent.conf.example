@@ -1,0 +1,67 @@
+# MyGest Agent - Configurazione
+# File: ~/.mygest-agent.conf
+
+[server]
+# URL del server MyGest
+url = http://localhost:8000
+
+# Token API per autenticazione
+# Genera da: Admin Django → Tokens → Create Token
+token = YOUR_API_TOKEN_HERE
+
+[agent]
+# Intervallo polling in secondi (default: 30)
+poll_interval = 30
+
+# Ore di retention cache file (default: 24)
+cache_retention_hours = 24
+
+[folders]
+# Cartelle da monitorare per auto-detection (una per riga)
+# Supporta path Windows (C:\...) o WSL (/mnt/c/...)
+# I path Windows verranno convertiti automaticamente in WSL
+
+# Downloads browser
+monitor_downloads = /mnt/c/Users/Sandro/Downloads
+
+# Desktop
+monitor_desktop = /mnt/c/Users/Sandro/Desktop
+
+# Documenti
+monitor_documents = /mnt/c/Users/Sandro/Documents
+
+# Google Drive (esempio drive G:)
+monitor_gdrive = /mnt/g/Il mio Drive
+
+# Dropbox (esempio drive D:)
+# monitor_dropbox = /mnt/d/Dropbox
+
+# OneDrive (esempio)
+# monitor_onedrive = /mnt/c/Users/Sandro/OneDrive
+
+# Cartelle personalizzate
+# monitor_custom1 = /mnt/c/Progetti/Documenti
+# monitor_custom2 = /mnt/e/Archivio/Scansioni
+
+[protection]
+# Percorsi protetti - NON verranno MAI eliminati (uno per riga)
+protected_path1 = /mnt/archivio
+protected_path2 = /home/sandro/mygest
+protected_path3 = /var/www
+protected_path4 = /usr
+protected_path5 = /bin
+protected_path6 = /sbin
+protected_path7 = /etc
+
+[logging]
+# Livello log: DEBUG, INFO, WARNING, ERROR
+level = INFO
+
+# File log
+file = ~/.mygest-agent.log
+
+# Dimensione massima file log (MB)
+max_size_mb = 10
+
+# Numero backup file log da mantenere
+backup_count = 3

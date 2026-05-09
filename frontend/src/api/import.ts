@@ -9,7 +9,7 @@ import { apiClient } from './client';
 // Types
 // ============================================
 
-export type TipoImportazione = 'cedolini' | 'unilav' | 'f24' | 'dichiarazioni_fiscali' | 'contratti' | 'fatture';
+export type TipoImportazione = 'cedolini' | 'certificazioni_uniche' | 'unilav' | 'f24' | 'dichiarazioni_fiscali' | 'contratti' | 'fatture';
 
 export type StatoSession = 'active' | 'completed' | 'expired';
 
@@ -186,6 +186,7 @@ export const importApi = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 120000, // 120 secondi per upload + parsing (ZIP con molti PDF)
       }
     );
     return data;

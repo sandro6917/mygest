@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
+from core.permissions import RBACPermission
 from django.http import FileResponse, Http404
 from django.db.models import Q
 from django.core.files.storage import default_storage
@@ -146,9 +147,13 @@ def _mappa_tipo_comunicazione_unilav(modello: str = None, tipologia_contrattuale
 
 class DocumentoViewSet(viewsets.ModelViewSet):
     """
-    ViewSet per gestione documenti
+    ViewSet per gestione documenti con RBAC.
+    
+    Isolamento dati:
+    - ADMIN/MANAGER: tutti i documenti
+    - OPERATORE/VIEWER: solo documenti dei clienti assegnati
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = DocumentoFilter
     search_fields = ['id', 'codice', 'descrizione', 'tags', 'note', 'ubicazione__codice', 'ubicazione__nome', 'ubicazione__full_path']
@@ -160,6 +165,19 @@ class DocumentoViewSet(viewsets.ModelViewSet):
             'tipo', 'cliente', 'cliente__anagrafica', 'fascicolo',
             'titolario_voce', 'ubicazione'
         ).prefetch_related('attributi_valori', 'attributi_valori__definizione')
+        
+        # RBAC Filtering
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            
+            # ADMIN/MANAGER: vedono tutto
+            if profile.can_view_all:
+                return qs
+            
+            # OPERATORE/VIEWER: solo documenti clienti assegnati
+            accessible_clients_ids = profile.get_accessible_clients_ids()
+            if accessible_clients_ids is not None:
+                qs = qs.filter(cliente_id__in=accessible_clients_ids)
         
         return qs
     
@@ -228,6 +246,38 @@ class DocumentoViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response(
                 {'detail': f'Errore nel download del file: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def preview(self, request, pk=None):
+        """Preview file documento (visualizza inline nel browser)"""
+        documento = self.get_object()
+        
+        if not documento.file:
+            return Response(
+                {'detail': 'Nessun file associato al documento'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            # Determina il content type dal nome del file
+            import mimetypes
+            content_type, _ = mimetypes.guess_type(documento.file.name)
+            
+            response = FileResponse(
+                documento.file.open('rb'),
+                as_attachment=False,  # Non forzare il download
+                content_type=content_type or 'application/octet-stream'
+            )
+            
+            # Aggiungi header per permettere la visualizzazione inline
+            response['Content-Disposition'] = f'inline; filename="{documento.file.name.split("/")[-1]}"'
+            
+            return response
+        except Exception as e:
+            return Response(
+                {'detail': f'Errore nel caricamento del file: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -1772,7 +1822,8 @@ class DocumentoViewSet(viewsets.ModelViewSet):
         POST /api/v1/documenti/importa-zip-libro-unico/
         
         Body (multipart/form-data):
-            - file: ZIP file
+            - file: ZIP file (opzionale se fornito session_uuid)
+            - session_uuid: UUID sessione import (opzionale se fornito file)
             - azione_duplicati: 'sostituisci' | 'duplica' | 'skip' (default: 'duplica')
         
         Response:
@@ -1795,6 +1846,7 @@ class DocumentoViewSet(viewsets.ModelViewSet):
         """
         from .importa_libro_unico import importa_zip_come_libro_unico
         from .serializers import ImportaZipLibroUnicoSerializer
+        from documenti.models import ImportSession
         
         serializer = ImportaZipLibroUnicoSerializer(data=request.data)
         
@@ -1804,17 +1856,143 @@ class DocumentoViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        zip_file = serializer.validated_data['file']
+        zip_file = serializer.validated_data.get('file')
+        session_uuid = serializer.validated_data.get('session_uuid')
         azione_duplicati = serializer.validated_data.get('azione_duplicati', 'duplica')
         
-        logger.info(f"Importazione ZIP libro unico: {zip_file.name}, azione={azione_duplicati}")
+        # Se fornito session_uuid, recupera il file originale dalla sessione
+        if session_uuid:
+            try:
+                session = ImportSession.objects.get(uuid=session_uuid)
+                if not session.file_originale:
+                    return Response(
+                        {'errori': ['La sessione non ha un file originale associato']},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Usa direttamente il file dalla sessione
+                zip_file = session.file_originale
+                logger.info(f"Importazione ZIP libro unico da sessione {session_uuid}: {zip_file.name}, azione={azione_duplicati}")
+            except ImportSession.DoesNotExist:
+                return Response(
+                    {'errori': ['Sessione di import non trovata']},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            logger.info(f"Importazione ZIP libro unico da file uploadato: {zip_file.name}, azione={azione_duplicati}")
         
         # Esegui importazione
-        risultato = importa_zip_come_libro_unico(
-            zip_file=zip_file,
-            azione_duplicati=azione_duplicati,
-            user=request.user
-        )
+        try:
+            risultato = importa_zip_come_libro_unico(
+                zip_file=zip_file,
+                azione_duplicati=azione_duplicati,
+                user=request.user
+            )
+        except Exception as e:
+            logger.error(f"Errore importazione ZIP libro unico: {e}", exc_info=True)
+            return Response(
+                {
+                    'success': False,
+                    'errori': [f"Errore durante l'importazione: {str(e)}"]
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        if risultato['success']:
+            return Response(risultato, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                risultato,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='importa-zip-cu',
+        parser_classes=[MultiPartParser, FormParser]
+    )
+    def importa_zip_cu(self, request):
+        """
+        Importa un file ZIP contenente certificazioni uniche come singolo documento CU-ZIP.
+        
+        POST /api/v1/documenti/importa-zip-cu/
+        
+        Body (multipart/form-data):
+            - file: ZIP file (opzionale se fornito session_uuid)
+            - session_uuid: UUID sessione import (opzionale se fornito file)
+            - azione_duplicati: 'sostituisci' | 'duplica' | 'skip' (default: 'duplica')
+        
+        Response:
+            {
+                "success": true,
+                "documento_id": 789,
+                "duplicato": false,
+                "azione": "creato",  # o "sostituito", "duplicato", "skipped"
+                "metadati": {
+                    "titolo": "Archivio CU 2025 - ACME SRL",
+                    "anno_imposta": 2025,
+                    "datore": "ACME SRL",
+                    "datore_cf": "12345678901",
+                    "num_certificazioni": 45,
+                    "dipendenti": ["BIANCHI LUCA", "ROSSI MARIO", ...]
+                },
+                "errori": []
+            }
+        """
+        from .importa_zip_cu import importa_zip_come_cu
+        from .serializers import ImportaZipCUSerializer
+        from documenti.models import ImportSession
+        
+        serializer = ImportaZipCUSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        zip_file = serializer.validated_data.get('file')
+        session_uuid = serializer.validated_data.get('session_uuid')
+        azione_duplicati = serializer.validated_data.get('azione_duplicati', 'duplica')
+        
+        # Se fornito session_uuid, recupera il file originale dalla sessione
+        if session_uuid:
+            try:
+                session = ImportSession.objects.get(uuid=session_uuid)
+                if not session.file_originale:
+                    return Response(
+                        {'errori': ['La sessione non ha un file originale associato']},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Usa direttamente il file dalla sessione
+                zip_file = session.file_originale
+                logger.info(f"Importazione ZIP CU da sessione {session_uuid}: {zip_file.name}, azione={azione_duplicati}")
+            except ImportSession.DoesNotExist:
+                return Response(
+                    {'errori': ['Sessione di import non trovata']},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            logger.info(f"Importazione ZIP CU da file uploadato: {zip_file.name}, azione={azione_duplicati}")
+        
+        # Esegui importazione
+        try:
+            risultato = importa_zip_come_cu(
+                zip_file=zip_file,
+                azione_duplicati=azione_duplicati,
+                user=request.user
+            )
+        except Exception as e:
+            logger.error(f"Errore importazione ZIP CU: {e}", exc_info=True)
+            return Response(
+                {
+                    'success': False,
+                    'errori': [f"Errore durante l'importazione: {str(e)}"]
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         if risultato['success']:
             return Response(risultato, status=status.HTTP_201_CREATED)
@@ -1952,11 +2130,11 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
     - POST /import-sessions/{uuid}/documents/{doc_uuid}/skip/ - Salta documento
     """
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     lookup_field = 'uuid'
     
     def get_queryset(self):
-        """Lista solo sessioni dell'utente corrente"""
+        """Lista solo sessioni dell'utente corrente (già filtrato per user)"""
         return ImportSession.objects.filter(
             utente=self.request.user
         ).prefetch_related('documents')
@@ -1995,11 +2173,19 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
             tipo_importazione: str (cedolini, unilav, f24, etc.)
             file: File (PDF o ZIP)
         """
+        print("=" * 80)
+        print("🚀 ImportSessionViewSet.create() AVVIATO")
+        print("=" * 80)
+        logger.info("🚀 ImportSessionViewSet.create() AVVIATO")
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
         tipo = serializer.validated_data['tipo_importazione']
         file = serializer.validated_data['file']
+        
+        print(f"📁 File upload: {file.name}, tipo: {tipo}")
+        logger.info(f"📁 File upload: {file.name}, tipo: {tipo}")
         
         try:
             # Crea sessione
@@ -2021,10 +2207,13 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
             
             # Estrai documenti dal file
             try:
+                print(f"📦 EXTRACT: Avvio estrazione documenti da {file.name}...")
+                logger.info(f"📦 Avvio estrazione documenti da {file.name}...")
                 extracted_docs = importer.extract_documents(session.file_originale.path)
-                logger.info(f"Estratti {len(extracted_docs)} documenti da {file.name}")
+                print(f"✅ EXTRACT: Estratti {len(extracted_docs)} documenti")
+                logger.info(f"✅ Estratti {len(extracted_docs)} documenti da {file.name}")
             except Exception as e:
-                logger.error(f"Errore estrazione documenti: {e}")
+                logger.error(f"❌ Errore estrazione documenti: {e}", exc_info=True)
                 session.delete()
                 return Response(
                     {'error': f'Errore estrazione documenti: {str(e)}'},
@@ -2032,8 +2221,12 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
                 )
             
             # Crea ImportSessionDocument per ogni file estratto
+            print(f"📝 CREATE: Creazione di {len(extracted_docs)} ImportSessionDocument...")
+            logger.info(f"📝 Creazione di {len(extracted_docs)} ImportSessionDocument...")
             session_docs = []
-            for doc_info in extracted_docs:
+            for idx, doc_info in enumerate(extracted_docs):
+                print(f"   CREATE: {idx+1}/{len(extracted_docs)}: {doc_info['filename']}")
+                logger.debug(f"   Creando ImportSessionDocument {idx+1}/{len(extracted_docs)}: {doc_info['filename']}")
                 session_doc = ImportSessionDocument.objects.create(
                     session=session,
                     filename=doc_info['filename'],
@@ -2043,15 +2236,23 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
                 )
                 session_docs.append(session_doc)
             
-            logger.info(f"Creati {len(session_docs)} ImportSessionDocument")
+            print(f"✅ CREATE: Creati {len(session_docs)} ImportSessionDocument")
+            print(f"🔄 PARSE: Avvio parsing di {len(session_docs)} documenti...")
+            logger.info(f"✅ Creati {len(session_docs)} ImportSessionDocument")
+            logger.info(f"🔄 Avvio parsing di {len(session_docs)} documenti...")
             
             # Parsa ogni documento
             for session_doc in session_docs:
                 try:
+                    print(f"🔄 PARSE: Inizio parsing {session_doc.filename}")
+                    logger.info(f"🔄 Inizio parsing: {session_doc.filename}")
                     parse_result = importer.parse_document(
                         session_doc.file_path,
                         session_doc.filename
                     )
+                    print(f"✅ PARSE: parse_document() terminato per {session_doc.filename}")
+                    logger.info(f"✅ parse_document() completato per {session_doc.filename}")
+                    logger.debug(f"   parse_result type: {type(parse_result)}, success: {parse_result.success if parse_result else 'None'}")
                     
                     if parse_result.success:
                         session_doc.parsed_data = parse_result.parsed_data
@@ -2059,10 +2260,19 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
                         session_doc.valori_editabili = parse_result.valori_editabili
                         session_doc.mappatura_db = parse_result.mappatura_db
                         session_doc.parsed_at = timezone.now()
-                        session_doc.save()
                         
-                        logger.info(f"Parsed OK: {session_doc.filename}")
+                        print(f"💾 SAVE: Salvando {session_doc.filename}...")
+                        logger.info(f"💾 Salvando documento parsato: {session_doc.filename}...")
+                        try:
+                            session_doc.save()
+                            print(f"✅ SAVE: OK per {session_doc.filename}")
+                            logger.info(f"✅ Parsed OK: {session_doc.filename}")
+                        except Exception as e_save:
+                            print(f"❌ SAVE: ERRORE per {session_doc.filename}: {e_save}")
+                            logger.error(f"❌ ERRORE SAVE documento {session_doc.filename}: {e_save}", exc_info=True)
+                            raise
                     else:
+                        print(f"⚠️  PARSE: Errore per {session_doc.filename}: {parse_result.error_message}")
                         session_doc.mark_as_error(
                             parse_result.error_message,
                             parse_result.error_traceback
@@ -2070,17 +2280,29 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
                         logger.warning(f"Errore parsing {session_doc.filename}: {parse_result.error_message}")
                     
                 except Exception as e:
+                    print(f"❌ EXCEPTION: {session_doc.filename}: {e}")
                     import traceback
                     error_traceback = traceback.format_exc()
                     session_doc.mark_as_error(str(e), error_traceback)
                     logger.error(f"Eccezione parsing {session_doc.filename}: {e}")
             
             # Aggiorna statistiche sessione
+            print(f"🎯 FINALE: Parsing completato, salvataggio sessione...")
+            logger.info(f"Parsing completato per {len(session_docs)} documenti. Salvataggio sessione...")
             session.save()
+            print(f"✅ FINALE: Sessione salvata, preparazione risposta...")
+            logger.info(f"✅ Sessione {session.uuid} salvata. Preparazione risposta HTTP...")
             
             # Ritorna dettaglio sessione
-            output_serializer = ImportSessionDetailSerializer(session)
-            return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+            try:
+                print(f"📤 SERIALIZER: Serializzazione sessione...")
+                output_serializer = ImportSessionDetailSerializer(session)
+                print(f"✅ SERIALIZER: OK, invio risposta HTTP 201...")
+                logger.info("✅ Serializzazione completata. Invio risposta al client...")
+                return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+            except Exception as e_ser:
+                logger.error(f"❌ ERRORE SERIALIZZAZIONE: {e_ser}", exc_info=True)
+                raise
             
         except Exception as e:
             logger.error(f"Errore creazione sessione: {e}")
@@ -2278,10 +2500,47 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
             **serializer.validated_data.get('valori_editabili', {})
         }
         
+        # Policy gestione duplicati
+        duplicate_policy = serializer.validated_data.get('duplicate_policy', 'skip')
+        
         try:
             # Recupera importer e crea documento
             importer_class = ImporterRegistry.get_importer(session.tipo_importazione)
             importer = importer_class(session)
+            
+            # Verifica duplicati se policy non è 'add' (aggiungi sempre)
+            if duplicate_policy != 'add':
+                # Check duplicato
+                if hasattr(importer, 'check_duplicate'):
+                    duplicate_result = importer.check_duplicate(
+                        parsed_data=session_doc.parsed_data,
+                        valori_editabili=valori_editabili
+                    )
+                    
+                    if duplicate_result and duplicate_result.get('is_duplicate'):
+                        # Se policy è 'skip', restituisci 409 Conflict
+                        if duplicate_policy == 'skip':
+                            return Response({
+                                'error': 'Documento duplicato',
+                                'error_type': 'duplicate',
+                                'duplicate_info': duplicate_result.get('duplicate_info'),
+                                'message': 'Documento già presente. Seleziona una policy diversa per continuare.'
+                            }, status=status.HTTP_409_CONFLICT)
+                        
+                        # Se policy è 'replace', elimina documento esistente
+                        elif duplicate_policy == 'replace':
+                            try:
+                                from documenti.models import Documento
+                                doc_id = duplicate_result.get('duplicate_info', {}).get('id')
+                                if doc_id:
+                                    doc_esistente = Documento.objects.get(id=doc_id)
+                                    logger.info(f"Elimino documento esistente {doc_esistente.codice} (ID={doc_id}) per sostituzione")
+                                    doc_esistente.delete()
+                            except Exception as e_del:
+                                logger.error(f"Errore eliminazione documento esistente: {e_del}")
+                                return Response({
+                                    'error': f'Errore eliminazione documento esistente: {str(e_del)}'
+                                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             documento = importer.create_documento(
                 parsed_data=session_doc.parsed_data,

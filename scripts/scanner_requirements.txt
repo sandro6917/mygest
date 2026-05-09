@@ -1,0 +1,9 @@
+# Scanner Service Requirements
+# Servizio per gestione scanner di rete con SANE
+
+Flask==3.0.0
+Flask-CORS==4.0.0
+python-sane==2.9.1
+Pillow==10.1.0
+pikepdf==8.10.1
+img2pdf==0.5.1

@@ -32,6 +32,14 @@ class PendingDeletionSerializer(serializers.ModelSerializer):
     
     documento_id = serializers.IntegerField(source='documento.id', read_only=True)
     documento_codice = serializers.CharField(source='documento.codice', read_only=True)
+    file_name = serializers.SerializerMethodField()
+    
+    def get_file_name(self, obj):
+        """Estrae il nome del file dal documento per auto-detection."""
+        if obj.documento and obj.documento.file:
+            import os
+            return os.path.basename(obj.documento.file.name)
+        return None
     
     class Meta:
         model = FileDeletionRequest
@@ -40,6 +48,7 @@ class PendingDeletionSerializer(serializers.ModelSerializer):
             'documento_id',
             'documento_codice',
             'source_path',
+            'file_name',  # ✅ Aggiunto per auto-detection
             'created_at',
             'file_size'
         ]

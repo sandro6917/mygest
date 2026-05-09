@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { documentiApi } from '@/api/documenti';
 import { fascicoliApi } from '@/api/fascicoli';
+import { aiClassifierApi } from '@/api/aiClassifier';
 import { apiClient } from '@/api/client';
 import type {
   DocumentoFormData,
@@ -20,6 +21,7 @@ import { TitolarioAutocomplete } from '@/components/TitolarioAutocomplete';
 import { TipoDocumentoAutocomplete } from '@/components/TipoDocumentoAutocomplete';
 import { AnagraficaAutocomplete, type AnagraficaOption } from '@/components/AnagraficaAutocomplete';
 import { FileSourceInfo } from '@/components/FileSourceInfo';
+import { ScannerSection } from '@/components/ScannerSection';
 
 type ClientiApiResponse = Cliente[] | { results?: Cliente[] };
 
@@ -65,6 +67,11 @@ export function DocumentoFormPage() {
   
   // Stato per anagrafiche selezionate negli attributi dinamici
   const [anagraficheAttributi, setAnagraficheAttributi] = useState<Record<string, AnagraficaOption | null>>({});
+  
+  // Stato per predizioni AI
+  const [aiPredictions, setAiPredictions] = useState<Array<{ tipo: string; confidence: number; tipo_display?: string }>>([]);
+  const [aiPredicting, setAiPredicting] = useState(false);
+  const [aiPredictionId, setAiPredictionId] = useState<number | null>(null);
 
   const getErrorMessage = (err: unknown, fallback: string) => {
     if (isAxiosError(err)) {
@@ -318,13 +325,101 @@ export function DocumentoFormPage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFormData((prev) => ({ ...prev, file }));
       setFilePreview(file.name);
       setRemoveFile(false); // Se carico un nuovo file, non devo rimuoverlo
+      
+      // Chiamata API predizione AI (solo se non è in edit mode)
+      if (!isEdit) {
+        setAiPredicting(true);
+        setAiPredictions([]);
+        try {
+          const response = await aiClassifierApi.predictDocumentType(file, 5, false);
+          if (response.success && response.predictions.tipo.all_predictions.length > 0) {
+            // Mappa le predizioni con i nomi display dei tipi documento
+            const predictions = response.predictions.tipo.all_predictions.map(([tipo, confidence]) => {
+              const tipoDoc = tipiDocumento.find(t => t.codice === tipo);
+              return {
+                tipo,
+                confidence,
+                tipo_display: tipoDoc?.nome || tipo,
+              };
+            });
+            setAiPredictions(predictions);
+            setAiPredictionId(response.prediction_id ?? null);
+            
+            // Auto-seleziona il tipo con confidence più alta se > 50%
+            if (response.predictions.tipo.confidence > 0.5) {
+              const tipoId = tipiDocumento.find(t => t.codice === response.predictions.tipo.top_prediction)?.id;
+              if (tipoId) {
+                setFormData((prev) => ({ ...prev, tipo: tipoId }));
+                // Carica gli attributi del tipo selezionato
+                await loadTipoDettaglio(tipoId);
+                
+                // Se ci sono campi parsed_fields (es. UNILAV), popola gli attributi
+                const parsedFields = response.metadata?.parsed_fields;
+                if (parsedFields && parsedFields.parsed_successfully) {
+                  console.log('📋 Campi specifici estratti:', parsedFields);
+                  
+                  // Popola descrizione suggerita se disponibile
+                  if (parsedFields.descrizione_suggerita) {
+                    setFormData((prev) => ({ 
+                      ...prev, 
+                      descrizione: parsedFields.descrizione_suggerita || prev.descrizione
+                    }));
+                  }
+                  
+                  // Popola data documento se disponibile
+                  if (parsedFields.attributi?.data_comunicazione) {
+                    setFormData((prev) => ({ 
+                      ...prev, 
+                      data_documento: parsedFields.attributi.data_comunicazione || prev.data_documento
+                    }));
+                  }
+                  
+                  // Dopo che gli attributi sono caricati, popola i valori
+                  // Usiamo un piccolo delay per assicurarci che gli attributi siano stati caricati
+                  setTimeout(() => {
+                    if (parsedFields.attributi) {
+                      // Popola tutti gli attributi estratti
+                      const newFormData: Partial<DocumentoFormData> = {};
+                      Object.entries(parsedFields.attributi).forEach(([codice, valore]) => {
+                        if (valore) {
+                          newFormData[`attr_${codice}` as keyof DocumentoFormData] = String(valore) as any;
+                        }
+                      });
+                      
+                      if (Object.keys(newFormData).length > 0) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          ...newFormData,
+                        }));
+                        console.log('✅ Attributi UNILAV popolati:', Object.keys(newFormData).length);
+                      }
+                    }
+                  }, 500);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Errore predizione AI:', err);
+          // Non bloccare il form se la predizione fallisce
+        } finally {
+          setAiPredicting(false);
+        }
+      }
     }
+  };
+
+  const handleScannedFile = (file: File) => {
+    // Gestisce il file generato dalla scansione
+    setFormData((prev) => ({ ...prev, file }));
+    setFilePreview(file.name);
+    setRemoveFile(false);
   };
 
   const handleRemoveFile = () => {
@@ -522,7 +617,14 @@ export function DocumentoFormPage() {
   }
 
   return (
-    <div className="page-container">
+    <>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div className="page-container">
       {/* Header */}
       <div className="page-header">
         <div>
@@ -571,6 +673,122 @@ export function DocumentoFormPage() {
                   placeholder="Cerca per codice o nome..."
                 />
                 {errors.tipo && <span style={{ color: '#dc3545', fontSize: '0.875rem' }}>{errors.tipo}</span>}
+                
+                {/* Suggerimenti AI */}
+                {aiPredicting && (
+                  <div style={{
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#e7f3ff',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #b3d9ff',
+                    fontSize: '0.875rem',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid #0066cc',
+                        borderTopColor: 'transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                      }} />
+                      <span>🤖 Analisi documento in corso...</span>
+                    </div>
+                  </div>
+                )}
+                
+                {!aiPredicting && aiPredictions.length > 0 && (
+                  <div style={{
+                    marginTop: '0.75rem',
+                    padding: '0.75rem',
+                    backgroundColor: '#f0f9ff',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #bfdbfe',
+                  }}>
+                    <div style={{ 
+                      fontWeight: '600', 
+                      marginBottom: '0.5rem', 
+                      fontSize: '0.875rem',
+                      color: '#1e40af',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.375rem',
+                    }}>
+                      🤖 Suggerimenti AI
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {aiPredictions.slice(0, 3).map((pred, idx) => {
+                        const confidencePercent = Math.round(pred.confidence * 100);
+                        const isHighConfidence = pred.confidence >= 0.7;
+                        const isMediumConfidence = pred.confidence >= 0.4 && pred.confidence < 0.7;
+                        const badgeColor = isHighConfidence ? '#10b981' : isMediumConfidence ? '#f59e0b' : '#ef4444';
+                        const bgColor = isHighConfidence ? '#d1fae5' : isMediumConfidence ? '#fef3c7' : '#fee2e2';
+                        const tipoObj = tipiDocumento.find(t => t.codice === pred.tipo);
+                        
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              if (tipoObj) {
+                                setFormData(prev => ({ ...prev, tipo: tipoObj.id }));
+                                loadTipoDettaglio(tipoObj.id);
+                              }
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '0.5rem 0.75rem',
+                              backgroundColor: idx === 0 ? bgColor : '#f9fafb',
+                              border: `1px solid ${idx === 0 ? badgeColor : '#e5e7eb'}`,
+                              borderRadius: '0.25rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                              textAlign: 'left',
+                              fontSize: '0.875rem',
+                              fontWeight: idx === 0 ? '500' : 'normal',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = bgColor;
+                              e.currentTarget.style.borderColor = badgeColor;
+                            }}
+                            onMouseLeave={(e) => {
+                              if (idx !== 0) {
+                                e.currentTarget.style.backgroundColor = '#f9fafb';
+                                e.currentTarget.style.borderColor = '#e5e7eb';
+                              } else {
+                                e.currentTarget.style.backgroundColor = bgColor;
+                                e.currentTarget.style.borderColor = badgeColor;
+                              }
+                            }}
+                          >
+                            <span>{pred.tipo_display || pred.tipo}</span>
+                            <span style={{
+                              padding: '0.125rem 0.5rem',
+                              backgroundColor: badgeColor,
+                              color: 'white',
+                              borderRadius: '0.25rem',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                            }}>
+                              {confidencePercent}%
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ 
+                      marginTop: '0.5rem', 
+                      fontSize: '0.75rem', 
+                      color: '#6b7280',
+                      fontStyle: 'italic',
+                    }}>
+                      Clicca su un suggerimento per selezionarlo
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Data Documento */}
@@ -864,6 +1082,32 @@ export function DocumentoFormPage() {
           <div className="card">
             <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>File</h2>
             
+            {/* Sezione Scansione Documento */}
+            {!isEdit && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <ScannerSection 
+                  onFileGenerated={handleScannedFile}
+                  disabled={loading}
+                />
+              </div>
+            )}
+            
+            {/* Separatore tra scansione e upload manuale */}
+            {!isEdit && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '1rem', 
+                margin: '1.5rem 0',
+                color: '#6b7280',
+                fontSize: '0.875rem'
+              }}>
+                <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+                <span>oppure carica manualmente</span>
+                <div style={{ flex: 1, height: '1px', backgroundColor: '#e5e7eb' }} />
+              </div>
+            )}
+            
             {/* File esistente */}
             {existingFile && !removeFile && !formData.file && (
               <div style={{ 
@@ -987,6 +1231,7 @@ export function DocumentoFormPage() {
           </div>
         </div>
       </form>
-    </div>
+      </div>
+    </>
   );
 }

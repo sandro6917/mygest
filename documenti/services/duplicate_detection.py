@@ -451,24 +451,31 @@ class DuplicateDetectionService:
         
         return best_match or DuplicateMatchResult(is_duplicate=False)
     
-    def _normalize_value(self, value: Any) -> Optional[Any]:
+    def _normalize_value(self, value: Any) -> Optional[str]:
         """
         Normalizza valore per confronto.
+        
+        Converte tutti i valori a stringa per evitare type mismatch 
+        (es. int 2025 vs string '2025').
         
         Args:
             value: Valore da normalizzare
             
         Returns:
-            Valore normalizzato o None
+            Valore normalizzato come stringa o None
         """
         if value is None:
             return None
         
-        if isinstance(value, str):
-            # Trim whitespace
-            value = value.strip()
-            # Empty string → None
-            if not value:
-                return None
+        # Converti a stringa
+        if not isinstance(value, str):
+            value = str(value)
+        
+        # Trim whitespace
+        value = value.strip()
+        
+        # Empty string → None
+        if not value:
+            return None
         
         return value

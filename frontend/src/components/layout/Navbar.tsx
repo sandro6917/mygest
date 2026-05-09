@@ -36,6 +36,8 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import WorkIcon from '@mui/icons-material/Work';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import LayersIcon from '@mui/icons-material/Layers';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 const getInitialTheme = (): 'light' | 'dark' => {
   if (typeof window === 'undefined') {
@@ -65,6 +67,7 @@ const navItems: NavItem[] = [
   { label: 'Comunicazioni', path: '/comunicazioni', icon: <EmailIcon /> },
   { label: 'Archivio', path: '/archivio', icon: <ArchiveIcon /> },
   { label: 'Operazioni', path: '/archivio-fisico/operazioni', icon: <InventoryIcon /> },
+  { label: 'Template AI', path: '/admin/templates', icon: <LayersIcon /> },
   { label: 'Help', path: '/help', icon: <HelpIcon /> },
   { label: 'AI Classifier', path: '/ai-classifier/jobs', icon: <SmartToyIcon /> },
 ];
@@ -76,6 +79,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -100,6 +104,14 @@ export function Navbar() {
 
   const handleUserMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleMoreMenuClick = (event: React.MouseEvent<HTMLElement>) => {
+    setMoreMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleMoreMenuClose = () => {
+    setMoreMenuAnchorEl(null);
   };
 
   const drawer = (
@@ -232,6 +244,48 @@ export function Navbar() {
                     {item.label}
                   </Button>
                 ))}
+                
+                {/* Menu "Altro" per item rimanenti */}
+                <Button
+                  onClick={handleMoreMenuClick}
+                  startIcon={<MoreVertIcon />}
+                  sx={{
+                    color: 'text.primary',
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                    },
+                  }}
+                >
+                  Altro
+                </Button>
+                
+                <Menu
+                  anchorEl={moreMenuAnchorEl}
+                  open={Boolean(moreMenuAnchorEl)}
+                  onClose={handleMoreMenuClose}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                  }}
+                >
+                  {navItems.slice(7).map((item) => (
+                    <MenuItem
+                      key={item.path}
+                      component={Link}
+                      to={item.path}
+                      onClick={handleMoreMenuClose}
+                    >
+                      <ListItemIcon sx={{ color: 'primary.main' }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText>{item.label}</ListItemText>
+                    </MenuItem>
+                  ))}
+                </Menu>
               </Box>
               
               {/* Help sempre visibile */}

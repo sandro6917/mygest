@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from core.permissions import RBACPermission
 from django.utils import timezone
 from django.db.models import Count, Min, Q
 from datetime import timedelta
@@ -26,7 +27,7 @@ class ScadenzaViewSet(viewsets.ModelViewSet):
     """
     ViewSet per gestione scadenze
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ScadenzaFilter
     search_fields = ['titolo', 'descrizione', 'categoria', 'note_interne']
@@ -63,6 +64,19 @@ class ScadenzaViewSet(viewsets.ModelViewSet):
         assegnatario = self.request.query_params.get('assegnatario')
         if assegnatario:
             qs = qs.filter(assegnatari__id=assegnatario)
+        
+        # RBAC: filtra per clienti accessibili
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    # Filtra scadenze collegate a pratiche/fascicoli/documenti dei clienti accessibili
+                    qs = qs.filter(
+                        Q(pratiche__cliente_id__in=accessible_clients_ids) |
+                        Q(fascicoli__cliente_id__in=accessible_clients_ids) |
+                        Q(documenti__cliente_id__in=accessible_clients_ids)
+                    ).distinct()
         
         return qs
     
@@ -257,7 +271,7 @@ class ScadenzaOccorrenzaViewSet(viewsets.ModelViewSet):
     GET /api/v1/scadenze/occorrenze/?stato=completed&ordering=-inizio
     ```
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     serializer_class = ScadenzaOccorrenzaSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ScadenzaOccorrenzaFilter
@@ -267,8 +281,23 @@ class ScadenzaOccorrenzaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Ottimizza le query con select_related per ridurre il numero di query al database.
+        Applica RBAC filtering tramite scadenza.
         """
-        return ScadenzaOccorrenza.objects.select_related('scadenza')
+        qs = ScadenzaOccorrenza.objects.select_related('scadenza')
+        
+        # RBAC: filtra per clienti accessibili via scadenza
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    qs = qs.filter(
+                        Q(scadenza__pratiche__cliente_id__in=accessible_clients_ids) |
+                        Q(scadenza__fascicoli__cliente_id__in=accessible_clients_ids) |
+                        Q(scadenza__documenti__cliente_id__in=accessible_clients_ids)
+                    ).distinct()
+        
+        return qs
     
     @action(detail=False, methods=['get'])
     def calendar_events(self, request):
@@ -362,7 +391,7 @@ class ScadenzaAlertViewSet(viewsets.ModelViewSet):
     - metodo__in: filtro multiplo per metodo (es: email,whatsapp)
     - attivo: boolean per alert attivi/inattivi
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     serializer_class = ScadenzaAlertSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = ScadenzaAlertFilter
@@ -370,7 +399,21 @@ class ScadenzaAlertViewSet(viewsets.ModelViewSet):
     ordering = ['alert_programmata_il']
     
     def get_queryset(self):
-        return ScadenzaAlert.objects.select_related('occorrenza__scadenza')
+        qs = ScadenzaAlert.objects.select_related('occorrenza__scadenza')
+        
+        # RBAC: filtra per clienti accessibili via scadenza
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    qs = qs.filter(
+                        Q(occorrenza__scadenza__pratiche__cliente_id__in=accessible_clients_ids) |
+                        Q(occorrenza__scadenza__fascicoli__cliente_id__in=accessible_clients_ids) |
+                        Q(occorrenza__scadenza__documenti__cliente_id__in=accessible_clients_ids)
+                    ).distinct()
+        
+        return qs
     
     @action(detail=True, methods=['post'])
     def mark_sent(self, request, pk=None):

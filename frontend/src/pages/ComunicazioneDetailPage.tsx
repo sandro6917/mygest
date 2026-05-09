@@ -107,7 +107,7 @@ const ComunicazioneDetailPage = () => {
   }
 
   const canEdit = comunicazione.stato === 'bozza';
-  const canSend = comunicazione.stato === 'bozza';
+  const canSend = comunicazione.stato === 'bozza' || comunicazione.stato === 'errore';
   const canDelete = comunicazione.stato === 'bozza';
 
   return (
@@ -141,7 +141,11 @@ const ComunicazioneDetailPage = () => {
             onClick={handleSend}
             disabled={sendMutation.isPending}
           >
-            📧 {sendMutation.isPending ? 'Invio in corso...' : 'Invia'}
+            📧 {sendMutation.isPending 
+              ? 'Invio in corso...' 
+              : comunicazione.stato === 'errore' 
+                ? 'Reinvia' 
+                : 'Invia'}
           </button>
         )}
         {!comunicazione.protocollo_movimento && comunicazione.documento_protocollo && (

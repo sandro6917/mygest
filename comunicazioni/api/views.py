@@ -54,10 +54,10 @@ class ComunicazioneViewSet(viewsets.ModelViewSet):
         
         comunicazione = self.get_object()
         
-        # Verifica che sia in stato bozza
-        if comunicazione.stato != "bozza":
+        # Verifica che sia in stato bozza o errore (per permettere reinvio)
+        if comunicazione.stato not in ["bozza", "errore"]:
             return Response(
-                {"error": "La comunicazione può essere inviata solo se è in stato bozza."},
+                {"error": "La comunicazione può essere inviata solo se è in stato bozza o errore."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -104,47 +104,63 @@ class ComunicazioneViewSet(viewsets.ModelViewSet):
         
         # Invio
         try:
-            connection.open()
-            connection.send_messages([email])
+            import logging
+            logger = logging.getLogger(__name__)
             
-            # Archiviazione (opzionale)
+            logger.info(f"[Comunicazione #{comunicazione.id}] Apertura connessione SMTP...")
+            connection.open()
+            logger.info(f"[Comunicazione #{comunicazione.id}] Connessione aperta, invio messaggio...")
+            
+            connection.send_messages([email])
+            logger.info(f"[Comunicazione #{comunicazione.id}] Messaggio inviato con successo")
+            
+            # Archiviazione IMAP (opzionale - non blocca l'invio se fallisce)
             try:
+                logger.info(f"[Comunicazione #{comunicazione.id}] Tentativo archiviazione IMAP...")
                 from comunicazioni.email_archiver import EmailAppendError, append_to_sent_folder
                 append_to_sent_folder(email.message())
-            except (EmailAppendError, ImportError):
+                logger.info(f"[Comunicazione #{comunicazione.id}] Archiviazione IMAP completata")
+            except (EmailAppendError, ImportError) as e:
+                logger.warning(f"[Comunicazione #{comunicazione.id}] Archiviazione IMAP fallita: {e}")
                 pass  # Non bloccare l'invio se l'archiviazione fallisce
             
             comunicazione.stato = "inviata"
             comunicazione.data_invio = timezone.now()
             comunicazione.save(update_fields=["stato", "data_invio"])
             
+            logger.info(f"[Comunicazione #{comunicazione.id}] Stato aggiornato a 'inviata'")
             serializer = self.get_serializer(comunicazione)
             return Response(serializer.data)
             
         except (ConnectionRefusedError, SMTPServerDisconnected, socket.timeout, OSError) as exc:
-            # Fallback a console backend se configurato
+            # Fallback a console backend se configurato (solo per debug)
             if getattr(settings, "EMAIL_FAILOVER_TO_CONSOLE", settings.DEBUG):
                 try:
                     email.connection = get_connection("django.core.mail.backends.console.EmailBackend")
                     email.send()
-                    comunicazione.stato = "inviata"
-                    comunicazione.data_invio = timezone.now()
-                    comunicazione.log_errore = f"Inviata via backend console: {type(exc).__name__} - {exc}"
-                    comunicazione.save(update_fields=["stato", "data_invio", "log_errore"])
+                    # IMPORTANTE: Non segnare come "inviata" perché l'email NON è stata realmente inviata
+                    comunicazione.stato = "errore"
+                    comunicazione.log_errore = (
+                        f"SMTP {type(exc).__name__}: {exc}\n\n"
+                        f"⚠️ EMAIL NON INVIATA REALMENTE - Stampata solo nel terminale del server.\n"
+                        f"Verificare configurazione SMTP e reinviare manualmente."
+                    )
+                    comunicazione.save(update_fields=["stato", "log_errore"])
                     
                     serializer = self.get_serializer(comunicazione)
                     response_data = serializer.data
-                    response_data['warning'] = (
-                        "⚠️ Email non inviata realmente (server SMTP non raggiungibile). "
-                        "L'email è stata stampata nel terminale del server. "
-                        "Verifica la configurazione SMTP per invii reali."
+                    response_data['error'] = (
+                        f"⚠️ SMTP Timeout/Errore: {exc}\n\n"
+                        f"Email NON inviata ai destinatari (server SMTP non raggiungibile).\n"
+                        f"L'email è stata stampata nel terminale del server solo per debug.\n\n"
+                        f"Verifica la configurazione SMTP e reinvia manualmente."
                     )
-                    return Response(response_data)
+                    return Response(response_data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 except Exception:
                     pass
             
             comunicazione.stato = "errore"
-            comunicazione.log_errore = str(exc)
+            comunicazione.log_errore = f"SMTP {type(exc).__name__}: {exc}"
             comunicazione.save(update_fields=["stato", "log_errore"])
             return Response(
                 {"error": f"Errore nell'invio: {exc}"},

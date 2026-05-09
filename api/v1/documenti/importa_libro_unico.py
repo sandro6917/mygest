@@ -7,7 +7,7 @@ import tempfile
 import shutil
 import zipfile
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from django.core.files.base import ContentFile
 from django.db.models import Q
@@ -19,6 +19,63 @@ from anagrafiche.models import Anagrafica, Cliente
 from titolario.models import TitolarioVoce
 
 logger = logging.getLogger(__name__)
+
+
+def _salva_attributi_libro_unico(documento: Documento, periodo: str, anno: int, mese: int, num_cedolini: int) -> Dict[str, Any]:
+    """
+    Salva gli attributi dinamici per il documento Libro Unico.
+    
+    Args:
+        documento: Il documento LIBUNI creato
+        periodo: Periodo in formato testo (es: "Aprile 2025")
+        anno: Anno di riferimento
+        mese: Mese di riferimento (1-12)
+        num_cedolini: Numero di cedolini contenuti
+    
+    Returns:
+        Dict con mapping codice_attributo -> valore (per passare a build_document_filename)
+    """
+    # Mappa attributi: codice -> valore
+    # NOTA: 'anno' e 'mese' sono int perché usati nel pattern template con formati numerici
+    attributi_map = {
+        'periodo': periodo,
+        'anno': anno,  # ✅ Mantieni come int per formattazione
+        'mese': mese,  # ✅ Mantieni come int per formattazione
+        'mensilita': mese,  # ✅ AGGIUNTO: stesso valore di mese (usato nel pattern template)
+        'num_cedolini': num_cedolini,  # ✅ Mantieni come int
+    }
+    
+    # Salva ogni attributo se definito per il tipo documento
+    for codice, valore in attributi_map.items():
+        try:
+            # Cerca la definizione dell'attributo per il tipo LIBUNI
+            definizione = AttributoDefinizione.objects.filter(
+                tipo_documento=documento.tipo,
+                codice=codice
+            ).first()
+            
+            if definizione:
+                # Crea o aggiorna l'attributo
+                # NOTA: valore rimane nel tipo originale (int/str) perché JSONField preserva i tipi
+                AttributoValore.objects.update_or_create(
+                    documento=documento,
+                    definizione=definizione,
+                    defaults={'valore': valore}  # ✅ Preserva tipo nativo per pattern template
+                )
+                logger.debug(f"Attributo {codice}={valore} salvato per documento {documento.id}")
+            else:
+                logger.warning(
+                    f"Definizione attributo '{codice}' non trovata per tipo documento LIBUNI"
+                )
+        except Exception as e:
+            logger.error(f"Errore salvando attributo {codice}: {e}", exc_info=True)
+    
+    # ✅ Restituisci la mappa degli attributi per build_document_filename
+    logger.debug(
+        f"_salva_attributi_libro_unico: documento {documento.id}, "
+        f"attrs_map keys: {list(attributi_map.keys())}, values: {attributi_map}"
+    )
+    return attributi_map
 
 
 def importa_zip_come_libro_unico(
@@ -60,11 +117,28 @@ def importa_zip_come_libro_unico(
         # Crea directory temporanea
         temp_dir = tempfile.mkdtemp(prefix='libro_unico_')
         
+        # Estrai solo il nome del file (basename) dal path dello storage
+        zip_filename = os.path.basename(zip_file.name)
+        zip_path = os.path.join(temp_dir, zip_filename)
+        
         # Salva ZIP temporaneamente
-        zip_path = os.path.join(temp_dir, zip_file.name)
         with open(zip_path, 'wb') as f:
-            for chunk in zip_file.chunks():
-                f.write(chunk)
+            # Se è un FieldFile di Django, usa .read() invece di .chunks()
+            if hasattr(zip_file, 'chunks'):
+                for chunk in zip_file.chunks():
+                    f.write(chunk)
+            else:
+                # Per file già aperti o ContentFile
+                zip_file.seek(0)
+                f.write(zip_file.read())
+        
+        # Verifica che il file sia un ZIP valido
+        if not zipfile.is_zipfile(zip_path):
+            risultato['errori'].append(
+                f"Il file {zip_file.name} non è un archivio ZIP valido. "
+                f"Dimensione: {os.path.getsize(zip_path)} bytes"
+            )
+            return risultato
         
         # Estrai PDF dallo ZIP
         extract_dir = os.path.join(temp_dir, 'extracted')
@@ -164,21 +238,13 @@ def importa_zip_come_libro_unico(
             risultato['errori'].append("Tipo documento LIBUNI non configurato nel sistema")
             return risultato
         
-        # Cerca titolario HR-PAY/PAG
-        titolario_hrpay = TitolarioVoce.objects.filter(
-            Q(codice='HR-PAY') | Q(codice='HRPAY') | Q(codice__icontains='PAY')
+        # Cerca titolario LIBUNI
+        titolario_libuni = TitolarioVoce.objects.filter(
+            codice='LIBUNI'
         ).first()
         
-        if not titolario_hrpay:
-            # Fallback: cerca HR-PAY con parent
-            titolario_hrpay = TitolarioVoce.objects.filter(
-                codice__icontains='HR'
-            ).filter(
-                Q(titolo__icontains='PAY') | Q(titolo__icontains='PAGA')
-            ).first()
-        
-        if not titolario_hrpay:
-            risultato['errori'].append("Titolario HR-PAY non trovato")
+        if not titolario_libuni:
+            risultato['errori'].append("Titolario LIBUNI non trovato")
             return risultato
         
         # Controlla duplicati: stesso cliente + periodo + tipo LIBUNI
@@ -209,21 +275,38 @@ def importa_zip_come_libro_unico(
                 # Aggiorna documento esistente
                 documento_esistente.descrizione = titolo
                 documento_esistente.data_documento = data_documento
-                documento_esistente.titolario_voce = titolario_hrpay
+                documento_esistente.titolario_voce = titolario_libuni
                 documento_esistente.fascicolo = None
                 documento_esistente.note = note
                 documento_esistente.digitale = True
                 documento_esistente.tracciabile = True
+                
+                # ✅ Salva attributi dinamici PRIMA di allegare il file
+                attrs_map = _salva_attributi_libro_unico(
+                    documento=documento_esistente,
+                    periodo=periodo_str,
+                    anno=anno,
+                    mese=mese,
+                    num_cedolini=len(pdf_paths)
+                )
+                
+                # ✅ Imposta flag per saltare rename automatico durante file.save()
+                documento_esistente._skip_auto_rename = True
                 
                 # Riallega ZIP
                 with open(zip_path, 'rb') as f:
                     documento_esistente.file.save(
                         zip_file.name,
                         ContentFile(f.read()),
-                        save=False
+                        save=True  # ✅ save=True per salvare il file
                     )
                 
-                documento_esistente.save()
+                # ✅ Applica rename con attributi dopo aver allegato il file
+                logger.info(
+                    f"applica_rename_con_attributi (sostituzione): documento {documento_esistente.id}, "
+                    f"attrs_map: {attrs_map}"
+                )
+                documento_esistente.applica_rename_con_attributi(attrs=attrs_map)
                 
                 risultato['success'] = True
                 risultato['documento_id'] = documento_esistente.id
@@ -236,7 +319,7 @@ def importa_zip_come_libro_unico(
         nuovo_documento = Documento(
             tipo=tipo_libuni,
             cliente=cliente_datore,
-            titolario_voce=titolario_hrpay,
+            titolario_voce=titolario_libuni,
             fascicolo=None,
             descrizione=titolo,
             data_documento=data_documento,
@@ -245,15 +328,37 @@ def importa_zip_come_libro_unico(
             tracciabile=True
         )
         
+        # ✅ IMPORTANTE: Salva il documento PRIMA di allegare il file
+        # per poter creare gli AttributoValore (richiedono documento.id)
+        nuovo_documento.save()
+        
+        # ✅ Salva attributi dinamici PRIMA di allegare il file
+        # Così il sistema di naming dei file potrà usare gli attributi
+        attrs_map = _salva_attributi_libro_unico(
+            documento=nuovo_documento,
+            periodo=periodo_str,
+            anno=anno,
+            mese=mese,
+            num_cedolini=len(pdf_paths)
+        )
+        
+        # ✅ Imposta flag per saltare rename automatico durante file.save()
+        nuovo_documento._skip_auto_rename = True
+        
         # Allega ZIP
         with open(zip_path, 'rb') as f:
             nuovo_documento.file.save(
                 zip_file.name,
                 ContentFile(f.read()),
-                save=False
+                save=True  # ✅ save=True per salvare il file
             )
         
-        nuovo_documento.save()
+        # ✅ Ora applica il rename con gli attributi disponibili
+        logger.info(
+            f"applica_rename_con_attributi: documento {nuovo_documento.id}, "
+            f"attrs_map: {attrs_map}"
+        )
+        nuovo_documento.applica_rename_con_attributi(attrs=attrs_map)
         
         risultato['success'] = True
         risultato['documento_id'] = nuovo_documento.id

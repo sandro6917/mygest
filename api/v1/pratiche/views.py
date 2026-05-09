@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
+from core.permissions import RBACPermission
 
 from pratiche.models import Pratica, PraticheTipo, PraticaNota
 from .serializers import (
@@ -20,9 +21,13 @@ from .serializers import (
 
 class PraticaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet per gestione pratiche
+    ViewSet per gestione pratiche con RBAC.
+    
+    Isolamento dati:
+    - ADMIN/MANAGER: tutte le pratiche
+    - OPERATORE/VIEWER: solo pratiche dei clienti assegnati o dove sono responsabili
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['id', 'codice', 'oggetto', 'note', 'tag']
     ordering_fields = ['data_apertura', 'data_chiusura', 'codice', 'oggetto']
@@ -33,6 +38,22 @@ class PraticaViewSet(viewsets.ModelViewSet):
         qs = Pratica.objects.select_related(
             'tipo', 'cliente', 'cliente__anagrafica', 'responsabile'
         ).prefetch_related('note_collegate')
+        
+        # RBAC Filtering
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            
+            # ADMIN/MANAGER: vedono tutto
+            if profile.can_view_all:
+                pass  # Nessun filtro
+            else:
+                # OPERATORE/VIEWER: solo pratiche clienti assegnati O dove sono responsabili
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    qs = qs.filter(
+                        Q(cliente_id__in=accessible_clients_ids) |
+                        Q(responsabile=self.request.user)
+                    )
         
         # Filtri personalizzati
         data_da = self.request.query_params.get('data_apertura_da')
@@ -109,7 +130,7 @@ class PraticaNotaViewSet(viewsets.ModelViewSet):
     """
     ViewSet per note pratiche
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     serializer_class = PraticaNotaSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['pratica', 'tipo', 'stato']
@@ -118,6 +139,14 @@ class PraticaNotaViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         qs = PraticaNota.objects.select_related('pratica')
+        
+        # RBAC: filtra per clienti accessibili via pratica
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    qs = qs.filter(pratica__cliente_id__in=accessible_clients_ids)
         
         # Filtro per pratica specifica
         pratica_id = self.request.query_params.get('pratica')

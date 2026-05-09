@@ -81,6 +81,10 @@ export function ImportaCedoliniPage() {
   // Importa come Libro Unico
   const [importingLibroUnico, setImportingLibroUnico] = useState(false);
   const [libroUnicoResult, setLibroUnicoResult] = useState<any | null>(null);
+  
+  // Importa come Archivio CU
+  const [importingCU, setImportingCU] = useState(false);
+  const [cuResult, setCuResult] = useState<any | null>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -179,6 +183,7 @@ export function ImportaCedoliniPage() {
     setPreview(null);
     setResult(null);
     setLibroUnicoResult(null);
+    setCuResult(null);
     setFascicolo(null);
     setDuplicatePolicy('skip');
   };
@@ -244,6 +249,70 @@ export function ImportaCedoliniPage() {
       );
     } finally {
       setImportingLibroUnico(false);
+    }
+  };
+  
+  const handleImportaCU = async () => {
+    if (!selectedFile) {
+      toast.error('Seleziona un file ZIP');
+      return;
+    }
+    
+    if (!selectedFile.name.toLowerCase().endsWith('.zip')) {
+      toast.error('Per importare come Archivio CU è necessario un file ZIP');
+      return;
+    }
+    
+    // Chiedi conferma e azione duplicati
+    const azione = window.confirm(
+      'Importare lo ZIP come Archivio Certificazioni Uniche (CU-ZIP)?\n\n' +
+      'Il file ZIP verrà salvato come singolo documento CU-ZIP per il datore di lavoro.\n\n' +
+      'Clicca OK per procedere (duplica se esiste), Annulla per annullare.'
+    );
+    
+    if (!azione) return;
+    
+    setImportingCU(true);
+    setCuResult(null);
+    
+    try {
+      const response = await documentiApi.importaZipCU(selectedFile, 'duplica');
+      
+      setCuResult(response);
+      
+      if (response.success) {
+        const metaInfo = response.duplicato 
+          ? `Trovato duplicato (ID ${response.duplicato_id}). Azione: ${response.azione}`
+          : `Documento creato con successo (ID ${response.documento_id})`;
+        
+        toast.success(
+          `✅ ${response.metadati.titolo}\n` +
+          `${response.metadati.num_certificazioni} certificazioni per ${response.metadati.dipendenti.length} dipendenti\n` +
+          metaInfo
+        );
+        
+        // Reset dopo 3 secondi
+        setTimeout(() => {
+          handleReset();
+        }, 3000);
+      } else {
+        toast.error(
+          `Errore importazione Archivio CU:\n${response.errori.join('\n')}`
+        );
+      }
+    } catch (error) {
+      console.error('Errore importazione archivio CU:', error);
+      const apiError = error as { response?: { data?: { detail?: string; errori?: string[] } } };
+      const errori = apiError.response?.data?.errori || [];
+      const detail = apiError.response?.data?.detail || 'Errore durante l\'importazione dell\'Archivio CU';
+      
+      toast.error(
+        errori.length > 0 
+          ? `Errori:\n${errori.join('\n')}`
+          : detail
+      );
+    } finally {
+      setImportingCU(false);
     }
   };
 
@@ -367,7 +436,7 @@ export function ImportaCedoliniPage() {
                   variant="contained"
                   color="primary"
                   onClick={handleAnalyze}
-                  disabled={!selectedFile || analyzing || importing || importingLibroUnico}
+                  disabled={!selectedFile || analyzing || importing || importingLibroUnico || importingCU}
                   startIcon={<UploadIcon />}
                   fullWidth
                 >
@@ -378,7 +447,7 @@ export function ImportaCedoliniPage() {
                   <Button
                     variant="outlined"
                     onClick={handleReset}
-                    disabled={analyzing || importing || importingLibroUnico}
+                    disabled={analyzing || importing || importingLibroUnico || importingCU}
                   >
                     ↻ Reset
                   </Button>
@@ -391,16 +460,30 @@ export function ImportaCedoliniPage() {
                   variant="contained"
                   color="secondary"
                   onClick={handleImportaLibroUnico}
-                  disabled={analyzing || importing || importingLibroUnico}
+                  disabled={analyzing || importing || importingLibroUnico || importingCU}
                   startIcon={<FileIcon />}
                   fullWidth
                 >
                   {importingLibroUnico ? '⏳ Importazione Libro Unico...' : '📚 Importa ZIP come Libro Unico'}
                 </Button>
               )}
+              
+              {/* Pulsante Importa come Archivio CU */}
+              {selectedFile && selectedFile.name.toLowerCase().endsWith('.zip') && (
+                <Button
+                  variant="contained"
+                  color="info"
+                  onClick={handleImportaCU}
+                  disabled={analyzing || importing || importingLibroUnico || importingCU}
+                  startIcon={<FileIcon />}
+                  fullWidth
+                >
+                  {importingCU ? '⏳ Importazione Archivio CU...' : '📋 Importa ZIP come Archivio CU'}
+                </Button>
+              )}
             </Box>
 
-            {(analyzing || importingLibroUnico) && (
+            {(analyzing || importingLibroUnico || importingCU) && (
               <Box>
                 <LinearProgress />
                 <Typography
@@ -410,6 +493,7 @@ export function ImportaCedoliniPage() {
                 >
                   {analyzing && 'Estrazione e analisi cedolini in corso...'}
                   {importingLibroUnico && 'Importazione Libro Unico in corso...'}
+                  {importingCU && 'Importazione Archivio CU in corso...'}
                 </Typography>
               </Box>
             )}
@@ -456,6 +540,56 @@ export function ImportaCedoliniPage() {
                     </Typography>
                     <ul>
                       {libroUnicoResult.errori.map((err: string, idx: number) => (
+                        <li key={idx}><Typography variant="caption">{err}</Typography></li>
+                      ))}
+                    </ul>
+                  </Box>
+                )}
+              </Alert>
+            )}
+            
+            {/* Risultato Archivio CU */}
+            {cuResult && (
+              <Alert severity={cuResult.success ? 'success' : 'error'} sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  {cuResult.success ? '✅ Archivio CU creato con successo!' : '❌ Errore importazione'}
+                </Typography>
+                
+                {cuResult.success && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2">
+                      <strong>Titolo:</strong> {cuResult.metadati.titolo}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Anno Imposta:</strong> {cuResult.metadati.anno_imposta}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Datore:</strong> {cuResult.metadati.datore} ({cuResult.metadati.datore_cf})
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Certificazioni:</strong> {cuResult.metadati.num_certificazioni}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Dipendenti:</strong> {cuResult.metadati.dipendenti.length}
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Azione:</strong> {cuResult.azione}
+                    </Typography>
+                    {cuResult.duplicato && (
+                      <Typography variant="body2" color="warning.main">
+                        ⚠️ Trovato duplicato (ID {cuResult.duplicato_id})
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+                
+                {cuResult.errori && cuResult.errori.length > 0 && (
+                  <Box sx={{ mt: 1 }}>
+                    <Typography variant="body2" color="error">
+                      Errori:
+                    </Typography>
+                    <ul>
+                      {cuResult.errori.map((err: string, idx: number) => (
                         <li key={idx}><Typography variant="caption">{err}</Typography></li>
                       ))}
                     </ul>

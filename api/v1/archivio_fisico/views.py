@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from core.permissions import RBACPermission
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -46,10 +47,16 @@ from .serializers import (
 
 class UnitaFisicaViewSet(viewsets.ModelViewSet):
     """
-    ViewSet per gestire le unità fisiche dell'archivio
+    ViewSet per gestire le unità fisiche dell'archivio.
+    
+    NOTA RBAC: UnitaFisica è infrastruttura/metadata condivisa.
+    - ADMIN/MANAGER: può modificare (create, update, delete)
+    - OPERATORE/VIEWER: può solo leggere (list, retrieve)
+    
+    Non filtrabile per cliente (non ha FK cliente).
     """
     queryset = UnitaFisica.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     pagination_class = None  # Disabilita paginazione per caricare tutte le unità
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['tipo', 'attivo', 'archivio_fisso', 'parent']
@@ -421,7 +428,7 @@ class OperazioneArchivioViewSet(viewsets.ModelViewSet):
     ViewSet per gestire le operazioni di archivio fisico
     """
     queryset = OperazioneArchivio.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['tipo_operazione', 'referente_interno', 'referente_esterno']
     search_fields = ['note', 'referente_esterno__cognome', 'referente_esterno__nome']
@@ -449,6 +456,18 @@ class OperazioneArchivioViewSet(viewsets.ModelViewSet):
                 )
             )
         )
+        
+        # RBAC: filtra per clienti accessibili tramite documenti e fascicoli nelle righe
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    # Filtra operazioni che hanno righe con documenti/fascicoli accessibili
+                    queryset = queryset.filter(
+                        Q(righe__documento__cliente_id__in=accessible_clients_ids) |
+                        Q(righe__fascicolo__cliente_id__in=accessible_clients_ids)
+                    ).distinct()
         
         # Filtro per data
         data_dal = self.request.query_params.get('data_dal')
@@ -565,7 +584,7 @@ class RigaOperazioneArchivioViewSet(viewsets.ModelViewSet):
     ViewSet per gestire le righe delle operazioni di archivio
     """
     queryset = RigaOperazioneArchivio.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['operazione', 'documento', 'fascicolo']
 
@@ -580,6 +599,18 @@ class RigaOperazioneArchivioViewSet(viewsets.ModelViewSet):
             'documento', 'fascicolo', 'movimento_protocollo',
             'unita_fisica_sorgente', 'unita_fisica_destinazione', 'operazione'
         )
+        
+        # RBAC: filtra per clienti accessibili via documento/fascicolo
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    queryset = queryset.filter(
+                        Q(documento__cliente_id__in=accessible_clients_ids) |
+                        Q(fascicolo__cliente_id__in=accessible_clients_ids)
+                    ).distinct()
+        
         return queryset
 
     def perform_create(self, serializer):
@@ -619,7 +650,7 @@ class CollocazioneFisicaViewSet(viewsets.ReadOnlyModelViewSet):
     ViewSet per visualizzare le collocazioni fisiche
     """
     queryset = CollocazioneFisica.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     serializer_class = CollocazioneFisicaSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['unita', 'documento', 'attiva']
@@ -629,6 +660,14 @@ class CollocazioneFisicaViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         queryset = queryset.select_related('unita', 'documento', 'content_type')
+        
+        # RBAC: filtra per clienti accessibili via documento
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    queryset = queryset.filter(documento__cliente_id__in=accessible_clients_ids)
         
         # Filtro per solo collocazioni attive
         solo_attive = self.request.query_params.get('solo_attive')
@@ -643,7 +682,7 @@ class DocumentoTracciabileViewSet(viewsets.ReadOnlyModelViewSet):
     ViewSet per cercare documenti tracciabili con filtri avanzati per stato operazioni
     """
     queryset = Documento.objects.filter(tracciabile=True, digitale=False)
-    permission_classes = [IsAuthenticated]
+    permission_classes = [RBACPermission]
     serializer_class = DocumentoSimpleSerializer
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['codice', 'descrizione']
@@ -654,6 +693,14 @@ class DocumentoTracciabileViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Ottimizzazione: carica l'ubicazione in un'unica query
         queryset = queryset.select_related('ubicazione', 'tipo', 'cliente__anagrafica', 'fascicolo__cliente__anagrafica')
+        
+        # RBAC: filtra per clienti accessibili
+        if hasattr(self.request.user, 'profile'):
+            profile = self.request.user.profile
+            if not profile.can_view_all:
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    queryset = queryset.filter(cliente_id__in=accessible_clients_ids)
         
         # Filtro per referente esterno (anagrafica)
         referente_esterno_id = self.request.query_params.get('referente_esterno')

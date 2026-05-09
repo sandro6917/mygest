@@ -1,4 +1,4 @@
-"""Utility per importare comunicazioni da caselle IMAP."""
+"""Utility e task Celery per importare comunicazioni da caselle IMAP."""
 
 from __future__ import annotations
 
@@ -267,3 +267,17 @@ def sincronizza_tutte_mailbox(limite: int | None = None) -> int:
     for mailbox in Mailbox.objects.filter(attiva=True):
         count += sincronizza_mailbox(mailbox, limite=limite)
     return count
+
+
+# ---------------------------------------------------------------------------
+# Celery tasks
+# ---------------------------------------------------------------------------
+
+from celery import shared_task  # noqa: E402
+
+
+@shared_task
+def sincronizza_mailbox_task() -> dict:
+    """Task Celery per sincronizzare tutte le mailbox attive."""
+    count = sincronizza_tutte_mailbox()
+    return {'status': 'success', 'nuove_email': count}

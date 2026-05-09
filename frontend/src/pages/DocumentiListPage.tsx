@@ -14,6 +14,7 @@ import {
   EditIcon,
   DeleteIcon,
   UploadIcon,
+  OpenInNewIcon,
 } from '@/components/icons/Icons';
 
 export function DocumentiListPage() {
@@ -157,6 +158,19 @@ export function DocumentiListPage() {
       console.error('Error downloading document:', error);
       alert('Errore durante il download del documento');
     }
+  };
+
+  const handlePreview = (documento: Documento) => {
+    if (!documento.file && !documento.file_url) {
+      alert('Nessun file disponibile per l\'anteprima');
+      return;
+    }
+    
+    // Usa l'endpoint preview dell'API che serve il file inline
+    const previewUrl = `/api/v1/documenti/${documento.id}/preview/`;
+    
+    // Apri in una nuova scheda
+    window.open(previewUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDelete = async (id: number) => {
@@ -398,10 +412,22 @@ export function DocumentiListPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                          {(documento.file || documento.file_url) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePreview(documento);
+                              }}
+                              className="btn-icon"
+                              title="Anteprima file"
+                            >
+                              <OpenInNewIcon size={18} />
+                            </button>
+                          )}
                           <Link
                             to={`/documenti/${documento.id}`}
                             className="btn-icon"
-                            title="Visualizza"
+                            title="Visualizza dettaglio"
                           >
                             <VisibilityIcon size={18} />
                           </Link>

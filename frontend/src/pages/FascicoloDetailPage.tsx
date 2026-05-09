@@ -612,7 +612,26 @@ export default function FascicoloDetailPage() {
             <span className="detail-value">
               {fascicolo.ubicazione_detail ? (
                 <>
-                  {fascicolo.ubicazione_detail.codice} - {fascicolo.ubicazione_detail.nome}
+                  <a
+                    href={`/archivio/unita/${fascicolo.ubicazione_detail.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (fascicolo.ubicazione_detail?.id) {
+                        navigate(`/archivio/unita/${fascicolo.ubicazione_detail.id}`);
+                      }
+                    }}
+                    style={{
+                      color: '#0066cc',
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid transparent',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = '#0066cc'}
+                    onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = 'transparent'}
+                  >
+                    {fascicolo.ubicazione_detail.codice} - {fascicolo.ubicazione_detail.nome}
+                  </a>
                   {fascicolo.ubicazione_full_path && (
                     <div style={{ fontSize: '0.75rem', color: '#6c757d' }}>
                       {fascicolo.ubicazione_full_path}

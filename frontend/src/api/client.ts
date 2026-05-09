@@ -64,8 +64,13 @@ apiClient.interceptors.response.use(
           refresh: refreshToken,
         });
 
-        const { access } = response.data;
+        const { access, refresh: newRefresh } = response.data;
         localStorage.setItem('access_token', access);
+        
+        // Se rotation abilitata, aggiorna anche refresh token
+        if (newRefresh) {
+          localStorage.setItem('refresh_token', newRefresh);
+        }
 
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${access}`;
