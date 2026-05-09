@@ -43,7 +43,7 @@ export default defineConfig({
           'vendor-ui': ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
           'vendor-query': ['@tanstack/react-query', 'axios', 'zustand'],
           'vendor-charts': ['chart.js', 'react-chartjs-2'],
-          'vendor-calendar': ['@fullcalendar/react', '@fullcalendar/core', '@fullcalendar/daygrid', '@fullcalendar/timegrid', '@fullcalendar/interaction'],
+          'vendor-calendar': ['@fullcalendar/react', '@fullcalendar/core', '@fullcalendar/daygrid', '@fullcalendar/interaction'],
         },
       },
     },
