@@ -71,7 +71,7 @@ jobs:
           DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
-          SECRET_KEY: 'test-secret-key-for-ci'
+          SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
         run: |
           python manage.py check
       
@@ -80,7 +80,7 @@ jobs:
           DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
-          SECRET_KEY: 'test-secret-key-for-ci'
+          SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
         run: |
           python manage.py makemigrations --check --dry-run
       
@@ -89,7 +89,7 @@ jobs:
           DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
-          SECRET_KEY: 'test-secret-key-for-ci'
+          SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
         run: |
           python manage.py migrate --noinput
       
@@ -98,7 +98,7 @@ jobs:
           DATABASE_URL: postgresql://mygest_user:test_password@localhost:5432/mygest_test
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
-          SECRET_KEY: 'test-secret-key-for-ci'
+          SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
         run: |
           pytest --cov=. --cov-report=xml --cov-report=term -v
       
