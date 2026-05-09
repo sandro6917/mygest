@@ -164,7 +164,7 @@ print("🔧 DJANGO DEVELOPMENT MODE")
 print("=" * 70)
 print(f"DEBUG: {DEBUG}")
 print(f"ALLOWED_HOSTS: {ALLOWED_HOSTS}")  # noqa: F405
-print(f"DATABASE: {DATABASES['default']['NAME']} @ {DATABASES['default']['HOST']}")  # noqa: F405
+print(f"DATABASE: {DATABASES['default']['NAME']} @ {DATABASES['default'].get('HOST', 'sqlite')}")  # noqa: F405
 print(f"ARCHIVIO: {ARCHIVIO_BASE_PATH}")  # noqa: F405
 print(f"REDIS: {CACHES['default']['LOCATION']}")  # noqa: F405
 print(f"EMAIL: {EMAIL_BACKEND}")  # noqa: F405
