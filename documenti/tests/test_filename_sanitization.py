@@ -94,8 +94,8 @@ class TestFilenameSanitization:
         from anagrafiche.models import Anagrafica, Cliente
         anagrafica = baker.make(
             Anagrafica,
-            codice="TESTCLI01",
-            codice_fiscale="12345678901",
+            codice="TESTCL01",
+            codice_fiscale="12345678903",
         )
         cliente = baker.make(Cliente, anagrafica=anagrafica)
 
@@ -135,7 +135,7 @@ class TestFilenameSanitization:
         assert "\\" not in filename, f"Il nome file contiene backslash: {filename}"
 
         # Verifica formato atteso
-        assert filename == "RettificaINPS_DM-2013_06-2025_3601978802_TESTCLI01.pdf"
+        assert filename == "RettificaINPS_DM-2013_06-2025_3601978802_TESTCL01.pdf"
 
     def test_attributo_con_caratteri_speciali_multipli(self):
         """Test con attributo contenente vari caratteri non validi."""

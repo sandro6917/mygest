@@ -177,6 +177,8 @@ class Anagrafica(models.Model):
         else:  # PG
             if not (self.ragione_sociale or "").strip():
                 errors["ragione_sociale"] = _("Per le persone giuridiche è obbligatoria la Ragione Sociale.")
+            if not (self.partita_iva or "").strip():
+                errors["partita_iva"] = _("Per le persone giuridiche è obbligatoria la Partita IVA.")
         if errors:
             raise ValidationError(errors)
 

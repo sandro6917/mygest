@@ -21,6 +21,7 @@ from fascicoli.utils import ensure_archivio_path, build_titolario_parts
 from archivio_fisico.models import UnitaFisica
 from mygest.storages import NASPathStorage
 from .utils import build_document_filename
+from .validators import validate_file_content
 from titolario.models import TitolarioVoce
 from anagrafiche.utils import get_or_generate_cli
 
@@ -225,7 +226,7 @@ class Documento(models.Model):
     )
 
     # percorso temporaneo nel NAS (verrà rinominato dentro lo storage)
-    file = models.FileField(storage=nas_storage, upload_to=documento_upload_to, blank=True, null=True, max_length=500)
+    file = models.FileField(storage=nas_storage, upload_to=documento_upload_to, blank=True, null=True, max_length=500, validators=[validate_file_content])
     percorso_archivio = models.CharField(max_length=500, blank=True, editable=False)
 
     tags = models.CharField(max_length=200, blank=True)

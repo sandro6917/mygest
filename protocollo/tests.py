@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from anagrafiche.models import Anagrafica, Cliente
 from archivio_fisico.models import UnitaFisica
+from core.models import UserRole
 from documenti.models import Documento, DocumentiTipo
 from fascicoli.models import Fascicolo
 from protocollo.models import MovimentoProtocollo, ProtocolloCounter
@@ -24,6 +25,8 @@ class MovimentoProtocolloClienteNormalizationTests(TestCase):
 		self.addCleanup(lambda: shutil.rmtree(self.tmpdir, ignore_errors=True))
 
 		self.user = get_user_model().objects.create_user("tester", "tester@example.com", "password")
+		self.user.profile.role = UserRole.OPERATORE
+		self.user.profile.save()
 		self.anagrafica = Anagrafica.objects.create(
 			tipo=Anagrafica.TipoSoggetto.PERSONA_GIURIDICA,
 			ragione_sociale="Libera Cooperativa Agricola Buriano",

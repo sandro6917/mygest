@@ -747,7 +747,7 @@ class OperazioneArchivioViewTests(TestCase):
 		self.assertEqual(response.status_code, 302)
 		operazione = OperazioneArchivio.objects.latest("id")
 		self.assertTrue(operazione.verbale_scan)
-		self.assertTrue(operazione.verbale_scan.name.startswith("archivio/operazioni/"))
+		self.assertTrue(operazione.verbale_scan.name.startswith("archivio_fisico/operazioni"))
 		self.assertTrue(operazione.verbale_scan.name.endswith(".pdf"))
 
 	def test_operazione_uscita_documento_senza_storico_archivio(self):

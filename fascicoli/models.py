@@ -125,7 +125,11 @@ class Fascicolo(models.Model):
     @staticmethod
     def _cliente_code(cliente_obj) -> str:
         """Codice cliente (CLI) uniforme a 8 caratteri; accetta Cliente o Anagrafica."""
+        if cliente_obj is None:
+            return "VARIE000"
         anag = getattr(cliente_obj, "anagrafica", cliente_obj)
+        if anag is None:
+            return "VARIE000"
         return get_or_generate_cli(anag)
 
     def _titolario_parts(self) -> List[str]:

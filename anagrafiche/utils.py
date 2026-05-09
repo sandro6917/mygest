@@ -58,7 +58,8 @@ def get_or_generate_cli(cliente: Anagrafica) -> str:
         if not code:
             try:
                 cliente.codice = candidate
-                cliente.save(update_fields=["codice"])
+                if cliente.pk:
+                    cliente.save(update_fields=["codice"])
                 return candidate
             except IntegrityError:
                 tries -= 1

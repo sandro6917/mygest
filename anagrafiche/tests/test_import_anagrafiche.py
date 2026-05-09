@@ -64,21 +64,21 @@ class ImportAnagraficheTestCase(TestCase):
     def test_import_persona_giuridica_valida(self):
         """Test importazione persona giuridica valida."""
         csv_data = self._create_csv_file([
-            ['PG', 'Acme S.r.l.', '', '', '12345678901', '12345678901', '', 
-             'ACME SRL', 'acme@pec.it', 'info@acme.it', '024567890', 
+            ['PG', 'Acme S.r.l.', '', '', '12345678903', '12345678903', '',
+             'ACME SRL', 'acme@pec.it', 'info@acme.it', '024567890',
              'Via Milano 10', 'Cliente importante']
         ])
-        
+
         response = self.client.post(
             self.import_url,
             {'file': io.BytesIO(csv_data)},
             format='multipart'
         )
-        
+
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(Anagrafica.objects.filter(codice_fiscale='12345678901').exists())
-        
-        anagrafica = Anagrafica.objects.get(codice_fiscale='12345678901')
+        self.assertTrue(Anagrafica.objects.filter(codice_fiscale='12345678903').exists())
+
+        anagrafica = Anagrafica.objects.get(codice_fiscale='12345678903')
         self.assertEqual(anagrafica.tipo, 'PG')
         self.assertEqual(anagrafica.ragione_sociale, 'Acme S.r.l.')
     
@@ -187,7 +187,7 @@ class ImportAnagraficheTestCase(TestCase):
             # Duplicato (scartata)
             ['PF', '', 'Luigi', 'Bianchi', 'RSSMRA80A01H501U', '', '', '', '', '', '', '', ''],
             # Valida PG
-            ['PG', 'Beta Srl', '', '', '98765432109', '', '', '', '', '', '', '', ''],
+            ['PG', 'Beta Srl', '', '', '98765432103', '98765432103', '', '', '', '', '', '', ''],
             # Tipo non valido (scartata)
             ['XX', '', 'Anna', 'Neri', 'NRENNI90A01H501P', '', '', '', '', '', '', '', ''],
         ])
@@ -209,7 +209,7 @@ class ImportAnagraficheTestCase(TestCase):
         
         # Verifica che le anagrafiche corrette siano state create
         self.assertTrue(Anagrafica.objects.filter(codice_fiscale='VRDMRA85M01H501Z').exists())
-        self.assertTrue(Anagrafica.objects.filter(codice_fiscale='98765432109').exists())
+        self.assertTrue(Anagrafica.objects.filter(codice_fiscale='98765432103').exists())
     
     def test_facsimile_csv_download(self):
         """Test download del file CSV di esempio."""
