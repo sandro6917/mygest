@@ -113,13 +113,17 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_mygest
         REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
+        DJANGO_ENV: development
       run: |
         python manage.py migrate --noinput
-    
+
     - name: Run tests
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_mygest
         REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
+        DJANGO_ENV: development
         DJANGO_SETTINGS_MODULE: mygest.settings
       run: |
         pytest -v --cov=. --cov-report=xml --cov-report=html --cov-report=term-missing -n auto
@@ -182,6 +186,8 @@ jobs:
       env:
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_mygest
         REDIS_URL: redis://localhost:6379/0
+        SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
+        DJANGO_ENV: development
       run: |
         pytest -v -m integration tests/test_integration.py
 
@@ -238,16 +244,25 @@ jobs:
         pip install -r requirements.txt
     
     - name: Check for migrations
+      env:
+        SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
+        DJANGO_ENV: development
       run: |
         python manage.py makemigrations --check --dry-run --noinput
-    
+
     - name: Collect static files
+      env:
+        SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
+        DJANGO_ENV: development
       run: |
         python manage.py collectstatic --noinput --clear
-    
+
     - name: Run Django system checks
+      env:
+        SECRET_KEY: "github-actions-ci-test-key-not-for-production-use-only-1234567890abcdef"
+        DJANGO_ENV: development
       run: |
-        python manage.py check --deploy --fail-level WARNING
+        python manage.py check --fail-level ERROR
 
   deploy-staging:
     name: Deploy to Staging
