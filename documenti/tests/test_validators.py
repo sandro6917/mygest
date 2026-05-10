@@ -230,7 +230,6 @@ class IntegrationTest(TestCase):
         )
         cliente = Cliente.objects.create(
             anagrafica=anagrafica,
-            attivo=True,
         )
         
         # File con estensione proibita

@@ -185,8 +185,11 @@ else:
             'PRE_PING': True,
         }
 
-# SQLite per testing
-if any(arg.startswith("test") or os.path.basename(arg).startswith("pytest") for arg in sys.argv):
+# SQLite per testing (solo se DATABASE_URL non è configurata, per non sovrascrivere PostgreSQL in CI)
+if (
+    'DATABASE_URL' not in os.environ
+    and any(arg.startswith("test") or os.path.basename(arg).startswith("pytest") for arg in sys.argv)
+):
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'test.sqlite3',
