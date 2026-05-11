@@ -183,7 +183,7 @@ class ImportAnagraficheTestCase(TestCase):
         
         csv_data = self._create_csv_file([
             # Valida PF
-            ['PF', '', 'Mario', 'Verdi', 'VRDMRA85M01H501Z', '', '', '', '', '', '', '', ''],
+            ['PF', '', 'Mario', 'Verdi', 'VRDMRA85M01H501M', '', '', '', '', '', '', '', ''],
             # Duplicato (scartata)
             ['PF', '', 'Luigi', 'Bianchi', 'RSSMRA80A01H501U', '', '', '', '', '', '', '', ''],
             # Valida PG
@@ -208,7 +208,7 @@ class ImportAnagraficheTestCase(TestCase):
         self.assertEqual(report['totale'], 4)
         
         # Verifica che le anagrafiche corrette siano state create
-        self.assertTrue(Anagrafica.objects.filter(codice_fiscale='VRDMRA85M01H501Z').exists())
+        self.assertTrue(Anagrafica.objects.filter(codice_fiscale='VRDMRA85M01H501M').exists())
         self.assertTrue(Anagrafica.objects.filter(codice_fiscale='98765432103').exists())
     
     def test_facsimile_csv_download(self):

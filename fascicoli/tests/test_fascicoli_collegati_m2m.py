@@ -96,7 +96,7 @@ class TestFascicoliCollegatiAPI:
         
         fascicolo_a.fascicoli_collegati.add(fascicolo_b, fascicolo_c)
         
-        response = api_client.get('/api/v1/fascicoli/')
+        response = api_client.get('/api/v1/fascicoli/fascicoli/')
         
         assert response.status_code == 200
         
@@ -119,8 +119,8 @@ class TestFascicoliCollegatiAPI:
         
         fascicolo_a.fascicoli_collegati.add(fascicolo_b)
         
-        response = api_client.get(f'/api/v1/fascicoli/{fascicolo_a.id}/')
-        
+        response = api_client.get(f'/api/v1/fascicoli/fascicoli/{fascicolo_a.id}/')
+
         assert response.status_code == 200
         assert 'fascicoli_collegati_details' in response.data
         assert len(response.data['fascicoli_collegati_details']) == 1
@@ -133,12 +133,16 @@ class TestFascicoliCollegatiAPI:
         fascicolo_a = baker.make('fascicoli.Fascicolo')
         fascicolo_b = baker.make('fascicoli.Fascicolo')  # Collegabile
         fascicolo_c = baker.make('fascicoli.Fascicolo')  # Già collegato
-        fascicolo_d = baker.make('fascicoli.Fascicolo', parent=fascicolo_a)  # Sottofascicolo
+        fascicolo_d = baker.make(
+            'fascicoli.Fascicolo', parent=fascicolo_a,
+            titolario_voce=fascicolo_a.titolario_voce, anno=fascicolo_a.anno,
+            cliente=fascicolo_a.cliente,
+        )  # Sottofascicolo
         
         # Collega C
         fascicolo_a.fascicoli_collegati.add(fascicolo_c)
         
-        response = api_client.get(f'/api/v1/fascicoli/{fascicolo_a.id}/fascicoli_collegabili/')
+        response = api_client.get(f'/api/v1/fascicoli/fascicoli/{fascicolo_a.id}/fascicoli_collegabili/')
         
         assert response.status_code == 200
         
@@ -164,10 +168,10 @@ class TestFascicoliCollegatiAPI:
         fascicolo_b = baker.make('fascicoli.Fascicolo')
         
         response = api_client.post(
-            f'/api/v1/fascicoli/{fascicolo_a.id}/collega_fascicolo/',
+            f'/api/v1/fascicoli/fascicoli/{fascicolo_a.id}/collega_fascicolo/',
             {'fascicolo_id': fascicolo_b.id}
         )
-        
+
         assert response.status_code == 200
         assert response.data['success'] is True
         
@@ -183,7 +187,7 @@ class TestFascicoliCollegatiAPI:
         fascicolo = baker.make('fascicoli.Fascicolo')
         
         response = api_client.post(
-            f'/api/v1/fascicoli/{fascicolo.id}/collega_fascicolo/',
+            f'/api/v1/fascicoli/fascicoli/{fascicolo.id}/collega_fascicolo/',
             {'fascicolo_id': fascicolo.id}
         )
         
@@ -195,10 +199,14 @@ class TestFascicoliCollegatiAPI:
         api_client.force_authenticate(user=user)
         
         fascicolo_parent = baker.make('fascicoli.Fascicolo')
-        fascicolo_child = baker.make('fascicoli.Fascicolo', parent=fascicolo_parent)
+        fascicolo_child = baker.make(
+            'fascicoli.Fascicolo', parent=fascicolo_parent,
+            titolario_voce=fascicolo_parent.titolario_voce, anno=fascicolo_parent.anno,
+            cliente=fascicolo_parent.cliente,
+        )
         
         response = api_client.post(
-            f'/api/v1/fascicoli/{fascicolo_parent.id}/collega_fascicolo/',
+            f'/api/v1/fascicoli/fascicoli/{fascicolo_parent.id}/collega_fascicolo/',
             {'fascicolo_id': fascicolo_child.id}
         )
         
@@ -217,7 +225,7 @@ class TestFascicoliCollegatiAPI:
         
         # Secondo collegamento (duplicato)
         response = api_client.post(
-            f'/api/v1/fascicoli/{fascicolo_a.id}/collega_fascicolo/',
+            f'/api/v1/fascicoli/fascicoli/{fascicolo_a.id}/collega_fascicolo/',
             {'fascicolo_id': fascicolo_b.id}
         )
         
@@ -236,7 +244,7 @@ class TestFascicoliCollegatiAPI:
         
         # Scollega
         response = api_client.post(
-            f'/api/v1/fascicoli/{fascicolo_a.id}/scollega_fascicolo/',
+            f'/api/v1/fascicoli/fascicoli/{fascicolo_a.id}/scollega_fascicolo/',
             {'fascicolo_id': fascicolo_b.id}
         )
         

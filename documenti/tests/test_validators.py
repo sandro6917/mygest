@@ -231,13 +231,13 @@ class IntegrationTest(TestCase):
         cliente = Cliente.objects.create(
             anagrafica=anagrafica,
         )
-        
+
         # File con estensione proibita
         file = SimpleUploadedFile("malware.exe", b"malicious")
-        
+
         with self.assertRaises(ValidationError):
             doc = Documento(
-                cliente=anagrafica,
+                cliente=cliente,
                 data_documento='2024-01-01',
                 file=file,
             )
