@@ -137,6 +137,7 @@ class TestFascicoliCollegatiAPI:
             'fascicoli.Fascicolo', parent=fascicolo_a,
             titolario_voce=fascicolo_a.titolario_voce, anno=fascicolo_a.anno,
             cliente=fascicolo_a.cliente,
+            codice=f'SUB-{fascicolo_a.codice}',
         )  # Sottofascicolo
         
         # Collega C
@@ -203,6 +204,7 @@ class TestFascicoliCollegatiAPI:
             'fascicoli.Fascicolo', parent=fascicolo_parent,
             titolario_voce=fascicolo_parent.titolario_voce, anno=fascicolo_parent.anno,
             cliente=fascicolo_parent.cliente,
+            codice=f'SUB-{fascicolo_parent.codice}',
         )
         
         response = api_client.post(
