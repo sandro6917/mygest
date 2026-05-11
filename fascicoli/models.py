@@ -178,7 +178,7 @@ class Fascicolo(models.Model):
 
     def _next_sub_progressivo(self) -> int:
         with transaction.atomic():
-            c, _ = SottofascicoloCounter.objects.get_or_create(parent=self)
+            c, _ = SottofascicoloCounter.objects.get_or_create(parent_id=self.parent_id)
             SottofascicoloCounter.objects.filter(pk=c.pk).update(last_number=F("last_number") + 1)
             c.refresh_from_db(fields=["last_number"])
             return c.last_number
