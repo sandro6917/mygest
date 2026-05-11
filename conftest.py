@@ -184,25 +184,15 @@ def cliente_pg(db, anagrafica_pg):
 
 @pytest.fixture
 def titolario_base(db):
-    """Titolario di base"""
-    from titolario.models import Titolario
-    return baker.make(
-        Titolario,
-        codice='01',
-        descrizione='Amministrazione',
-        livello=1
-    )
+    """Voce di titolario di base"""
+    from titolario.models import TitolarioVoce
+    return baker.make(TitolarioVoce)
 
 
 @pytest.fixture
 def classificazione(db, titolario_base):
-    """Classificazione collegata a titolario"""
-    from titolario.models import Classificazione
-    return baker.make(
-        Classificazione,
-        titolo=titolario_base,
-        anno=2024
-    )
+    """Classificazione (ora alias TitolarioVoce)"""
+    return titolario_base
 
 
 # ====================================
@@ -240,25 +230,21 @@ def pratica(db, cliente_pf, pratica_tipo):
 
 @pytest.fixture
 def fascicolo_tipo(db):
-    """Tipo fascicolo"""
-    from fascicoli.models import FascicoloTipo
-    return baker.make(
-        FascicoloTipo,
-        nome='Fascicolo Standard'
-    )
+    """TitolarioVoce come tipo fascicolo"""
+    from titolario.models import TitolarioVoce
+    return baker.make(TitolarioVoce)
 
 
 @pytest.fixture
-def fascicolo(db, cliente_pf, fascicolo_tipo, classificazione):
+def fascicolo(db, cliente_pf, fascicolo_tipo):
     """Fascicolo di test"""
     from fascicoli.models import Fascicolo
     return baker.make(
         Fascicolo,
         cliente=cliente_pf,
-        tipo=fascicolo_tipo,
-        classificazione=classificazione,
+        titolario_voce=fascicolo_tipo,
+        anno=2024,
         titolo='Fascicolo di test',
-        stato='aperto'
     )
 
 
@@ -317,17 +303,14 @@ def movimento_protocollo(db, documento):
 def scadenza(db, pratica):
     """Scadenza di test"""
     from scadenze.models import Scadenza
-    from django.utils import timezone
-    from datetime import timedelta
-    
-    return baker.make(
+
+    sc = baker.make(
         Scadenza,
-        pratica=pratica,
         titolo='Scadenza test',
-        data_inizio=timezone.now(),
-        data_scadenza=timezone.now() + timedelta(days=30),
-        stato='ATTIVA'
+        stato='attiva',
     )
+    sc.pratiche.add(pratica)
+    return sc
 
 
 # ====================================
@@ -336,13 +319,12 @@ def scadenza(db, pratica):
 
 @pytest.fixture
 def unita_archivio(db):
-    """Unità archivio"""
+    """Unità archivio (radice, tipo ufficio)"""
     from archivio_fisico.models import UnitaFisica
     return baker.make(
         UnitaFisica,
-        codice='U001',
-        descrizione='Unità test',
-        tipo='SCATOLA'
+        nome='Unità test',
+        tipo='ufficio',
     )
 
 
@@ -351,13 +333,12 @@ def collocazione(db, documento, unita_archivio):
     """Collocazione fisica"""
     from archivio_fisico.models import CollocazioneFisica
     from django.contrib.contenttypes.models import ContentType
-    
+
     return baker.make(
         CollocazioneFisica,
         content_type=ContentType.objects.get_for_model(documento),
         object_id=documento.id,
         unita=unita_archivio,
-        posizione=1
     )
 
 
@@ -371,10 +352,10 @@ def comunicazione(db, cliente_pf):
     from comunicazioni.models import Comunicazione
     return baker.make(
         Comunicazione,
-        destinatario=cliente_pf.anagrafica,
+        destinatari=cliente_pf.anagrafica.email or 'test@example.com',
         oggetto='Test comunicazione',
-        testo='Corpo del messaggio di test',
-        tipo='EMAIL'
+        corpo='Corpo del messaggio di test',
+        tipo='AVVISO',
     )
 
 
