@@ -231,6 +231,13 @@ set -a
 [ -f .env ] && source .env
 set +a
 
+# Verifica che DJANGO_ENV=production sia impostato
+if [ "${DJANGO_ENV}" != "production" ]; then
+    error "DJANGO_ENV non è 'production' (valore: '${DJANGO_ENV:-non impostato}')"
+    error "Imposta DJANGO_ENV=production in .env e rilancia il deploy"
+    exit 1
+fi
+
 pip install -q --upgrade pip
 if pip install -q -r requirements.txt; then
     success "Dependencies aggiornate"
