@@ -502,6 +502,13 @@ WHATSAPP_CLOUD_ACCESS_TOKEN = env('WHATSAPP_CLOUD_ACCESS_TOKEN', default='')
 WHATSAPP_CLOUD_VERIFY_TOKEN = env('WHATSAPP_CLOUD_VERIFY_TOKEN', default='')
 WHATSAPP_CLOUD_APP_SECRET = env('WHATSAPP_CLOUD_APP_SECRET', default='')
 WHATSAPP_CLOUD_TIMEOUT = env.int('WHATSAPP_CLOUD_TIMEOUT', default=10)
+WHATSAPP_ALERT_DEFAULT_NUMBERS = env.list('WHATSAPP_ALERT_DEFAULT_NUMBERS', default=['+39335337132'])
+WHATSAPP_ALERTS_ENABLED = env.bool('WHATSAPP_ALERTS_ENABLED', default=False)
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN', default='8352908018:AAHYs48NQCRoDfNWaQ6B-fiQaTO0h8FibYk')
+TELEGRAM_ALERT_DEFAULT_CHAT_IDS = env.list('TELEGRAM_ALERT_DEFAULT_CHAT_IDS', default=['7198357516'])
+TELEGRAM_ALERTS_ENABLED = env.bool('TELEGRAM_ALERTS_ENABLED', default=True)
 
 # AI Classifier
 AI_CLASSIFIER = {
@@ -585,6 +592,10 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 CELERY_BEAT_SCHEDULE = {
+    'invia-alert-scadenze': {
+        'task': 'scadenze.tasks.invia_alert_scadenze_task',
+        'schedule': crontab(minute='*/5'),
+    },
     'sincronizza-mailbox': {
         'task': 'comunicazioni.tasks.sincronizza_mailbox_task',
         'schedule': crontab(minute='*/15'),

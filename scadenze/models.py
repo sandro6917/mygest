@@ -186,6 +186,8 @@ class ScadenzaOccorrenza(models.Model):
     class MetodoAlert(models.TextChoices):
         EMAIL = "email", _("Email")
         WEBHOOK = "webhook", _("Webhook")
+        WHATSAPP = "whatsapp", _("WhatsApp")
+        TELEGRAM = "telegram", _("Telegram")
 
     class Stato(models.TextChoices):
         PENDENTE = "pending", _("In attesa")
@@ -299,6 +301,8 @@ class ScadenzaAlert(models.Model):
     class MetodoAlert(models.TextChoices):
         EMAIL = "email", _("Email")
         WEBHOOK = "webhook", _("Webhook")
+        WHATSAPP = "whatsapp", _("WhatsApp")
+        TELEGRAM = "telegram", _("Telegram")
 
     class Stato(models.TextChoices):
         PENDENTE = "pending", _("In attesa")
@@ -380,6 +384,20 @@ class ScadenzaAlert(models.Model):
                 raise ValidationError({
                     "alert_config": _("URL webhook obbligatoria per questo metodo di alert."),
                 })
+        if self.metodo_alert == self.MetodoAlert.WHATSAPP:
+            from django.conf import settings as django_settings
+            numeri = (self.alert_config or {}).get("numeri_telefono") or getattr(django_settings, "WHATSAPP_ALERT_DEFAULT_NUMBERS", [])
+            if not numeri:
+                raise ValidationError({
+                    "alert_config": _("Specificare almeno un numero di telefono per alert WhatsApp."),
+                })
+        if self.metodo_alert == self.MetodoAlert.TELEGRAM:
+            from django.conf import settings as django_settings
+            chat_ids = (self.alert_config or {}).get("chat_ids") or getattr(django_settings, "TELEGRAM_ALERT_DEFAULT_CHAT_IDS", [])
+            if not chat_ids:
+                raise ValidationError({
+                    "alert_config": _("Specificare almeno un chat_id Telegram."),
+                })
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         # Calcola automaticamente alert_programmata_il in base all'occorrenza e all'offset
@@ -410,6 +428,8 @@ class ScadenzaNotificaLog(models.Model):
         ALERT_INVIATO = "alert_sent", _("Alert inviato")
         WEBHOOK_ERROR = "webhook_error", _("Errore webhook")
         EMAIL_ERROR = "email_error", _("Errore email")
+        WHATSAPP_ERROR = "whatsapp_error", _("Errore WhatsApp")
+        TELEGRAM_ERROR = "telegram_error", _("Errore Telegram")
         MASSIVE_GENERATION = "bulk_generation", _("Generazione massiva")
 
     occorrenza = models.ForeignKey(

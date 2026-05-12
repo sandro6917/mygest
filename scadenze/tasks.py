@@ -1,18 +1,18 @@
 """
-Task Celery per aggiornamento automatico codici tributo F24.
+Task Celery per scadenze: alert periodici e aggiornamento codici tributo F24.
 
 Configurazione in settings.py:
 
 CELERY_BEAT_SCHEDULE = {
+    'invia-alert-scadenze': {
+        'task': 'scadenze.tasks.invia_alert_scadenze_task',
+        'schedule': crontab(minute='*/5'),  # Ogni 5 minuti
+    },
     'aggiorna-codici-tributo': {
         'task': 'scadenze.tasks.aggiorna_codici_tributo_task',
         'schedule': crontab(hour=3, minute=0, day_of_week=1),  # Ogni lunedì alle 3:00
     },
 }
-
-Uso manuale:
-    from scadenze.tasks import aggiorna_codici_tributo_task
-    aggiorna_codici_tributo_task.delay()
 """
 
 from celery import shared_task
@@ -21,6 +21,43 @@ from django.core.mail import mail_admins
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+@shared_task(bind=True, max_retries=3)
+def invia_alert_scadenze_task(self):
+    """Controlla e invia tutti gli ScadenzaAlert con alert_programmata_il <= adesso."""
+    from django.utils import timezone
+    from .models import ScadenzaAlert
+    from .services import AlertDispatcher
+
+    from django.conf import settings as django_settings
+    now = timezone.now()
+    qs = ScadenzaAlert.objects.filter(
+        stato=ScadenzaAlert.Stato.PENDENTE,
+        alert_programmata_il__lte=now,
+    ).select_related("occorrenza__scadenza")
+
+    if not getattr(django_settings, "WHATSAPP_ALERTS_ENABLED", False):
+        qs = qs.exclude(metodo_alert=ScadenzaAlert.MetodoAlert.WHATSAPP)
+    if not getattr(django_settings, "TELEGRAM_ALERTS_ENABLED", False):
+        qs = qs.exclude(metodo_alert=ScadenzaAlert.MetodoAlert.TELEGRAM)
+
+    alerts = qs
+
+    dispatcher = AlertDispatcher()
+    inviati = 0
+    falliti = 0
+
+    for alert in alerts:
+        try:
+            dispatcher.dispatch_alert(alert)
+            inviati += 1
+        except Exception as exc:
+            logger.error("Errore invio alert %s: %s", alert.pk, exc)
+            falliti += 1
+
+    logger.info("Alert scadenze: %d inviati, %d falliti", inviati, falliti)
+    return {"inviati": inviati, "falliti": falliti}
 
 
 @shared_task(bind=True, max_retries=3)

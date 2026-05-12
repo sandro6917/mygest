@@ -193,15 +193,19 @@ class AlertDispatcher:
     def dispatch_alert(self, alert: "ScadenzaAlert") -> None:
         """Invia un singolo alert."""
         from .models import ScadenzaAlert
-        
+
         try:
             if alert.metodo_alert == ScadenzaAlert.MetodoAlert.EMAIL:
                 self._send_email_alert(alert)
             elif alert.metodo_alert == ScadenzaAlert.MetodoAlert.WEBHOOK:
                 self._send_webhook_alert(alert)
+            elif alert.metodo_alert == ScadenzaAlert.MetodoAlert.WHATSAPP:
+                self._send_whatsapp_alert(alert)
+            elif alert.metodo_alert == ScadenzaAlert.MetodoAlert.TELEGRAM:
+                self._send_telegram_alert(alert)
             else:
                 raise ValueError(f"Metodo di alert {alert.metodo_alert} non supportato")
-            
+
             alert.mark_sent()
         except Exception as exc:
             alert.mark_failed(error_message=str(exc))
@@ -218,16 +222,22 @@ class AlertDispatcher:
             alert_programmata_il__lte=now
         )
         
+        _evento_errore = {
+            "email": ScadenzaNotificaLog.Evento.EMAIL_ERROR,
+            "webhook": ScadenzaNotificaLog.Evento.WEBHOOK_ERROR,
+            "whatsapp": ScadenzaNotificaLog.Evento.WHATSAPP_ERROR,
+            "telegram": ScadenzaNotificaLog.Evento.TELEGRAM_ERROR,
+        }
         inviati = []
         for alert in alerts_da_inviare:
             try:
                 self.dispatch_alert(alert)
                 inviati.append(alert)
             except Exception as exc:
-                # Log dell'errore ma continua con gli altri alert
+                evento = _evento_errore.get(alert.metodo_alert, ScadenzaNotificaLog.Evento.EMAIL_ERROR)
                 ScadenzaNotificaLog.objects.create(
                     occorrenza=occorrenza,
-                    evento=ScadenzaNotificaLog.Evento.EMAIL_ERROR if alert.metodo_alert == "email" else ScadenzaNotificaLog.Evento.WEBHOOK_ERROR,
+                    evento=evento,
                     esito=False,
                     messaggio=f"Errore invio alert: {exc}",
                 )
@@ -239,20 +249,19 @@ class AlertDispatcher:
         self.dispatch_occorrenza_alerts(occorrenza)
 
     def _send_email_alert(self, alert: "ScadenzaAlert") -> None:
-        """Invia un alert via email."""
+        """Crea una Comunicazione e la invia via SMTP."""
         from comunicazioni.models import Comunicazione
-        from .models import ScadenzaAlert
-        
+        from comunicazioni.utils import invia_comunicazione_programmatica, EmailSendError
+
         occorrenza = alert.occorrenza
         config = alert.alert_config or {}
-        
+
         dests = _split_destinatari(occorrenza.scadenza.comunicazione_destinatari)
         dests.extend(_split_destinatari(config.get("destinatari")))
         dedup = sorted({d for d in dests if d})
         if not dedup:
             raise ImproperlyConfigured("Nessun destinatario per la comunicazione di scadenza")
 
-        # Supporto per oggetto e corpo personalizzati
         oggetto = config.get("oggetto_custom") or occorrenza.titolo or occorrenza.scadenza.titolo
         corpo = config.get("corpo_custom") or self._render_corpo_comunicazione(occorrenza, alert)
 
@@ -262,17 +271,99 @@ class AlertDispatcher:
             corpo=corpo,
             destinatari=", ".join(dedup),
         )
-        
-        # Aggiorna l'occorrenza se necessario
+
         if not occorrenza.comunicazione:
             occorrenza.comunicazione = comunicazione
             occorrenza.save(update_fields=["comunicazione", "aggiornato_il"])
 
+        try:
+            invia_comunicazione_programmatica(comunicazione)
+        except EmailSendError as exc:
+            ScadenzaNotificaLog.objects.create(
+                occorrenza=occorrenza,
+                evento=ScadenzaNotificaLog.Evento.EMAIL_ERROR,
+                esito=False,
+                messaggio=str(exc),
+                payload={"alert_id": alert.pk},
+            )
+            raise
+
         ScadenzaNotificaLog.objects.create(
             occorrenza=occorrenza,
             evento=ScadenzaNotificaLog.Evento.ALERT_INVIATO,
-            messaggio=f"Alert inviato via email ({alert.offset_alert} {alert.get_offset_alert_periodo_display()} prima)",
+            messaggio=f"Alert email inviato ({alert.offset_alert} {alert.get_offset_alert_periodo_display()} prima)",
             payload={"destinatari": dedup, "alert_id": alert.pk},
+        )
+
+    def _send_whatsapp_alert(self, alert: "ScadenzaAlert") -> None:
+        """Invia un alert via WhatsApp Cloud API."""
+        from whatsapp.services import WhatsAppCloudClient, WhatsAppAPIError
+
+        occorrenza = alert.occorrenza
+        config = alert.alert_config or {}
+        numeri = config.get("numeri_telefono") or getattr(settings, "WHATSAPP_ALERT_DEFAULT_NUMBERS", [])
+        if not numeri:
+            raise ImproperlyConfigured("Nessun numero di telefono per alert WhatsApp")
+
+        corpo = config.get("corpo_custom") or self._render_corpo_comunicazione(occorrenza, alert)
+
+        try:
+            client = WhatsAppCloudClient()
+            for numero in numeri:
+                client.send_text_message(to=numero, body=corpo)
+        except WhatsAppAPIError as exc:
+            ScadenzaNotificaLog.objects.create(
+                occorrenza=occorrenza,
+                evento=ScadenzaNotificaLog.Evento.WHATSAPP_ERROR,
+                esito=False,
+                messaggio=str(exc),
+                payload={"numeri": numeri, "alert_id": alert.pk},
+            )
+            raise
+
+        ScadenzaNotificaLog.objects.create(
+            occorrenza=occorrenza,
+            evento=ScadenzaNotificaLog.Evento.ALERT_INVIATO,
+            messaggio=f"Alert WhatsApp inviato a {len(numeri)} numero/i ({alert.offset_alert} {alert.get_offset_alert_periodo_display()} prima)",
+            payload={"numeri": numeri, "alert_id": alert.pk},
+        )
+
+    def _send_telegram_alert(self, alert: "ScadenzaAlert") -> None:
+        """Invia un alert via Telegram Bot API."""
+        requests_mod = _load_requests_module()
+        if requests_mod is None:
+            raise ImproperlyConfigured("La libreria requests è necessaria per Telegram")
+
+        token = getattr(settings, "TELEGRAM_BOT_TOKEN", "")
+        if not token:
+            raise ImproperlyConfigured("TELEGRAM_BOT_TOKEN non configurato")
+
+        occorrenza = alert.occorrenza
+        config = alert.alert_config or {}
+        chat_ids = config.get("chat_ids") or getattr(settings, "TELEGRAM_ALERT_DEFAULT_CHAT_IDS", [])
+        if not chat_ids:
+            raise ImproperlyConfigured("Nessun chat_id Telegram configurato")
+
+        testo = config.get("corpo_custom") or self._render_corpo_comunicazione(occorrenza, alert)
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+        for chat_id in chat_ids:
+            response = requests_mod.post(url, json={"chat_id": chat_id, "text": testo}, timeout=10)
+            if response.status_code >= 400:
+                ScadenzaNotificaLog.objects.create(
+                    occorrenza=occorrenza,
+                    evento=ScadenzaNotificaLog.Evento.TELEGRAM_ERROR,
+                    esito=False,
+                    messaggio=response.text[:200],
+                    payload={"chat_id": chat_id, "alert_id": alert.pk},
+                )
+                raise ImproperlyConfigured(f"Telegram API error {response.status_code}: {response.text[:100]}")
+
+        ScadenzaNotificaLog.objects.create(
+            occorrenza=occorrenza,
+            evento=ScadenzaNotificaLog.Evento.ALERT_INVIATO,
+            messaggio=f"Alert Telegram inviato a {len(chat_ids)} chat ({alert.offset_alert} {alert.get_offset_alert_periodo_display()} prima)",
+            payload={"chat_ids": chat_ids, "alert_id": alert.pk},
         )
 
     def _render_corpo_comunicazione(self, occorrenza: ScadenzaOccorrenza, alert: "ScadenzaAlert" = None) -> str:
