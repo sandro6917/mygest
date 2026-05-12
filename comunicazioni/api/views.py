@@ -33,7 +33,7 @@ class ComunicazioneViewSet(viewsets.ModelViewSet):
     )
     serializer_class = ComunicazioneSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["direzione", "stato", "tipo", "anagrafica"]
+    filterset_fields = ["direzione", "stato", "tipo"]
     search_fields = ["oggetto", "corpo", "mittente", "destinatari"]
     ordering_fields = ["data_creazione", "data_invio"]
     ordering = ["-data_creazione"]
