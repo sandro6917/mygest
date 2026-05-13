@@ -180,18 +180,10 @@ jobs:
             set -ex  # Enable debugging and exit on error
             echo "🚀 Starting deployment..."
             cd /srv/mygest/app
-            
-            # Pull latest code
-            echo "📥 Pulling latest code..."
-            git fetch --all
-            git reset --hard origin/main
-            
-            # Activate venv and install deps
-            echo "📦 Installing Python dependencies..."
+
+            # Activate venv (deploy.sh gestisce git pull e build)
             source /srv/mygest/venv/bin/activate || { echo "Failed to activate venv"; exit 1; }
-            pip install -q --upgrade pip || { echo "Failed to upgrade pip"; exit 1; }
-            pip install -q -r requirements.txt || { echo "Failed to install requirements"; exit 1; }
-            
+
             # Run deploy script with --force if service is not active
             echo "🔧 Running deploy script..."
             if ! systemctl is-active --quiet gunicorn_mygest; then
