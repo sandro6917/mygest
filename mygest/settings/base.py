@@ -361,6 +361,9 @@ CLOUDFLARE_R2 = {
     # Durata URL firmati in secondi (default 1 ora).
     # I file restano privati su R2: ogni URL contiene una firma con scadenza.
     'URL_EXPIRY_SECONDS': env.int('R2_URL_EXPIRY_SECONDS', default=3600),
+    # Se True: lettura da R2 abilitata, scrittura/cancellazione bloccata.
+    # Usare in sviluppo per leggere i file di produzione senza rischio di modificarli.
+    'READ_ONLY': env.bool('R2_READ_ONLY', default=False),
 }
 
 # Importazioni

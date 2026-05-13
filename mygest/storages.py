@@ -53,10 +53,24 @@ class NASPathStorage(FileSystemStorage):
         return self._r2._open(name, mode) if self._r2 else super()._open(name, mode)
 
     def _save(self, name, content):
-        return self._r2._save(name, content) if self._r2 else super()._save(name, content)
+        if self._r2:
+            self._check_not_readonly()
+            return self._r2._save(name, content)
+        return super()._save(name, content)
 
     def delete(self, name):
-        return self._r2.delete(name) if self._r2 else super().delete(name)
+        if self._r2:
+            self._check_not_readonly()
+            return self._r2.delete(name)
+        return super().delete(name)
+
+    def _check_not_readonly(self):
+        if settings.CLOUDFLARE_R2.get('READ_ONLY'):
+            raise PermissionError(
+                "R2 è configurato in modalità READ-ONLY in questo ambiente. "
+                "Le scritture su R2 sono disabilitate. "
+                "Imposta R2_READ_ONLY=False nel .env per abilitarle."
+            )
 
     def exists(self, name):
         return self._r2.exists(name) if self._r2 else super().exists(name)
