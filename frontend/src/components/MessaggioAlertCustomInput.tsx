@@ -16,7 +16,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 interface MessaggioAlertCustomInputProps {
-  metodoAlert: 'email' | 'webhook';
+  metodoAlert: 'email' | 'webhook' | 'telegram' | 'whatsapp';
   oggettoCustom?: string;
   corpoCustom?: string;
   payloadCustom?: string;

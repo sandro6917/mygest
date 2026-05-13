@@ -123,7 +123,7 @@ export interface ScadenzaAlert {
   offset_alert: number;
   offset_alert_periodo: 'minutes' | 'hours' | 'days' | 'weeks';
   offset_alert_periodo_display: string;
-  metodo_alert: 'email' | 'webhook';
+  metodo_alert: 'email' | 'webhook' | 'telegram' | 'whatsapp';
   metodo_alert_display: string;
   alert_config: ScadenzaAlertConfig;
   alert_programmata_il: string | null;
@@ -166,7 +166,7 @@ export interface ScadenzaOccorrenza {
   inizio: string;
   fine: string | null;
   giornaliera: boolean;
-  metodo_alert: 'email' | 'webhook';
+  metodo_alert: 'email' | 'webhook' | 'telegram' | 'whatsapp';
   metodo_alert_display: string;
   offset_alert_minuti: number;
   alert_config: ScadenzaOccorrenzaAlertConfig;

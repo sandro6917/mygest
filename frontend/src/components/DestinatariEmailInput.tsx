@@ -2,10 +2,22 @@ import React, { useState } from 'react';
 import { ClienteAutocomplete } from './ClienteAutocomplete';
 import { apiClient } from '@/api/client';
 
+interface EmailContatto {
+  email: string;
+  tipo: string;
+  is_preferito: boolean;
+  attivo: boolean;
+}
+
 interface Cliente {
   id: number;
   anagrafica_display?: string;
   email?: string;
+  anagrafica?: {
+    email?: string;
+    telefono?: string;
+    contatti_email?: EmailContatto[];
+  };
 }
 
 interface DestinatariEmailInputProps {
@@ -54,11 +66,18 @@ export const DestinatariEmailInput: React.FC<DestinatariEmailInputProps> = ({
       const response = await apiClient.get<Cliente>(`/clienti/${clienteId}/`);
       const cliente = response.data;
 
-      if (cliente.email) {
-        // Aggiungi email del cliente se non già presente
-        if (!emailList.includes(cliente.email)) {
-          const newEmails = [...emailList, cliente.email];
-          onChange(newEmails.join(', '));
+      const anagrafica = typeof cliente.anagrafica === 'object' ? cliente.anagrafica : undefined;
+      const contattiEmail = anagrafica?.contatti_email ?? [];
+      const emailDaContatti =
+        contattiEmail.find(c => c.is_preferito && c.attivo)?.email ||
+        contattiEmail.find(c => c.attivo)?.email ||
+        contattiEmail[0]?.email;
+
+      const email = cliente.email || anagrafica?.email || emailDaContatti;
+
+      if (email) {
+        if (!emailList.includes(email)) {
+          onChange([...emailList, email].join(', '));
         }
       } else {
         alert('Il cliente selezionato non ha un indirizzo email configurato.');
