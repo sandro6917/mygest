@@ -2209,7 +2209,20 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
             try:
                 print(f"📦 EXTRACT: Avvio estrazione documenti da {file.name}...")
                 logger.info(f"📦 Avvio estrazione documenti da {file.name}...")
-                extracted_docs = importer.extract_documents(session.file_originale.path)
+
+                # Scarica dal storage (locale o R2) in un temp file per il processing locale
+                ext = os.path.splitext(session.file_originale_nome)[1].lower() or '.bin'
+                with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as _tmp:
+                    _tmp_path = _tmp.name
+                try:
+                    with session.file_originale.open('rb') as _src:
+                        with open(_tmp_path, 'wb') as _dst:
+                            shutil.copyfileobj(_src, _dst)
+                    extracted_docs = importer.extract_documents(_tmp_path)
+                finally:
+                    if os.path.exists(_tmp_path):
+                        os.unlink(_tmp_path)
+
                 print(f"✅ EXTRACT: Estratti {len(extracted_docs)} documenti")
                 logger.info(f"✅ Estratti {len(extracted_docs)} documenti da {file.name}")
             except Exception as e:
