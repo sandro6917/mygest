@@ -55,6 +55,7 @@ const ComunicazioneFormPage   = lazy(() => import('@/pages/ComunicazioneFormPage
 // Archivio fisico
 const ArchivioPage          = lazy(() => import('@/pages/ArchivioPage').then(m => ({ default: m.ArchivioPage })));
 const UnitaFisicaDetailPage = lazy(() => import('@/pages/UnitaFisicaDetailPage').then(m => ({ default: m.UnitaFisicaDetailPage })));
+const UnitaFisicaFormPage   = lazy(() => import('@/pages/UnitaFisicaFormPage'));
 const OperazioniArchivioList   = lazy(() => import('@/pages/ArchivioFisico').then(m => ({ default: m.OperazioniArchivioList })));
 const OperazioneArchivioDetail = lazy(() => import('@/pages/ArchivioFisico').then(m => ({ default: m.OperazioneArchivioDetail })));
 const OperazioneArchivioForm   = lazy(() => import('@/pages/ArchivioFisico').then(m => ({ default: m.OperazioneArchivioForm })));
@@ -159,6 +160,8 @@ export const router = createBrowserRouter([
       { path: 'comunicazioni/:id/modifica', element: <Suspense fallback={<PageLoader />}><ComunicazioneFormPage /></Suspense> },
       // Archivio fisico
       { path: 'archivio',                             element: <Suspense fallback={<PageLoader />}><ArchivioPage /></Suspense> },
+      { path: 'archivio/unita/nuovo',                 element: <Suspense fallback={<PageLoader />}><UnitaFisicaFormPage /></Suspense> },
+      { path: 'archivio/unita/:id/modifica',          element: <Suspense fallback={<PageLoader />}><UnitaFisicaFormPage /></Suspense> },
       { path: 'archivio/unita/:id',                   element: <Suspense fallback={<PageLoader />}><UnitaFisicaDetailPage /></Suspense> },
       { path: 'archivio-fisico/operazioni',           element: <Suspense fallback={<PageLoader />}><OperazioniArchivioList /></Suspense> },
       { path: 'archivio-fisico/operazioni/nuova',     element: <Suspense fallback={<PageLoader />}><OperazioneArchivioForm /></Suspense> },
