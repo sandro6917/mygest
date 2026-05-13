@@ -21,8 +21,8 @@ def ensure_archivio_path(cliente_code: str, titolario_path_parts: list[str], ann
         parts.append(str(anno))
     path = os.path.join(*parts)
 
-    r2_config = getattr(settings, ‘CLOUDFLARE_R2’, {})
-    if not r2_config.get(‘BUCKET_NAME’):
+    r2_config = getattr(settings, "CLOUDFLARE_R2", {})
+    if not r2_config.get("BUCKET_NAME"):
         os.makedirs(path, exist_ok=True)
 
     return path
