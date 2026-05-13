@@ -262,12 +262,31 @@ class ClienteSerializer(serializers.ModelSerializer):
     """Serializer per Cliente"""
     anagrafica = AnagraficaDetailSerializer(read_only=True)
     tipo_cliente_display = serializers.CharField(source='tipo_cliente.descrizione', read_only=True)
-    
+    email = serializers.SerializerMethodField()
+
+    def get_email(self, obj) -> str | None:
+        """Restituisce la migliore email disponibile per il cliente."""
+        ana = obj.anagrafica
+        if ana.email:
+            return ana.email
+        contatto = (
+            ana.contatti_email.filter(tipo='GEN', is_preferito=True, attivo=True).first()
+            or ana.contatti_email.filter(tipo='GEN', attivo=True).first()
+            or ana.contatti_email.filter(attivo=True).first()
+            or ana.contatti_email.first()
+        )
+        if contatto:
+            return contatto.email
+        if ana.pec:
+            return ana.pec
+        return None
+
     class Meta:
         model = Cliente
         fields = [
             'id', 'anagrafica', 'cliente_dal', 'cliente_al',
-            'codice_destinatario', 'tipo_cliente', 'tipo_cliente_display'
+            'codice_destinatario', 'tipo_cliente', 'tipo_cliente_display',
+            'email',
         ]
 
 

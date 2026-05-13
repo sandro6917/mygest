@@ -66,14 +66,7 @@ export const DestinatariEmailInput: React.FC<DestinatariEmailInputProps> = ({
       const response = await apiClient.get<Cliente>(`/clienti/${clienteId}/`);
       const cliente = response.data;
 
-      const anagrafica = typeof cliente.anagrafica === 'object' ? cliente.anagrafica : undefined;
-      const contattiEmail = anagrafica?.contatti_email ?? [];
-      const emailDaContatti =
-        contattiEmail.find(c => c.is_preferito && c.attivo)?.email ||
-        contattiEmail.find(c => c.attivo)?.email ||
-        contattiEmail[0]?.email;
-
-      const email = cliente.email || anagrafica?.email || emailDaContatti;
+      const email = cliente.email;
 
       if (email) {
         if (!emailList.includes(email)) {
