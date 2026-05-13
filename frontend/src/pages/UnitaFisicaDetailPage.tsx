@@ -23,8 +23,11 @@ export function UnitaFisicaDetailPage() {
   const [showListaMenu, setShowListaMenu] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    const numericId = Number(id);
+    if (id && !isNaN(numericId)) {
       loadData();
+    } else if (id) {
+      navigate('/archivio', { replace: true });
     }
   }, [id]);
 
