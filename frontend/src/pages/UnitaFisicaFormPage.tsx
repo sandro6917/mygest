@@ -44,7 +44,7 @@ const UnitaFisicaFormPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Partial<UnitaFisica>>({
-    codice: '',
+    prefisso_codice: '',
     nome: '',
     tipo: 'contenitore',
     parent: searchParams.get('parent') ? Number(searchParams.get('parent')) : null,
@@ -65,7 +65,7 @@ const UnitaFisicaFormPage: React.FC = () => {
       setLoading(true);
       const data = await getUnitaFisica(unitaId);
       setFormData({
-        codice: data.codice,
+        prefisso_codice: data.prefisso_codice ?? '',
         nome: data.nome,
         tipo: data.tipo,
         parent: data.parent ?? null,
@@ -83,8 +83,8 @@ const UnitaFisicaFormPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.codice?.trim() || !formData.nome?.trim() || !formData.tipo) {
-      setError('Codice, nome e tipo sono obbligatori');
+    if (!formData.prefisso_codice?.trim() || !formData.nome?.trim() || !formData.tipo) {
+      setError('Prefisso codice, nome e tipo sono obbligatori');
       return;
     }
 
@@ -142,11 +142,12 @@ const UnitaFisicaFormPage: React.FC = () => {
 
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-                label="Codice"
-                value={formData.codice ?? ''}
-                onChange={e => setFormData(p => ({ ...p, codice: e.target.value }))}
+                label="Prefisso codice"
+                value={formData.prefisso_codice ?? ''}
+                onChange={e => setFormData(p => ({ ...p, prefisso_codice: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') }))}
                 required
                 size="small"
+                helperText="Es. UFF, ST, SC — il codice completo viene generato automaticamente"
                 sx={{ flex: 1 }}
               />
               <TextField

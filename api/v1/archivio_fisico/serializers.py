@@ -50,8 +50,8 @@ class UnitaFisicaSimpleSerializer(serializers.ModelSerializer):
     class Meta:
         model = UnitaFisica
         fields = [
-            'id', 'codice', 'nome', 'tipo', 'tipo_display', 'parent', 'parent_nome',
-            'full_path', 'attivo', 'archivio_fisso', 'cliente', 'cliente_nome'
+            'id', 'prefisso_codice', 'codice', 'nome', 'tipo', 'tipo_display', 'parent', 'parent_nome',
+            'full_path', 'attivo', 'archivio_fisso', 'ordine', 'note', 'cliente', 'cliente_nome'
         ]
     
     def get_cliente_nome(self, obj):
