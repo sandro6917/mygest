@@ -340,15 +340,28 @@ COMPRESS_JS_FILTERS = [
 
 ARCHIVIO_BASE_PATH = env('ARCHIVIO_BASE_PATH', default=str(BASE_DIR / 'archivio'))
 
-# Media URL per servire i file dell'archivio
+# Media URL per servire i file dell'archivio (sovrascritta da R2 se configurato)
 MEDIA_URL = '/archivio/'
 MEDIA_ROOT = ARCHIVIO_BASE_PATH
 
 # Storage personalizzato per NAS
 NAS_STORAGE = FileSystemStorage(location=ARCHIVIO_BASE_PATH)
 
-# ML Models storage (su NAS)
+# ML Models storage (sempre su disco locale, non su R2)
 NAS_ML_MODELS_PATH = os.path.join(ARCHIVIO_BASE_PATH, "ml_models")
+
+# Cloudflare R2 Storage (opzionale - se configurato sostituisce il filesystem locale)
+# Crea bucket su: https://dash.cloudflare.com → R2 → Crea bucket
+# Genera API token con permessi Object Read/Write sul bucket
+CLOUDFLARE_R2 = {
+    'ACCOUNT_ID': env('R2_ACCOUNT_ID', default=''),
+    'ACCESS_KEY_ID': env('R2_ACCESS_KEY_ID', default=''),
+    'SECRET_ACCESS_KEY': env('R2_SECRET_ACCESS_KEY', default=''),
+    'BUCKET_NAME': env('R2_BUCKET_NAME', default=''),
+    # Durata URL firmati in secondi (default 1 ora).
+    # I file restano privati su R2: ogni URL contiene una firma con scadenza.
+    'URL_EXPIRY_SECONDS': env.int('R2_URL_EXPIRY_SECONDS', default=3600),
+}
 
 # Importazioni
 IMPORTAZIONI_SOURCE_DIRS = env.list(

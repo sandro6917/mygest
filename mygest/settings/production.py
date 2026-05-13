@@ -210,20 +210,25 @@ else:
 # ARCHIVIO PRODUCTION
 # =============================================================================
 
-# Validazione percorso archivio
-if not Path(ARCHIVIO_BASE_PATH).exists():  # noqa: F405
-    raise ImproperlyConfigured(  # noqa: F405
-        f"ARCHIVIO_BASE_PATH non esiste: {ARCHIVIO_BASE_PATH}\n"  # noqa: F405
-        "Crea la directory o configura ARCHIVIO_BASE_PATH corretto nel .env"
-    )
+_r2_bucket = CLOUDFLARE_R2.get('BUCKET_NAME') and CLOUDFLARE_R2.get('ACCOUNT_ID')  # noqa: F405
 
-if not os.access(ARCHIVIO_BASE_PATH, os.W_OK):  # noqa: F405
-    raise ImproperlyConfigured(  # noqa: F405
-        f"ARCHIVIO_BASE_PATH non scrivibile: {ARCHIVIO_BASE_PATH}\n"  # noqa: F405
-        "Verifica permessi directory per utente mygest"
-    )
-
-print(f"✓ Archivio: {ARCHIVIO_BASE_PATH}")  # noqa: F405
+if _r2_bucket:
+    print(f"✓ Storage: Cloudflare R2 (bucket: {CLOUDFLARE_R2['BUCKET_NAME']})")  # noqa: F405
+    if CLOUDFLARE_R2.get('CUSTOM_DOMAIN'):  # noqa: F405
+        print(f"✓ R2 Custom Domain: {CLOUDFLARE_R2['CUSTOM_DOMAIN']}")  # noqa: F405
+else:
+    # Modalità filesystem locale: valida che il path esista e sia scrivibile
+    if not Path(ARCHIVIO_BASE_PATH).exists():  # noqa: F405
+        raise ImproperlyConfigured(  # noqa: F405
+            f"ARCHIVIO_BASE_PATH non esiste: {ARCHIVIO_BASE_PATH}\n"  # noqa: F405
+            "Crea la directory, monta il NAS, oppure configura le variabili R2_* per usare Cloudflare R2."
+        )
+    if not os.access(ARCHIVIO_BASE_PATH, os.W_OK):  # noqa: F405
+        raise ImproperlyConfigured(  # noqa: F405
+            f"ARCHIVIO_BASE_PATH non scrivibile: {ARCHIVIO_BASE_PATH}\n"  # noqa: F405
+            "Verifica permessi directory per utente mygest"
+        )
+    print(f"✓ Archivio (filesystem): {ARCHIVIO_BASE_PATH}")  # noqa: F405
 
 
 # =============================================================================

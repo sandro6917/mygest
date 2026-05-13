@@ -4,22 +4,27 @@ from typing import List, Optional
 
 def ensure_archivio_path(cliente_code: str, titolario_path_parts: list[str], anno: int | None = None) -> str:
     """
-    Crea (se non esistono) le directory dell’archivio cliente/titolario.
+    Restituisce il percorso archivio cliente/titolario e, su filesystem locale,
+    crea le directory se non esistono. Con Cloudflare R2 restituisce solo il path
+    (R2 non ha directory reali, le crea implicitamente al salvataggio).
 
     Esempio:
         cliente_code = "ROSSIM"
-        titolario_path_parts = ["03 - Amministrazione", "03.01 - Fatturazione clienti", "03.01.02 - Fatture ricevute"]
+        titolario_path_parts = ["03 - Amministrazione", "03.01 - Fatturazione clienti"]
         anno = 2025
-    Restituisce il percorso assoluto creato:
-        /srv/archivio/ROSSIM/03 - Amministrazione/03.01 - Fatturazione clienti/03.01.02 - Fatture ricevute/2025
+    Restituisce:
+        /srv/archivio/ROSSIM/03 - Amministrazione/03.01 - Fatturazione clienti/2025
     """
     base = getattr(settings, "ARCHIVIO_BASE_PATH", "/srv/archivio")
-    # crea il percorso cliente
     parts = [base, cliente_code] + titolario_path_parts
     if anno:
         parts.append(str(anno))
     path = os.path.join(*parts)
-    os.makedirs(path, exist_ok=True)
+
+    r2_config = getattr(settings, ‘CLOUDFLARE_R2’, {})
+    if not r2_config.get(‘BUCKET_NAME’):
+        os.makedirs(path, exist_ok=True)
+
     return path
 
 def build_titolario_parts(voce) -> List[str]:

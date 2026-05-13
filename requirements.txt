@@ -56,7 +56,7 @@ django-stubs==4.2.7
 
 # Storage remoti (opzionale)
 django-storages==1.14.4
-# boto3==1.35.15              # S3
+boto3==1.35.15                # S3 / Cloudflare R2
 # google-cloud-storage==2.18.2
 
 # PDF/Report (opzionale, per app 'stampe')
