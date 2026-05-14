@@ -94,6 +94,11 @@ fi
 # Create required directories
 mkdir -p "$BACKUP_DIR" "$LOG_DIR"
 
+# Ensure app logs dir exists and is writable by the service user
+mkdir -p "$REPO_DIR/logs"
+chown -R "${SUDO_USER:-mygest}:www-data" "$REPO_DIR/logs" 2>/dev/null || true
+chmod 775 "$REPO_DIR/logs"
+
 # =============================================================================
 # FUNCTIONS
 # =============================================================================
