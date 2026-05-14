@@ -59,10 +59,14 @@ def invio_massivo(comunicazioni, context_list, template_id=None, use_gmail=False
             )
             if corpo_html:
                 email.attach_alternative(corpo_html, "text/html")
-            for allegato in comunicazione.allegati.select_related("documento"):
-                doc = allegato.documento
-                if doc.file:
-                    email.attach(doc.file.name.split("/")[-1], doc.file.read())
+            for allegato in comunicazione.allegati.all():
+                try:
+                    content = allegato.get_file_content()
+                    if content:
+                        email.attach(allegato.get_filename(), content)
+                except Exception as exc_att:
+                    import logging
+                    logging.getLogger(__name__).error(f"Errore allegato {allegato.id} comunicazione {comunicazione.id}: {exc_att}")
             email.send()
             comunicazione.stato = "inviata"
             comunicazione.data_invio = timezone.now()

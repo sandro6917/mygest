@@ -81,31 +81,22 @@ class ComunicazioneViewSet(viewsets.ModelViewSet):
         if comunicazione.corpo_html:
             email.attach_alternative(comunicazione.corpo_html, "text/html")
         
-        # Allegati - gestisce documento, fascicolo e file
-        import os
-        temp_files = []  # Track temporary files to clean up
-        
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Allegati - usa get_file_content() che funziona con filesystem e R2
         for allegato in comunicazione.allegati.all():
             try:
-                file_path = allegato.get_file_path()
                 filename = allegato.get_filename()
-                
-                if file_path and os.path.exists(file_path):
-                    with open(file_path, 'rb') as f:
-                        email.attach(filename, f.read())
-                    
-                    # Se è un fascicolo (ZIP temporaneo), traccia per pulizia
-                    if allegato.fascicolo and file_path.endswith('.zip'):
-                        temp_files.append(file_path)
+                content = allegato.get_file_content()
+                if content:
+                    email.attach(filename, content)
             except Exception as e:
-                # Log error but continue with other attachments
-                print(f"Errore allegato {allegato.id}: {e}")
+                logger.error(f"Errore allegato {allegato.id} nella comunicazione {comunicazione.id}: {e}")
                 continue
-        
+
         # Invio
         try:
-            import logging
-            logger = logging.getLogger(__name__)
             
             logger.info(f"[Comunicazione #{comunicazione.id}] Apertura connessione SMTP...")
             connection.open()
@@ -176,13 +167,10 @@ class ComunicazioneViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         finally:
-            # Pulizia file temporanei (ZIP fascicoli)
-            for temp_file in temp_files:
-                try:
-                    if os.path.exists(temp_file):
-                        os.unlink(temp_file)
-                except Exception:
-                    pass
+            try:
+                connection.close()
+            except Exception:
+                pass
 
     @action(detail=True, methods=["post"])
     def rigenera(self, request, pk=None):

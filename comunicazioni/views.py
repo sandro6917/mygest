@@ -309,13 +309,12 @@ def invia_comunicazione(request, pk):
         if comunicazione.corpo_html:
             email.attach_alternative(comunicazione.corpo_html, "text/html")
         for allegato in allegati:
-            doc = allegato.documento
-            if doc and getattr(doc, "file", None):
-                doc.file.open("rb")
-                try:
-                    email.attach(doc.file.name.split("/")[-1], doc.file.read())
-                finally:
-                    doc.file.close()
+            try:
+                content = allegato.get_file_content()
+                if content:
+                    email.attach(allegato.get_filename(), content)
+            except Exception as exc_att:
+                messages.warning(request, f"Allegato '{allegato.get_filename()}' non incluso nell'email: {exc_att}")
         try:
             connection.open()
             connection.send_messages([email])

@@ -585,16 +585,32 @@ class AllegatoComunicazione(models.Model):
         return f"{self.comunicazione} -> Allegato senza contenuto"
     
     def get_file_path(self):
-        """Ritorna il path del file da allegare"""
+        """Ritorna il path del file da allegare (solo filesystem locale, non R2)"""
         if self.documento and hasattr(self.documento, 'file') and self.documento.file:
             return self.documento.file.path
         elif self.file:
             return self.file.path
         elif self.fascicolo:
-            # Genera ZIP al volo
             return self._generate_fascicolo_zip()
         return None
-    
+
+    def get_file_content(self):
+        """
+        Legge il contenuto binario del file, compatibile con qualsiasi storage
+        (filesystem locale e Cloudflare R2). Da usare per allegare file alle email.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        if self.documento and hasattr(self.documento, 'file') and self.documento.file:
+            with self.documento.file.open('rb') as f:
+                return f.read()
+        elif self.file:
+            with self.file.open('rb') as f:
+                return f.read()
+        elif self.fascicolo:
+            return self._generate_fascicolo_zip_bytes()
+        return None
+
     def get_filename(self):
         """Ritorna il nome del file da usare nell'allegato email"""
         if self.documento:
@@ -604,30 +620,42 @@ class AllegatoComunicazione(models.Model):
         elif self.fascicolo:
             return f"{self.fascicolo.titolo}_{self.fascicolo.id}.zip"
         return "allegato"
-    
-    def _generate_fascicolo_zip(self):
-        """Genera uno ZIP con tutti i documenti del fascicolo"""
-        import os
+
+    def _generate_fascicolo_zip_bytes(self):
+        """Genera uno ZIP in memoria con i documenti del fascicolo (compatibile con R2)"""
+        import io
+        import logging
         import zipfile
-        from django.conf import settings
-        from tempfile import NamedTemporaryFile
-        
-        # Crea file temporaneo
-        temp_file = NamedTemporaryFile(delete=False, suffix='.zip')
-        
-        with zipfile.ZipFile(temp_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Aggiungi tutti i documenti del fascicolo
+        logger = logging.getLogger(__name__)
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for doc in self.fascicolo.documenti.all():
                 if hasattr(doc, 'file') and doc.file:
                     try:
-                        file_path = doc.file.path
-                        arcname = f"{doc.file.name.split('/')[-1]}"
-                        zipf.write(file_path, arcname)
+                        arcname = doc.file.name.split('/')[-1]
+                        with doc.file.open('rb') as f:
+                            zipf.writestr(arcname, f.read())
                     except Exception as e:
-                        # Log errore ma continua
-                        print(f"Errore aggiunta documento {doc.id} allo ZIP: {e}")
+                        logger.error(f"Errore aggiunta documento {doc.id} allo ZIP fascicolo {self.fascicolo.id}: {e}")
                         continue
-        
+        buffer.seek(0)
+        return buffer.read()
+
+    def _generate_fascicolo_zip(self):
+        """Genera uno ZIP su filesystem temporaneo (solo ambienti locali, non R2)"""
+        import os
+        import zipfile
+        from tempfile import NamedTemporaryFile
+        temp_file = NamedTemporaryFile(delete=False, suffix='.zip')
+        with zipfile.ZipFile(temp_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for doc in self.fascicolo.documenti.all():
+                if hasattr(doc, 'file') and doc.file:
+                    try:
+                        zipf.write(doc.file.path, doc.file.name.split('/')[-1])
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).error(f"Errore aggiunta documento {doc.id} allo ZIP: {e}")
+                        continue
         temp_file.close()
         return temp_file.name
 
