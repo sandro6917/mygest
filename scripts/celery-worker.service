@@ -4,21 +4,12 @@ After=network.target redis.service postgresql.service
 Requires=redis.service
 
 [Service]
-Type=forking
+Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/srv/mygest/app
 EnvironmentFile=/srv/mygest/app/.env
-ExecStart=/srv/mygest/venv/bin/celery \
-    -A mygest worker \
-    --loglevel=info \
-    --logfile=/srv/mygest/logs/celery-worker.log \
-    --pidfile=/tmp/celery-worker.pid \
-    --concurrency=2 \
-    --detach
-ExecStop=/bin/kill -TERM $MAINPID
-ExecReload=/bin/kill -HUP $MAINPID
-PIDFile=/tmp/celery-worker.pid
+ExecStart=/srv/mygest/venv/bin/celery -A mygest worker --loglevel=info --concurrency=2
 Restart=on-failure
 RestartSec=10
 KillMode=mixed
