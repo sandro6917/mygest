@@ -1,0 +1,29 @@
+[Unit]
+Description=MyGest Celery Beat Scheduler
+After=network.target redis.service postgresql.service celery-worker.service
+Requires=redis.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/mygest/app
+EnvironmentFile=/srv/mygest/app/.env
+ExecStart=/srv/mygest/venv/bin/celery \
+    -A mygest beat \
+    --loglevel=info \
+    --logfile=/srv/mygest/logs/celery-beat.log \
+    --pidfile=/tmp/celery-beat.pid \
+    --detach
+ExecStop=/bin/kill -TERM $MAINPID
+PIDFile=/tmp/celery-beat.pid
+Restart=on-failure
+RestartSec=10
+KillMode=mixed
+TimeoutStopSec=30
+
+StandardOutput=append:/srv/mygest/logs/celery-beat.log
+StandardError=append:/srv/mygest/logs/celery-beat.log
+
+[Install]
+WantedBy=multi-user.target

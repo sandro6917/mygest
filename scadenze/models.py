@@ -417,6 +417,20 @@ class ScadenzaAlert(models.Model):
         """Marca l'alert come fallito."""
         self.stato = self.Stato.FALLITO
         self.save(update_fields=["stato", "aggiornato_il"])
+        if error_message:
+            _evento_map = {
+                self.MetodoAlert.TELEGRAM: ScadenzaNotificaLog.Evento.TELEGRAM_ERROR,
+                self.MetodoAlert.WHATSAPP: ScadenzaNotificaLog.Evento.WHATSAPP_ERROR,
+                self.MetodoAlert.WEBHOOK: ScadenzaNotificaLog.Evento.WEBHOOK_ERROR,
+                self.MetodoAlert.EMAIL: ScadenzaNotificaLog.Evento.EMAIL_ERROR,
+            }
+            ScadenzaNotificaLog.objects.create(
+                occorrenza=self.occorrenza,
+                evento=_evento_map.get(self.metodo_alert, ScadenzaNotificaLog.Evento.EMAIL_ERROR),
+                esito=False,
+                messaggio=error_message[:500],
+                payload={"alert_id": self.pk, "metodo": self.metodo_alert},
+            )
 
 
 class ScadenzaNotificaLog(models.Model):

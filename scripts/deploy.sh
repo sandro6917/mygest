@@ -23,6 +23,8 @@ BACKUP_DIR="/srv/mygest/backups"
 LOG_DIR="/srv/mygest/logs"
 LOG_FILE="$LOG_DIR/deploy.log"
 SERVICE_NAME="gunicorn_mygest"
+CELERY_WORKER_SERVICE="celery-worker"
+CELERY_BEAT_SERVICE="celery-beat"
 HEALTH_URL="http://localhost:8000/api/v1/health/"
 HEALTH_TIMEOUT=10
 MAX_RETRIES=3
@@ -273,7 +275,7 @@ else
 fi
 
 # 9. SERVICE RESTART
-section "Step 9/9: Restart Service"
+section "Step 9/9: Restart Services"
 log "Reloading $SERVICE_NAME (graceful)..."
 
 if sudo systemctl reload "$SERVICE_NAME" 2>/dev/null; then
@@ -286,6 +288,30 @@ else
         error "Restart servizio fallito"
         rollback "$CURRENT_COMMIT"
     fi
+fi
+
+# Riavvia Celery Worker e Beat (necessario per caricare nuovo codice)
+log "Riavviando Celery Worker..."
+if systemctl is-enabled --quiet "$CELERY_WORKER_SERVICE" 2>/dev/null; then
+    if sudo systemctl restart "$CELERY_WORKER_SERVICE"; then
+        success "Celery Worker riavviato"
+    else
+        warn "Celery Worker restart fallito (non bloccante)"
+    fi
+else
+    warn "Servizio $CELERY_WORKER_SERVICE non abilitato - alert scadenze non funzioneranno!"
+    warn "Esegui: sudo bash scripts/setup_celery_services.sh"
+fi
+
+log "Riavviando Celery Beat..."
+if systemctl is-enabled --quiet "$CELERY_BEAT_SERVICE" 2>/dev/null; then
+    if sudo systemctl restart "$CELERY_BEAT_SERVICE"; then
+        success "Celery Beat riavviato"
+    else
+        warn "Celery Beat restart fallito (non bloccante)"
+    fi
+else
+    warn "Servizio $CELERY_BEAT_SERVICE non abilitato - alert scadenze non funzioneranno!"
 fi
 
 # 10. POST-DEPLOY HEALTH CHECK

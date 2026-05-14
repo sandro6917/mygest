@@ -53,10 +53,30 @@ def invia_alert_scadenze_task(self):
             dispatcher.dispatch_alert(alert)
             inviati += 1
         except Exception as exc:
-            logger.error("Errore invio alert %s: %s", alert.pk, exc)
+            logger.error(
+                "Errore invio alert %s (metodo=%s, occorrenza=%s): %s",
+                alert.pk, alert.metodo_alert,
+                getattr(alert, 'occorrenza_id', '?'), exc,
+            )
             falliti += 1
 
-    logger.info("Alert scadenze: %d inviati, %d falliti", inviati, falliti)
+    if falliti:
+        logger.warning("Alert scadenze: %d inviati, %d FALLITI", inviati, falliti)
+        try:
+            mail_admins(
+                subject=f"[MyGest] {falliti} alert scadenze falliti",
+                message=(
+                    f"Il task Celery 'invia_alert_scadenze_task' ha riportato {falliti} "
+                    f"alert falliti su {inviati + falliti} totali.\n\n"
+                    "Controllare ScadenzaNotificaLog nel pannello admin per i dettagli."
+                ),
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+    else:
+        logger.info("Alert scadenze: %d inviati, %d falliti", inviati, falliti)
+
     return {"inviati": inviati, "falliti": falliti}
 
 

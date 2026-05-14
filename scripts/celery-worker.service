@@ -1,0 +1,31 @@
+[Unit]
+Description=MyGest Celery Worker
+After=network.target redis.service postgresql.service
+Requires=redis.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/mygest/app
+EnvironmentFile=/srv/mygest/app/.env
+ExecStart=/srv/mygest/venv/bin/celery \
+    -A mygest worker \
+    --loglevel=info \
+    --logfile=/srv/mygest/logs/celery-worker.log \
+    --pidfile=/tmp/celery-worker.pid \
+    --concurrency=2 \
+    --detach
+ExecStop=/bin/kill -TERM $MAINPID
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/tmp/celery-worker.pid
+Restart=on-failure
+RestartSec=10
+KillMode=mixed
+TimeoutStopSec=60
+
+StandardOutput=append:/srv/mygest/logs/celery-worker.log
+StandardError=append:/srv/mygest/logs/celery-worker.log
+
+[Install]
+WantedBy=multi-user.target
