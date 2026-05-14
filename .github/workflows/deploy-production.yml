@@ -184,10 +184,15 @@ jobs:
             # Activate venv (deploy.sh gestisce git pull e build)
             source /srv/mygest/venv/bin/activate || { echo "Failed to activate venv"; exit 1; }
 
-            # Run deploy script with --force if service is not active
+            # Run deploy script: usa --force se il servizio non è attivo O se il health check fallisce
             echo "🔧 Running deploy script..."
-            if ! systemctl is-active --quiet gunicorn_mygest; then
-              echo "⚠️  Service not active, using --force --skip-backup flags"
+            HEALTH_OK=false
+            if systemctl is-active --quiet gunicorn_mygest; then
+              curl -sf --max-time 10 http://localhost:8000/api/v1/health/ > /dev/null 2>&1 && HEALTH_OK=true
+            fi
+
+            if [ "$HEALTH_OK" = "false" ]; then
+              echo "⚠️  Servizio non attivo o health check fallito, usando --force --skip-backup"
               ./scripts/deploy.sh --force --skip-backup || { echo "Deploy script failed"; exit 1; }
             else
               ./scripts/deploy.sh || { echo "Deploy script failed"; exit 1; }
