@@ -12,6 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils import timezone
 
+from .holidays_utils import next_business_day
 from .models import (
     Scadenza,
     ScadenzaAlert,
@@ -43,6 +44,20 @@ class OccurrenceResult:
     created: bool
 
 
+def _shift_to_business_day(dt_aware: datetime) -> datetime:
+    """Sposta dt_aware al primo giorno feriale utile, preservando l'orario."""
+    shifted_date = next_business_day(dt_aware.date())
+    if shifted_date == dt_aware.date():
+        return dt_aware
+    return dt_aware.replace(year=shifted_date.year, month=shifted_date.month, day=shifted_date.day)
+
+
+def _advance_to_next_business_day(dt_aware: datetime) -> datetime:
+    """Sposta dt_aware al primo giorno feriale STRETTAMENTE successivo alla sua data."""
+    shifted_date = next_business_day(dt_aware.date() + timedelta(days=1))
+    return dt_aware.replace(year=shifted_date.year, month=shifted_date.month, day=shifted_date.day)
+
+
 class OccurrenceGenerator:
     """Genera occorrenze serializzando la logica di periodicità."""
 
@@ -66,7 +81,17 @@ class OccurrenceGenerator:
         metodo_alert: str,
         offset_alert_minuti: int,
         alert_config: dict[str, Any],
+        posticipa_festivi: bool | None = None,
+        alert_templates: list[dict[str, Any]] | None = None,
     ) -> list[ScadenzaOccorrenza]:
+        """Genera le occorrenze della scadenza.
+
+        `posticipa_festivi=None` usa il valore configurato sulla scadenza;
+        se esplicito (True/False) vale solo per questa chiamata. `alert_templates`
+        (lista di dict con offset_alert/offset_alert_periodo/metodo_alert/alert_config)
+        crea un ScadenzaAlert per ciascun template SOLO sulle occorrenze nuove
+        create in questo batch; un template non valido fa rollback dell'intero batch.
+        """
         if self.scadenza.periodicita == Scadenza.Periodicita.NESSUNA:
             raise ValueError(
                 "La scadenza non ha periodicità configurata. "
@@ -81,6 +106,8 @@ class OccurrenceGenerator:
                 metodo_alert=metodo_alert,
                 offset_alert_minuti=offset_alert_minuti,
                 alert_config=alert_config,
+                posticipa_festivi=posticipa_festivi,
+                alert_templates=alert_templates,
             )
         freq = self.FREQ_MAP.get(self.scadenza.periodicita)
         if freq is None:
@@ -93,11 +120,10 @@ class OccurrenceGenerator:
             start_naive = start
 
         rule_kwargs: dict[str, Any] = {"dtstart": start_naive, "interval": interval}
+        end_aware: datetime | None = None
         if end:
-            if timezone.is_aware(end):
-                end_naive = timezone.localtime(end).replace(tzinfo=None)
-            else:
-                end_naive = end
+            end_aware = timezone.make_aware(end) if timezone.is_naive(end) else end
+            end_naive = timezone.localtime(end_aware).replace(tzinfo=None)
             rule_kwargs["until"] = end_naive
         if count:
             rule_kwargs["count"] = count
@@ -106,18 +132,43 @@ class OccurrenceGenerator:
         import logging
         logger = logging.getLogger(__name__)
         logger.info(f"OccurrenceGenerator - freq: {freq}, rule_kwargs: {rule_kwargs}")
-        
+
+        effective_posticipa = (
+            self.scadenza.posticipa_festivi if posticipa_festivi is None else posticipa_festivi
+        )
+
         risultati: list[ScadenzaOccorrenza] = []
         nuove_create = 0
         gia_esistenti = 0
-        
+        scartate = 0
+
         with transaction.atomic():
             occorrenze_rrule = list(rrule.rrule(freq, **rule_kwargs))
             logger.info(f"rrule ha generato {len(occorrenze_rrule)} date")
-            
+
+            used_dates: set[datetime] = set()
             for dt in occorrenze_rrule:
                 # Converti il datetime naive di rrule in timezone-aware
                 dt_aware = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+
+                if effective_posticipa:
+                    dt_aware = _shift_to_business_day(dt_aware)
+
+                # Due date diverse della rrule possono convergere sullo stesso giorno
+                # feriale dopo il posticipo festività: senza questo controllo
+                # get_or_create le collasserebbe in un solo record (una rata "sparirebbe").
+                while dt_aware in used_dates:
+                    dt_aware = _advance_to_next_business_day(dt_aware)
+
+                if end_aware and dt_aware > end_aware:
+                    scartate += 1
+                    logger.warning(
+                        f"Occorrenza scartata: {dt_aware} supera la data fine {end_aware} dopo il posticipo"
+                    )
+                    continue
+
+                used_dates.add(dt_aware)
+
                 occ, created = ScadenzaOccorrenza.objects.get_or_create(
                     scadenza=self.scadenza,
                     inizio=dt_aware,
@@ -130,7 +181,7 @@ class OccurrenceGenerator:
                     },
                 )
                 risultati.append(occ)
-                
+
                 if created:
                     nuove_create += 1
                     logger.info(f"Occorrenza CREATA: {dt_aware}")
@@ -139,11 +190,14 @@ class OccurrenceGenerator:
                         evento=ScadenzaNotificaLog.Evento.MASSIVE_GENERATION,
                         messaggio="Occorrenza generata da periodicità",
                     )
+                    self._apply_alert_templates(occ, alert_templates)
                 else:
                     gia_esistenti += 1
                     logger.info(f"Occorrenza GIÀ ESISTENTE: {dt_aware}")
-                    
-        logger.info(f"Riepilogo: {nuove_create} create, {gia_esistenti} già esistenti")
+
+        logger.info(
+            f"Riepilogo: {nuove_create} create, {gia_esistenti} già esistenti, {scartate} scartate oltre fine periodo"
+        )
         return risultati
 
     def _generate_custom(
@@ -155,23 +209,43 @@ class OccurrenceGenerator:
         metodo_alert: str,
         offset_alert_minuti: int,
         alert_config: dict[str, Any],
+        posticipa_festivi: bool | None = None,
+        alert_templates: list[dict[str, Any]] | None = None,
     ) -> list[ScadenzaOccorrenza]:
         configurazione = self.scadenza.periodicita_config or {}
         explicit_dates: Sequence[str] = configurazione.get("dates", [])
         if not explicit_dates:
             raise ValueError("Periodicità personalizzata senza date esplicite.")
 
+        effective_posticipa = (
+            self.scadenza.posticipa_festivi if posticipa_festivi is None else posticipa_festivi
+        )
+        start_aware = timezone.make_aware(start) if timezone.is_naive(start) else start
+        end_aware = timezone.make_aware(end) if end and timezone.is_naive(end) else end
+
         risultati: list[ScadenzaOccorrenza] = []
         with transaction.atomic():
+            used_dates: set[datetime] = set()
             for raw in explicit_dates:
                 dt = datetime.fromisoformat(raw)
-                if end and dt > end:
+                dt_aware = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+
+                if effective_posticipa:
+                    dt_aware = _shift_to_business_day(dt_aware)
+
+                while dt_aware in used_dates:
+                    dt_aware = _advance_to_next_business_day(dt_aware)
+
+                if end_aware and dt_aware > end_aware:
                     continue
-                if dt < start:
+                if dt_aware < start_aware:
                     continue
-                occ, _ = ScadenzaOccorrenza.objects.get_or_create(
+
+                used_dates.add(dt_aware)
+
+                occ, created = ScadenzaOccorrenza.objects.get_or_create(
                     scadenza=self.scadenza,
-                    inizio=timezone.make_aware(dt) if timezone.is_naive(dt) else dt,
+                    inizio=dt_aware,
                     defaults={
                         "metodo_alert": metodo_alert,
                         "offset_alert_minuti": offset_alert_minuti,
@@ -181,7 +255,26 @@ class OccurrenceGenerator:
                     },
                 )
                 risultati.append(occ)
+                if created:
+                    self._apply_alert_templates(occ, alert_templates)
         return risultati
+
+    def _apply_alert_templates(
+        self,
+        occorrenza: ScadenzaOccorrenza,
+        alert_templates: list[dict[str, Any]] | None,
+    ) -> None:
+        """Crea un ScadenzaAlert per ciascun template su un'occorrenza appena creata."""
+        for tpl in alert_templates or []:
+            alert = ScadenzaAlert(
+                occorrenza=occorrenza,
+                offset_alert=tpl.get("offset_alert", 1),
+                offset_alert_periodo=tpl.get("offset_alert_periodo", ScadenzaAlert.TipoPeriodo.GIORNI),
+                metodo_alert=tpl.get("metodo_alert", ScadenzaAlert.MetodoAlert.EMAIL),
+                alert_config=tpl.get("alert_config") or {},
+            )
+            alert.full_clean()
+            alert.save()
 
 
 class AlertDispatcher:

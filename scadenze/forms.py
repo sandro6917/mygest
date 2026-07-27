@@ -30,6 +30,7 @@ class ScadenzaForm(forms.ModelForm):
             "periodicita",
             "periodicita_intervallo",
             "periodicita_config",
+            "posticipa_festivi",
             "num_occorrenze",
             "data_scadenza",
             "google_calendar_calendar_id",

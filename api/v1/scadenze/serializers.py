@@ -110,7 +110,7 @@ class ScadenzaDetailSerializer(serializers.ModelSerializer):
             'documenti', 'documenti_detail',
             'comunicazione_destinatari', 'comunicazione_modello',
             'periodicita', 'periodicita_display', 'periodicita_intervallo',
-            'periodicita_config',
+            'periodicita_config', 'posticipa_festivi',
             'google_calendar_calendar_id', 'google_calendar_synced_at',
             'creato_il', 'aggiornato_il'
         ]
@@ -163,6 +163,7 @@ class ScadenzaCreateUpdateSerializer(serializers.ModelSerializer):
             'pratiche', 'fascicoli', 'documenti',
             'comunicazione_destinatari', 'comunicazione_modello',
             'periodicita', 'periodicita_intervallo', 'periodicita_config',
+            'posticipa_festivi',
             'num_occorrenze', 'data_scadenza',
             'google_calendar_calendar_id'
         ]

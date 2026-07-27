@@ -74,6 +74,40 @@ export function PraticaAutocomplete({
     return undefined;
   }, [searchTerm]);
 
+  // Carica i dettagli delle pratiche già selezionate ma non presenti nei risultati di ricerca
+  // locali (es. all'apertura del form di modifica): senza questo fetch, i chip delle pratiche
+  // già collegate non vengono mai renderizzati perché "pratiche" contiene solo risultati di ricerca.
+  const selectedIds = multiple
+    ? (Array.isArray(value) ? value : [])
+    : (typeof value === 'number' ? [value] : []);
+  const selectedIdsKey = selectedIds.slice().sort((a, b) => a - b).join(',');
+
+  useEffect(() => {
+    const ids = selectedIdsKey ? selectedIdsKey.split(',').map(Number) : [];
+    const missingIds = ids.filter(id => !pratiche.some(p => p.id === id));
+    if (missingIds.length === 0) return;
+
+    let isActive = true;
+    void (async () => {
+      const fetched = (
+        await Promise.all(
+          missingIds.map(id =>
+            apiClient.get<Pratica>(`/pratiche/${id}/`).then(r => r.data).catch(() => null)
+          )
+        )
+      ).filter((p): p is Pratica => p !== null);
+
+      if (isActive && fetched.length > 0) {
+        setPratiche(prev => [...prev, ...fetched.filter(p => !prev.some(existing => existing.id === p.id))]);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIdsKey]);
+
   // Filtra pratiche escludendo quelle nell'elenco excludeIds
   const availablePratiche = pratiche.filter(p => !excludeIds.includes(p.id));
 

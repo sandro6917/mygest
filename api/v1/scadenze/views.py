@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from core.permissions import RBACPermission
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from django.db.models import Count, Min, Q
 from datetime import timedelta
@@ -180,7 +181,9 @@ class ScadenzaViewSet(viewsets.ModelViewSet):
         start = request.data.get('start')
         end = request.data.get('end')
         count = request.data.get('count')
-        
+        posticipa_festivi = request.data.get('posticipa_festivi')
+        alerts_raw = request.data.get('alerts') or []
+
         # Log per debug
         import logging
         logger = logging.getLogger(__name__)
@@ -188,38 +191,66 @@ class ScadenzaViewSet(viewsets.ModelViewSet):
         logger.info(f"Periodicità: {scadenza.periodicita} ({scadenza.get_periodicita_display()})")
         logger.info(f"Intervallo: {scadenza.periodicita_intervallo}")
         logger.info(f"Parametri ricevuti - start: {start}, end: {end}, count: {count}")
-        
+
         if not start and not end and not count:
             return Response(
                 {'error': 'Specificare almeno uno tra start, end o count'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        if not isinstance(alerts_raw, list):
+            return Response(
+                {'error': "'alerts' deve essere una lista di template alert"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        metodi_validi = {c[0] for c in ScadenzaAlert.MetodoAlert.choices}
+        periodi_validi = {c[0] for c in ScadenzaAlert.TipoPeriodo.choices}
+        for tpl in alerts_raw:
+            if not isinstance(tpl, dict) or tpl.get('metodo_alert') not in metodi_validi:
+                return Response(
+                    {'error': f"metodo_alert non valido: {tpl.get('metodo_alert') if isinstance(tpl, dict) else tpl}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if tpl.get('offset_alert_periodo', ScadenzaAlert.TipoPeriodo.GIORNI) not in periodi_validi:
+                return Response(
+                    {'error': f"offset_alert_periodo non valido: {tpl.get('offset_alert_periodo')}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         try:
             # Converti le stringhe in datetime se necessario
             if start and isinstance(start, str):
                 start = timezone.datetime.fromisoformat(start.replace('Z', '+00:00'))
             if end and isinstance(end, str):
                 end = timezone.datetime.fromisoformat(end.replace('Z', '+00:00'))
-            
+
             logger.info(f"Dopo conversione - start: {start}, end: {end}, count: {count}")
-            
+
             occorrenze = scadenza.genera_occorrenze(
                 start=start,
                 end=end,
                 count=int(count) if count else None,
+                posticipa_festivi=posticipa_festivi,
+                alert_templates=alerts_raw,
             )
-            
+
             logger.info(f"Occorrenze generate: {len(occorrenze)}")
-            
+
             serializer = ScadenzaOccorrenzaSerializer(occorrenze, many=True)
-            
+
             # Aggiungi informazioni utili nella risposta
             return Response({
                 'occorrenze': serializer.data,
                 'totale': len(occorrenze),
-                'messaggio': f'{len(occorrenze)} occorrenze gestite (alcune potrebbero essere già esistenti)'
+                'messaggio': (
+                    f'{len(occorrenze)} occorrenze gestite (alcune potrebbero essere già esistenti)'
+                    + (f', {len(alerts_raw)} template alert applicati a ciascuna nuova occorrenza' if alerts_raw else '')
+                )
             })
+        except DjangoValidationError as e:
+            logger.error(f"Errore di validazione nella generazione occorrenze: {e}")
+            detail = e.message_dict if hasattr(e, 'message_dict') else e.messages
+            return Response({'error': detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             import traceback
             traceback.print_exc()  # Log dell'errore completo

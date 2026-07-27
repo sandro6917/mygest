@@ -94,6 +94,41 @@ const ScadenzaFormPage: React.FC = () => {
     loadScadenza();
   }, [loadScadenza]);
 
+  // Dettagli dei fascicoli già collegati, per mostrare codice/titolo invece del solo ID nei chip
+  const [fascicoliDetails, setFascicoliDetails] = useState<Record<number, { codice: string; titolo: string }>>({});
+
+  useEffect(() => {
+    const ids = formData.fascicoli || [];
+    const missingIds = ids.filter(id => !(id in fascicoliDetails));
+    if (missingIds.length === 0) return;
+
+    let isActive = true;
+    void (async () => {
+      const results = await Promise.all(
+        missingIds.map(id =>
+          apiClient
+            .get<{ id: number; codice: string; titolo: string }>(`/fascicoli/fascicoli/${id}/`)
+            .then(r => r.data)
+            .catch(() => null)
+        )
+      );
+      if (isActive) {
+        setFascicoliDetails(prev => {
+          const next = { ...prev };
+          for (const f of results) {
+            if (f) next[f.id] = { codice: f.codice, titolo: f.titolo };
+          }
+          return next;
+        });
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.fascicoli]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -377,7 +412,11 @@ const ScadenzaFormPage: React.FC = () => {
                       fontSize: '0.875rem',
                     }}
                   >
-                    <span>Fascicolo #{fascicoloId}</span>
+                    <span>
+                      {fascicoliDetails[fascicoloId]
+                        ? `${fascicoliDetails[fascicoloId].codice} - ${fascicoliDetails[fascicoloId].titolo}`
+                        : `Fascicolo #${fascicoloId}`}
+                    </span>
                     <button
                       type="button"
                       onClick={() => {

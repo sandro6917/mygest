@@ -9,6 +9,7 @@ import type {
   ScadenzaFilters,
   ScadenzaOccorrenza,
   OccorrenzaFilters,
+  GeneraOccorrenzeParams,
   PaginatedResponse,
 } from '@/types/scadenza';
 
@@ -67,7 +68,7 @@ export const scadenzeApi = {
   // Genera occorrenze
   async generaOccorrenze(
     id: number,
-    params: { start?: string; end?: string; count?: number }
+    params: GeneraOccorrenzeParams
   ): Promise<{ occorrenze: ScadenzaOccorrenza[]; totale: number; messaggio: string } | ScadenzaOccorrenza[]> {
     const response = await apiClient.post<{ occorrenze: ScadenzaOccorrenza[]; totale: number; messaggio: string } | ScadenzaOccorrenza[]>(
       `${BASE_URL}/${id}/genera_occorrenze/`,

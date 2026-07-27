@@ -77,6 +77,7 @@ export interface Scadenza {
   periodicita_display: string;
   periodicita_intervallo: number;
   periodicita_config: Record<string, unknown>;
+  posticipa_festivi: boolean;
   google_calendar_calendar_id: string;
   google_calendar_synced_at: string | null;
   creato_il: string;
@@ -100,6 +101,7 @@ export interface ScadenzaFormData {
   periodicita: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
   periodicita_intervallo: number;
   periodicita_config: Record<string, unknown>;
+  posticipa_festivi: boolean;
   google_calendar_calendar_id: string;
 }
 
@@ -132,6 +134,21 @@ export interface ScadenzaAlert {
   stato_display: string;
   creato_il: string;
   aggiornato_il: string;
+}
+
+export interface AlertTemplate {
+  offset_alert: number;
+  offset_alert_periodo: 'minutes' | 'hours' | 'days' | 'weeks';
+  metodo_alert: 'email' | 'webhook' | 'telegram' | 'whatsapp';
+  alert_config?: ScadenzaAlertConfig;
+}
+
+export interface GeneraOccorrenzeParams {
+  start?: string;
+  end?: string;
+  count?: number;
+  posticipa_festivi?: boolean;
+  alerts?: AlertTemplate[];
 }
 
 export interface ScadenzaOccorrenzaAlertConfig {

@@ -17,6 +17,7 @@ import {
 } from '@/components/icons/Icons';
 import OccorrenzaModal from '@/components/scadenze/OccorrenzaModal';
 import AlertManager from '@/components/scadenze/AlertManager';
+import GeneraOccorrenzeWizard from '@/components/scadenze/GeneraOccorrenzeWizard';
 
 export default function ScadenzaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +33,7 @@ export default function ScadenzaDetailPage() {
   const [selectedOccorrenza, setSelectedOccorrenza] = useState<ScadenzaOccorrenza | null>(null);
   const [showAlertManager, setShowAlertManager] = useState(false);
   const [alertOccorrenza, setAlertOccorrenza] = useState<ScadenzaOccorrenza | null>(null);
+  const [showGeneraWizard, setShowGeneraWizard] = useState(false);
 
   const getErrorMessage = useCallback((err: unknown, fallback: string) => {
     if (isAxiosError(err)) {
@@ -121,28 +123,13 @@ export default function ScadenzaDetailPage() {
     }
   };
 
-  const handleGeneraOccorrenze = async () => {
-    if (!scadenzaId) return;
+  const handleOpenGeneraWizard = () => {
+    setShowGeneraWizard(true);
+  };
 
-    const count = window.prompt('Quante occorrenze vuoi generare?', '10');
-    if (!count) return;
-
-    try {
-      const result = await scadenzeApi.generaOccorrenze(scadenzaId, { count: Number(count) });
-      loadOccorrenze(); // Ricarica la lista
-      
-      // Mostra messaggio più informativo
-      if (!Array.isArray(result) && 'messaggio' in result) {
-        alert(result.messaggio);
-      } else if (Array.isArray(result)) {
-        // Fallback per vecchio formato
-        alert(`${result.length} occorrenze gestite con successo`);
-      } else {
-        alert('Occorrenze generate con successo');
-      }
-    } catch (err) {
-      alert(getErrorMessage(err, 'Errore durante la generazione delle occorrenze'));
-    }
+  const handleOccorrenzeGenerated = (messaggio: string) => {
+    loadOccorrenze(); // Ricarica la lista
+    alert(messaggio);
   };
 
   const handleAddOccorrenza = () => {
@@ -698,7 +685,7 @@ export default function ScadenzaDetailPage() {
               <span>Nuova Occorrenza</span>
             </button>
             <button
-              onClick={handleGeneraOccorrenze}
+              onClick={handleOpenGeneraWizard}
               className="btn btn-primary btn-sm"
               disabled={scadenza.periodicita === 'none'}
               title={scadenza.periodicita === 'none' ? 'Imposta una periodicità per generare occorrenze' : 'Genera nuove occorrenze'}
@@ -889,8 +876,8 @@ export default function ScadenzaDetailPage() {
                                 onClick={() => handleDeleteOccorrenza(occorrenza.id)}
                                 className="btn btn-icon btn-sm"
                                 title="Elimina occorrenza"
-                                style={{ 
-                                  backgroundColor: 'var(--danger)', 
+                                style={{
+                                  backgroundColor: '#dc3545',
                                   color: 'white',
                                   border: 'none'
                                 }}
@@ -938,6 +925,16 @@ export default function ScadenzaDetailPage() {
             setAlertOccorrenza(null);
             loadOccorrenze(); // Ricarica per aggiornare num_alerts
           }}
+        />
+      )}
+
+      {/* Wizard per generazione automatica di occorrenze multiple */}
+      {showGeneraWizard && (
+        <GeneraOccorrenzeWizard
+          scadenzaId={scadenza.id}
+          scadenza={scadenza}
+          onClose={() => setShowGeneraWizard(false)}
+          onGenerated={handleOccorrenzeGenerated}
         />
       )}
     </div>

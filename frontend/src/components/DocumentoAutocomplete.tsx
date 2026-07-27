@@ -77,6 +77,40 @@ export function DocumentoAutocomplete({
     return undefined;
   }, [searchTerm]);
 
+  // Carica i dettagli dei documenti già selezionati ma non presenti nei risultati di ricerca
+  // locali (es. all'apertura del form di modifica): senza questo fetch, i chip dei documenti
+  // già collegati non vengono mai renderizzati perché "documenti" contiene solo risultati di ricerca.
+  const selectedIds = multiple
+    ? (Array.isArray(value) ? value : [])
+    : (typeof value === 'number' ? [value] : []);
+  const selectedIdsKey = selectedIds.slice().sort((a, b) => a - b).join(',');
+
+  useEffect(() => {
+    const ids = selectedIdsKey ? selectedIdsKey.split(',').map(Number) : [];
+    const missingIds = ids.filter(id => !documenti.some(d => d.id === id));
+    if (missingIds.length === 0) return;
+
+    let isActive = true;
+    void (async () => {
+      const fetched = (
+        await Promise.all(
+          missingIds.map(id =>
+            apiClient.get<Documento>(`/documenti/${id}/`).then(r => r.data).catch(() => null)
+          )
+        )
+      ).filter((d): d is Documento => d !== null);
+
+      if (isActive && fetched.length > 0) {
+        setDocumenti(prev => [...prev, ...fetched.filter(d => !prev.some(existing => existing.id === d.id))]);
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIdsKey]);
+
   // Filtra documenti escludendo quelli nell'elenco excludeIds
   const availableDocumenti = documenti.filter(d => !excludeIds.includes(d.id));
 

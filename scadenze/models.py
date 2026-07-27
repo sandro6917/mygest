@@ -102,7 +102,14 @@ class Scadenza(models.Model):
         blank=True,
         help_text=_("Parametri aggiuntivi per la generazione delle occorrenze."),
     )
-    
+    posticipa_festivi = models.BooleanField(
+        default=True,
+        help_text=_(
+            "Se un'occorrenza generata cade in un giorno festivo italiano o nel "
+            "weekend, posticipala automaticamente al primo giorno feriale utile."
+        ),
+    )
+
     num_occorrenze = models.PositiveIntegerField(
         null=True,
         blank=True,
@@ -157,8 +164,17 @@ class Scadenza(models.Model):
         offset_alert_minuti: int = 0,
         metodo_alert: str = "email",
         alert_config: dict[str, Any] | None = None,
+        posticipa_festivi: bool | None = None,
+        alert_templates: list[dict[str, Any]] | None = None,
     ) -> list["ScadenzaOccorrenza"]:
-        """Genera occorrenze basandosi sui parametri di periodicità della scadenza."""
+        """Genera occorrenze basandosi sui parametri di periodicità della scadenza.
+
+        Se `posticipa_festivi` è None viene usato il valore configurato sulla
+        scadenza; se esplicitamente True/False sovrascrive solo questa chiamata
+        senza modificare il campo persistito. `alert_templates`, se fornito,
+        applica un `ScadenzaAlert` per ciascun template a ogni occorrenza NUOVA
+        generata in questo batch (le occorrenze già esistenti non vengono toccate).
+        """
         from .services import OccurrenceGenerator
 
         # Se non viene specificato start, usa l'inizio della giornata corrente
@@ -166,7 +182,7 @@ class Scadenza(models.Model):
             now = timezone.now()
             # Normalizza all'inizio della giornata (ore 09:00 come orario lavorativo)
             start = now.replace(hour=9, minute=0, second=0, microsecond=0)
-        
+
         generator = OccurrenceGenerator(self)
         metodo = metodo_alert or ScadenzaOccorrenza.MetodoAlert.EMAIL
         return generator.generate(
@@ -177,6 +193,8 @@ class Scadenza(models.Model):
             metodo_alert=metodo,
             offset_alert_minuti=offset_alert_minuti,
             alert_config=alert_config or {},
+            posticipa_festivi=posticipa_festivi,
+            alert_templates=alert_templates,
         )
 
 
