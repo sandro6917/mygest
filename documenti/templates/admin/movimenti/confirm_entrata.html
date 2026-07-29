@@ -23,7 +23,7 @@
       <div class="module">
         <ul>
           {% for obj in queryset %}
-            <li>{{ obj.codice }} — {{ obj.descrizione }} ({{ obj.cliente }})</li>
+            <li>{{ obj.codice }} — {{ obj.descrizione }} (<a href="{{ obj.cliente.get_absolute_url }}">{{ obj.cliente }}</a>)</li>
             <input type="hidden" name="_selected_action" value="{{ obj.pk }}">
           {% endfor %}
         </ul>

@@ -223,7 +223,8 @@ def detail(request, pk: int):
     indirizzo_principale = obj.indirizzo_principale
 
     comunicazioni_qs = (
-        Comunicazione.objects.filter(anagrafica=obj)
+        Comunicazione.objects.filter(contatti_destinatari__anagrafica=obj)
+        .distinct()
         .annotate(data_riferimento=Coalesce("data_invio", "data_creazione"))
         .order_by("-data_riferimento", "-id")
     )

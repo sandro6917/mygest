@@ -6,7 +6,7 @@
     <div class="body">
       <p class="muted">
         Documento: {{ doc.descrizione|default:"(senza descrizione)" }}
-        {% if doc.cliente %} · Cliente: {{ doc.cliente }}{% endif %}
+        {% if doc.cliente %} · Cliente: <a class="link" href="{{ doc.cliente.get_absolute_url }}">{{ doc.cliente }}</a>{% endif %}
         {% if doc.tipo %} · Tipo: {{ doc.tipo }}{% endif %}
       </p>
 

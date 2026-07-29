@@ -23,6 +23,8 @@ const AnagraficheImportPage = lazy(() => import('@/pages/AnagraficheImportPage')
 const DocumentiListPage      = lazy(() => import('@/pages/DocumentiListPage').then(m => ({ default: m.DocumentiListPage })));
 const DocumentoDetailPage    = lazy(() => import('@/pages/DocumentoDetailPage').then(m => ({ default: m.DocumentoDetailPage })));
 const DocumentoFormPage      = lazy(() => import('@/pages/DocumentoFormPage').then(m => ({ default: m.DocumentoFormPage })));
+const DocumentiTipiListPage  = lazy(() => import('@/pages/DocumentiTipiListPage'));
+const DocumentiTipoDetailPage = lazy(() => import('@/pages/DocumentiTipoDetailPage'));
 const ImportaUnilavPage      = lazy(() => import('@/pages/ImportaUnilavPage').then(m => ({ default: m.ImportaUnilavPage })));
 const ImportSelectionPage    = lazy(() => import('@/pages/ImportSelectionPage').then(m => ({ default: m.ImportSelectionPage })));
 const ImportDocumentsListPage   = lazy(() => import('@/pages/ImportDocumentsListPage').then(m => ({ default: m.ImportDocumentsListPage })));
@@ -133,6 +135,8 @@ export const router = createBrowserRouter([
       { path: 'documenti/importa-cedolini',          element: <Navigate to="/import" replace /> },
       { path: 'documenti/importa-unilav',            element: <Suspense fallback={<PageLoader />}><ImportaUnilavPage /></Suspense> },
       { path: 'documenti/new',                       element: <Suspense fallback={<PageLoader />}><DocumentoFormPage /></Suspense> },
+      { path: 'documenti/tipi',                      element: <Suspense fallback={<PageLoader />}><DocumentiTipiListPage /></Suspense> },
+      { path: 'documenti/tipi/:codice',               element: <Suspense fallback={<PageLoader />}><DocumentiTipoDetailPage /></Suspense> },
       { path: 'documenti/:id',                       element: <Suspense fallback={<PageLoader />}><DocumentoDetailPage /></Suspense> },
       { path: 'documenti/:id/edit',                  element: <Suspense fallback={<PageLoader />}><DocumentoFormPage /></Suspense> },
       { path: 'import',                              element: <Suspense fallback={<PageLoader />}><ImportSelectionPage /></Suspense> },

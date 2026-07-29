@@ -386,7 +386,23 @@ export default function PraticheListPage() {
                         )}
                       </td>
                       <td>{pratica.tipo_detail.nome}</td>
-                      <td>{pratica.cliente_detail.anagrafica_display}</td>
+                      <td>
+                        {pratica.cliente_detail?.anagrafica ? (
+                          <a
+                            href={`/anagrafiche/${pratica.cliente_detail.anagrafica}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              navigate(`/anagrafiche/${pratica.cliente_detail.anagrafica}`);
+                            }}
+                            style={{ color: '#2563eb', textDecoration: 'none' }}
+                          >
+                            {pratica.cliente_detail.anagrafica_display}
+                          </a>
+                        ) : (
+                          pratica.cliente_detail?.anagrafica_display || '-'
+                        )}
+                      </td>
                       <td>{pratica.oggetto}</td>
                       <td>
                         <span className={`badge ${getStatoBadgeClass(pratica.stato)}`}>

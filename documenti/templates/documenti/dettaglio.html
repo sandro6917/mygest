@@ -9,7 +9,7 @@
         <div class="body">
           <div><strong>Codice:</strong> {{ doc.codice|default:"—" }}</div>
           <div><strong>Descrizione:</strong> {{ doc.descrizione|default:"(senza descrizione)" }}</div>
-          <div><strong>Cliente:</strong> {{ doc.cliente|default:"—" }}</div>
+          <div><strong>Cliente:</strong> {% if doc.cliente %}<a class="link" href="{{ doc.cliente.get_absolute_url }}">{{ doc.cliente }}</a>{% else %}—{% endif %}</div>
           <div><strong>Tipo:</strong> {{ doc.tipo|default:"—" }}</div>
           <div><strong>Data documento:</strong> {{ doc.data_documento|date:"d/m/Y" }}</div>
           {% if doc.fascicolo %}<div><strong>Fascicolo:</strong> {{ doc.fascicolo }}</div>{% endif %}
@@ -75,7 +75,7 @@
                 <li style="margin-bottom:6px">
                   <strong>{{ m.direzione }}</strong> n. {{ m.numero }}/{{ m.anno }}
                   — {{ m.data|date:"d/m/Y H:i" }}
-                  — {{ m.cliente }}
+                  — <a class="link" href="{{ m.cliente.get_absolute_url }}">{{ m.cliente }}</a>
                   {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
                   {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
                   {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}

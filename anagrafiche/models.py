@@ -542,6 +542,9 @@ class Cliente(models.Model):
     def __str__(self):
         return f"Cliente: {self.anagrafica} - {self.tipo_cliente}"
 
+    def get_absolute_url(self):
+        return self.anagrafica.get_absolute_url()
+
     @property
     def denominazione(self) -> str:
         if self.anagrafica.tipo == Anagrafica.TipoSoggetto.PERSONA_FISICA:

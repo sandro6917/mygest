@@ -10,7 +10,7 @@
       <p class="text-muted mb-3">
         <strong>{{ comunicazione.oggetto }}</strong>
         {% if documento %}· Documento: {{ documento }}{% endif %}
-        {% if comunicazione.anagrafica %}· Cliente: {{ comunicazione.anagrafica }}{% endif %}
+        {% if comunicazione.get_prima_anagrafica %}· Cliente: <a class="link" href="{{ comunicazione.get_prima_anagrafica.get_absolute_url }}">{{ comunicazione.get_prima_anagrafica }}</a>{% endif %}
       </p>
       <form method="post" novalidate>
         {% csrf_token %}

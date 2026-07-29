@@ -116,8 +116,8 @@
             </dd>
             <dt class="col-sm-5">Anagrafica</dt>
             <dd class="col-sm-7">
-              {% if comunicazione.anagrafica %}
-                {{ comunicazione.anagrafica }}
+              {% if comunicazione.get_prima_anagrafica %}
+                <a class="link" href="{{ comunicazione.get_prima_anagrafica.get_absolute_url }}">{{ comunicazione.get_prima_anagrafica }}</a>
               {% else %}
                 <span class="text-muted">Non specificata</span>
               {% endif %}

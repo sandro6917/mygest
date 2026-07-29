@@ -210,6 +210,10 @@ export function DocumentiListPage() {
           <p className="text-muted">Gestione documenti ({totalCount} totali)</p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link to="/documenti/tipi" className="btn-secondary">
+            <DocumentiIcon size={18} />
+            <span>Tipi Documento</span>
+          </Link>
           <Link to="/import" className="btn-secondary">
             <UploadIcon size={18} />
             <span>Importa Documenti</span>
@@ -386,7 +390,14 @@ export function DocumentiListPage() {
                         {new Date(documento.data_documento).toLocaleDateString('it-IT')}
                       </td>
                       <td>
-                        {documento.tipo_detail?.nome || '-'}
+                        {documento.tipo_detail ? (
+                          <Link
+                            to={`/documenti/tipi/${documento.tipo_detail.codice}`}
+                            style={{ color: '#2563eb', textDecoration: 'none' }}
+                          >
+                            {documento.tipo_detail.nome}
+                          </Link>
+                        ) : '-'}
                       </td>
                       <td>
                         <Link 
@@ -400,7 +411,16 @@ export function DocumentiListPage() {
                         </Link>
                       </td>
                       <td>
-                        {documento.cliente_detail?.anagrafica_display || '-'}
+                        {documento.cliente_detail?.anagrafica ? (
+                          <Link
+                            to={`/anagrafiche/${documento.cliente_detail.anagrafica}`}
+                            style={{ color: '#2563eb', textDecoration: 'none' }}
+                          >
+                            {documento.cliente_detail.anagrafica_display}
+                          </Link>
+                        ) : (
+                          documento.cliente_detail?.anagrafica_display || '-'
+                        )}
                       </td>
                       <td>
                         <span className={`badge ${getStatoBadgeClass(documento.stato)}`}>

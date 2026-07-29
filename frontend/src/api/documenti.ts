@@ -33,6 +33,13 @@ export const documentiApi = {
       if (filters.digitale !== undefined) params.append('digitale', filters.digitale.toString());
       if (filters.tracciabile !== undefined) params.append('tracciabile', filters.tracciabile.toString());
       if (filters.ordering) params.append('ordering', filters.ordering);
+      if (filters.attributi) {
+        Object.entries(filters.attributi).forEach(([codice, value]) => {
+          if (value !== undefined && value !== '') {
+            params.append(`attr_${codice}`, String(value));
+          }
+        });
+      }
     }
 
     const response = await apiClient.get<DocumentoListResponse>(

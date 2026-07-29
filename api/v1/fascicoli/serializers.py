@@ -37,27 +37,34 @@ class FascicoloListSerializer(serializers.ModelSerializer):
     """Serializer per lista fascicoli"""
     stato_display = serializers.CharField(source='get_stato_display', read_only=True)
     cliente_display = serializers.SerializerMethodField()
+    cliente_anagrafica_id = serializers.SerializerMethodField()
     titolario_voce_detail = TitolarioVoceSerializer(source='titolario_voce', read_only=True)
     parent_display = serializers.SerializerMethodField()
     ubicazione_full_path = serializers.SerializerMethodField()
     num_pratiche = serializers.SerializerMethodField()
     num_sottofascicoli = serializers.SerializerMethodField()
     num_fascicoli_collegati = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Fascicolo
         fields = [
             'id', 'codice', 'titolo', 'anno', 'stato', 'stato_display',
-            'cliente', 'cliente_display', 'titolario_voce', 'titolario_voce_detail',
+            'cliente', 'cliente_display', 'cliente_anagrafica_id', 'titolario_voce', 'titolario_voce_detail',
             'parent', 'parent_display', 'progressivo', 'sub_progressivo',
             'ubicazione', 'ubicazione_full_path', 'retention_anni',
             'created_at', 'updated_at', 'num_pratiche', 'num_sottofascicoli', 'num_fascicoli_collegati'
         ]
-    
+
     def get_cliente_display(self, obj):
         """Restituisce il nome del cliente"""
         if obj.cliente and hasattr(obj.cliente, 'anagrafica'):
             return obj.cliente.anagrafica.display_name()
+        return None
+
+    def get_cliente_anagrafica_id(self, obj):
+        """Restituisce l'id dell'Anagrafica collegata al cliente (per i link alla scheda cliente)"""
+        if obj.cliente:
+            return obj.cliente.anagrafica_id
         return None
     
     def get_parent_display(self, obj):
@@ -95,6 +102,7 @@ class FascicoloDetailSerializer(serializers.ModelSerializer):
     """Serializer per dettaglio fascicolo"""
     stato_display = serializers.CharField(source='get_stato_display', read_only=True)
     cliente_display = serializers.SerializerMethodField()
+    cliente_anagrafica_id = serializers.SerializerMethodField()
     titolario_voce_detail = TitolarioVoceSerializer(source='titolario_voce', read_only=True)
     parent_display = serializers.SerializerMethodField()
     ubicazione_detail = UnitaFisicaSerializer(source='ubicazione', read_only=True)
@@ -106,12 +114,12 @@ class FascicoloDetailSerializer(serializers.ModelSerializer):
     fascicoli_collegati_details = serializers.SerializerMethodField()
     movimenti_protocollo = serializers.SerializerMethodField()
     protocollo_attivo = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Fascicolo
         fields = [
             'id', 'codice', 'titolo', 'anno', 'stato', 'stato_display',
-            'cliente', 'cliente_display', 'titolario_voce', 'titolario_voce_detail',
+            'cliente', 'cliente_display', 'cliente_anagrafica_id', 'titolario_voce', 'titolario_voce_detail',
             'parent', 'parent_display', 'progressivo', 'sub_progressivo',
             'ubicazione', 'ubicazione_detail', 'ubicazione_full_path',
             'retention_anni', 'note', 'path_archivio',
@@ -119,11 +127,17 @@ class FascicoloDetailSerializer(serializers.ModelSerializer):
             'sottofascicoli', 'fascicoli_collegati_details', 'movimenti_protocollo', 'protocollo_attivo',
             'created_at', 'updated_at'
         ]
-    
+
     def get_cliente_display(self, obj):
         """Restituisce il nome del cliente"""
         if obj.cliente and hasattr(obj.cliente, 'anagrafica'):
             return obj.cliente.anagrafica.display_name()
+        return None
+
+    def get_cliente_anagrafica_id(self, obj):
+        """Restituisce l'id dell'Anagrafica collegata al cliente (per i link alla scheda cliente)"""
+        if obj.cliente:
+            return obj.cliente.anagrafica_id
         return None
     
     def get_parent_display(self, obj):

@@ -440,10 +440,10 @@ export default function PraticaDetailPage() {
               {pratica.cliente ? (
                 <span className="detail-value">
                   <a
-                    href={`/anagrafiche/${pratica.cliente}`}
+                    href={`/anagrafiche/${pratica.cliente_detail?.anagrafica}`}
                     onClick={(e) => {
                       e.preventDefault();
-                      navigate(`/anagrafiche/${pratica.cliente}`);
+                      navigate(`/anagrafiche/${pratica.cliente_detail?.anagrafica}`);
                     }}
                     style={{ color: '#2563eb', textDecoration: 'none' }}
                   >
@@ -783,7 +783,17 @@ export default function PraticaDetailPage() {
                         </a>
                       </td>
                       <td>{doc.descrizione}</td>
-                      <td>{doc.tipo_detail?.nome || doc.tipo}</td>
+                      <td>
+                        {doc.tipo_detail ? (
+                          <a
+                            href={`/documenti/tipi/${doc.tipo_detail.codice}`}
+                            onClick={(e) => { e.preventDefault(); navigate(`/documenti/tipi/${doc.tipo_detail!.codice}`); }}
+                            style={{ color: '#2563eb', textDecoration: 'none' }}
+                          >
+                            {doc.tipo_detail.nome}
+                          </a>
+                        ) : doc.tipo}
+                      </td>
                       <td>
                         {doc.fascicolo_detail ? (
                           <a

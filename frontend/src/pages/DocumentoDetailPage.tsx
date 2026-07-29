@@ -254,7 +254,13 @@ export function DocumentoDetailPage() {
               </div>
               <div className="detail-row">
                 <span className="detail-label">Tipo:</span>
-                <span className="detail-value">{documento.tipo_detail?.nome || '-'}</span>
+                <span className="detail-value">
+                  {documento.tipo_detail ? (
+                    <Link to={`/documenti/tipi/${documento.tipo_detail.codice}`} style={{ color: '#2563eb', textDecoration: 'none' }}>
+                      {documento.tipo_detail.nome}
+                    </Link>
+                  ) : '-'}
+                </span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Stato:</span>

@@ -84,7 +84,7 @@
         {% if ultimi_clienti %}
           <ul>
             {% for c in ultimi_clienti %}
-              <li>{{ c }}</li>
+              <li><a class="link" href="{{ c.get_absolute_url }}">{{ c }}</a></li>
             {% endfor %}
           </ul>
         {% else %}
@@ -99,7 +99,7 @@
         {% if clienti_recenti %}
           <ul>
             {% for c in clienti_recenti %}
-              <li>{{ c }}</li>
+              <li><a class="link" href="{{ c.get_absolute_url }}">{{ c }}</a></li>
             {% endfor %}
           </ul>
         {% else %}
@@ -114,7 +114,7 @@
         {% if top_clienti %}
           <ul>
             {% for c, n in top_clienti %}
-              <li>{{ c }} <span class="muted">· {{ n }} documenti</span></li>
+              <li><a class="link" href="{{ c.get_absolute_url }}">{{ c }}</a> <span class="muted">· {{ n }} documenti</span></li>
             {% endfor %}
           </ul>
         {% else %}

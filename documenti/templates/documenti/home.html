@@ -50,7 +50,7 @@
                 <li>
                   <div><strong>#{{ d.id }}</strong> — {{ d.descrizione|default:"(senza descrizione)" }}</div>
                   <div class="muted">
-                    Cliente: {{ d.cliente|default:"—" }}{% if d.tipo %} · Tipo: {{ d.tipo }}{% endif %}
+                    Cliente: {% if d.cliente %}<a class="link" href="{{ d.cliente.get_absolute_url }}">{{ d.cliente }}</a>{% else %}—{% endif %}{% if d.tipo %} · Tipo: {{ d.tipo }}{% endif %}
                   </div>
                 </li>
               {% endfor %}
@@ -101,7 +101,7 @@
             <ul>
               {% for d in documenti_filtrati %}
                 <li>
-                  {{ d.descrizione }} ({{ d.codice }}) — {{ d.cliente }}
+                  {{ d.descrizione }} ({{ d.codice }}) — <a class="link" href="{{ d.cliente.get_absolute_url }}">{{ d.cliente }}</a>
                   <a href="{% url 'documenti:dettaglio' d.pk %}">Dettaglio</a>
                   <a href="{% url 'documenti:modifica_dinamico' d.pk %}">Modifica</a>
                   {% if d.file %}
@@ -143,7 +143,7 @@
                         {{ m.fascicolo.codice|default:m.fascicolo_id }}
                       </a>
                   {% endif %}
-                  — {{ m.cliente }}
+                  — <a class="link" href="{{ m.cliente.get_absolute_url }}">{{ m.cliente }}</a>
                   {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
                   {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
                   {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}

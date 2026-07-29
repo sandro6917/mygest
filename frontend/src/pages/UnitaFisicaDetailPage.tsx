@@ -568,7 +568,13 @@ export function UnitaFisicaDetailPage() {
                         <tr key={documento.id} onClick={() => handleDocumentoClick(documento.id)}>
                           <td className="code-cell">{documento.codice}</td>
                           <td className="title-cell">{documento.descrizione}</td>
-                          <td>{documento.tipo_detail?.nome}</td>
+                          <td>
+                            {documento.tipo_detail ? (
+                              <Link to={`/documenti/tipi/${documento.tipo_detail.codice}`} style={{ color: '#2563eb', textDecoration: 'none' }}>
+                                {documento.tipo_detail.nome}
+                              </Link>
+                            ) : '-'}
+                          </td>
                           <td>{documento.cliente_detail?.anagrafica_display}</td>
                           <td>{new Date(documento.data_documento).toLocaleDateString()}</td>
                           <td>

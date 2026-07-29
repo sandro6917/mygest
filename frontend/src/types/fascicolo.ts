@@ -33,6 +33,7 @@ export interface FascicoloListItem {
   stato_display: string;
   cliente: number | null;
   cliente_display?: string;
+  cliente_anagrafica_id?: number | null;
   titolario_voce: number;
   titolario_voce_detail?: TitolarioVoce;
   parent: number | null;

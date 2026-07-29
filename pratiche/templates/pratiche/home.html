@@ -13,7 +13,7 @@
             {% for p in ultimi_pratiche %}
               <li>
                 <strong>{{ p.codice }}</strong> — {{ p.oggetto }}
-                <small class="muted">· {{ p.cliente }}</small>
+                <small class="muted">· <a class="link" href="{{ p.cliente.get_absolute_url }}">{{ p.cliente }}</a></small>
                 <small class="muted">· {{ p.tipo.nome }}</small>
                 <a class="btn btn-xs" href="{% url 'pratiche:dettaglio' p.pk %}">Apri</a>
               </li>
@@ -44,7 +44,7 @@
             {% for p in pratiche_filtrate %}
               <li>
                 <strong>{{ p.codice }}</strong> — {{ p.oggetto }}
-                <small class="muted">· {{ p.cliente }}</small>
+                <small class="muted">· <a class="link" href="{{ p.cliente.get_absolute_url }}">{{ p.cliente }}</a></small>
                 <small class="muted">· {{ p.tipo.nome }}</small>
                 <a class="btn btn-xs" href="{% url 'pratiche:dettaglio' p.pk %}">Apri</a>
               </li>
@@ -63,7 +63,7 @@
         {% if clienti_recenti %}
           <ul class="list">
             {% for c in clienti_recenti %}
-              <li>{{ c }}</li>
+              <li><a class="link" href="{{ c.get_absolute_url }}">{{ c }}</a></li>
             {% endfor %}
           </ul>
         {% else %}

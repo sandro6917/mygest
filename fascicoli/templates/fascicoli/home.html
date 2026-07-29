@@ -80,7 +80,7 @@
                       {{ m.fascicolo.codice|default:m.fascicolo_id }}
                     </a>
                 {% endif %}
-                — {{ m.cliente }}
+                — <a class="link" href="{{ m.cliente.get_absolute_url }}">{{ m.cliente }}</a>
                 {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
                 {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
                 {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}

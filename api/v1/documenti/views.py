@@ -165,20 +165,53 @@ class DocumentoViewSet(viewsets.ModelViewSet):
             'tipo', 'cliente', 'cliente__anagrafica', 'fascicolo',
             'titolario_voce', 'ubicazione'
         ).prefetch_related('attributi_valori', 'attributi_valori__definizione')
-        
+
         # RBAC Filtering
         if hasattr(self.request.user, 'profile'):
             profile = self.request.user.profile
-            
+
             # ADMIN/MANAGER: vedono tutto
-            if profile.can_view_all:
-                return qs
-            
-            # OPERATORE/VIEWER: solo documenti clienti assegnati
-            accessible_clients_ids = profile.get_accessible_clients_ids()
-            if accessible_clients_ids is not None:
-                qs = qs.filter(cliente_id__in=accessible_clients_ids)
-        
+            if not profile.can_view_all:
+                # OPERATORE/VIEWER: solo documenti clienti assegnati
+                accessible_clients_ids = profile.get_accessible_clients_ids()
+                if accessible_clients_ids is not None:
+                    qs = qs.filter(cliente_id__in=accessible_clients_ids)
+
+        return self._filter_by_attributi(qs)
+
+    @staticmethod
+    def _coerce_attr_value(tipo_dato, raw):
+        """Converte il valore stringa ricevuto in query string nel tipo Python
+        coerente con quello salvato in AttributoValore.valore (JSONField)."""
+        try:
+            if tipo_dato == 'int':
+                return int(raw)
+            if tipo_dato == 'decimal':
+                return float(raw)
+            if tipo_dato == 'bool':
+                return raw.lower() in ('1', 'true', 'si', 'yes')
+            return raw
+        except (TypeError, ValueError):
+            return None
+
+    def _filter_by_attributi(self, qs):
+        """Filtra per i parametri query string 'attr_<codice>=<valore>', usati
+        dai filtri dinamici generati in base agli attributi del tipo documento."""
+        tipo_id = self.request.query_params.get('tipo')
+        for key, value in self.request.query_params.items():
+            if not key.startswith('attr_') or value == '':
+                continue
+            codice = key[len('attr_'):]
+            lookup = {'codice': codice}
+            if tipo_id:
+                lookup['tipo_documento_id'] = tipo_id
+            definizione = AttributoDefinizione.objects.filter(**lookup).first()
+            if not definizione:
+                continue
+            coerced = self._coerce_attr_value(definizione.tipo_dato, value)
+            if coerced is None:
+                continue
+            qs = qs.filter(attributi_valori__definizione=definizione, attributi_valori__valore=coerced)
         return qs
     
     def get_serializer_class(self):

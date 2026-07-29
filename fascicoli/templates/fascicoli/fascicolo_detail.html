@@ -17,7 +17,7 @@
         <dl class="kv">
           <dt>Codice</dt><dd>{{ fascicolo.codice }}</dd>
           <dt>Titolo</dt><dd>{{ fascicolo.titolo }}</dd>
-          <dt>Cliente</dt><dd>{{ fascicolo.cliente }}</dd>
+          <dt>Cliente</dt><dd>{% if fascicolo.cliente %}<a class="link" href="{{ fascicolo.cliente.get_absolute_url }}">{{ fascicolo.cliente }}</a>{% else %}—{% endif %}</dd>
           <dt>Voce titolario</dt><dd>{{ fascicolo.titolario_voce }}</dd>
           <dt>Anno</dt><dd>{{ fascicolo.anno }}</dd>
           <dt>Stato</dt><dd>{{ fascicolo.get_stato_display }}</dd>
@@ -237,7 +237,7 @@
                       {{ m.fascicolo.codice|default:m.fascicolo_id }}
                     </a>
                 {% endif %}
-                — {{ m.cliente }}
+                — <a class="link" href="{{ m.cliente.get_absolute_url }}">{{ m.cliente }}</a>
                 {% if m.direzione == "IN" and m.destinatario %} — Da: {{ m.destinatario }}{% endif %}
                 {% if m.direzione == "OUT" and m.destinatario %} — A: {{ m.destinatario }}{% endif %}
                 {% if m.ubicazione %} — Ubicazione: {{ m.ubicazione }}{% endif %}

@@ -33,7 +33,7 @@
           {% for p in pratiche_filtrate %}
             <li>
               <strong>{{ p.codice }}</strong> — {{ p.oggetto }}
-              <small class="muted">· {{ p.cliente }}</small>
+              <small class="muted">· <a class="link" href="{{ p.cliente.get_absolute_url }}">{{ p.cliente }}</a></small>
               <small class="muted">· {{ p.get_stato_display }}</small>
               <a class="btn btn-xs" href="{% url 'pratiche:dettaglio' p.pk %}">Apri pratica</a>
             </li>

@@ -126,8 +126,9 @@ class DocumentoListSerializer(serializers.ModelSerializer):
     fascicolo_detail = FascicoloSimpleSerializer(source='fascicolo', read_only=True)
     titolario_voce_detail = TitolarioVoceSimpleSerializer(source='titolario_voce', read_only=True)
     ubicazione_detail = UnitaFisicaSimpleSerializer(source='ubicazione', read_only=True)
+    attributi = AttributoValoreSerializer(many=True, read_only=True, source='attributi_valori')
     file_name = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Documento
         fields = [
@@ -135,7 +136,8 @@ class DocumentoListSerializer(serializers.ModelSerializer):
             'cliente', 'cliente_detail', 'titolario_voce', 'titolario_voce_detail',
             'descrizione', 'data_documento', 'stato', 'digitale', 'tracciabile',
             'file', 'file_name', 'percorso_archivio', 'tags', 'note',
-            'creato_il', 'aggiornato_il', 'out_aperto', 'ubicazione', 'ubicazione_detail'
+            'creato_il', 'aggiornato_il', 'out_aperto', 'ubicazione', 'ubicazione_detail',
+            'attributi'
         ]
     
     def get_file_name(self, obj):

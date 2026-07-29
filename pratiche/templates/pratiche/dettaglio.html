@@ -14,7 +14,7 @@
         <dl class="kv">
           <dt>Codice</dt><dd>{{ pratica.codice }}</dd>
           <dt>Oggetto</dt><dd>{{ pratica.oggetto }}</dd>
-          <dt>Cliente</dt><dd>{{ pratica.cliente }}</dd>
+          <dt>Cliente</dt><dd><a class="link" href="{{ pratica.cliente.get_absolute_url }}">{{ pratica.cliente }}</a></dd>
           <dt>Tipo</dt><dd>{{ pratica.tipo }}</dd>
           <dt>Stato</dt><dd>{{ pratica.get_stato_display }}</dd>
           <dt>Responsabile</dt><dd>{{ pratica.responsabile|default:"—" }}</dd>
@@ -163,7 +163,7 @@
                 </a>
                 {% if d.codice %}<small class="muted">· {{ d.codice }}</small>{% endif %}
                 {% if d.tipo %}<small class="muted">· {{ d.tipo.nome }}</small>{% endif %}
-                {% if d.cliente %}<small class="muted">· Cliente: {{ d.cliente }}</small>{% endif %}
+                {% if d.cliente %}<small class="muted">· Cliente: <a class="link" href="{{ d.cliente.get_absolute_url }}">{{ d.cliente }}</a></small>{% endif %}
                 {% if d.fascicolo %}<small class="muted">· Fascicolo: {{ d.fascicolo.codice|default:d.fascicolo.titolo }}</small>{% endif %}
               </li>
             {% endfor %}

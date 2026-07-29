@@ -565,7 +565,22 @@ export default function FascicoloDetailPage() {
           </div>
           <div className="detail-row">
             <span className="detail-label">Cliente:</span>
-            <span className="detail-value">{fascicolo.cliente_display || '-'}</span>
+            <span className="detail-value">
+              {fascicolo.cliente_anagrafica_id ? (
+                <a
+                  href={`/anagrafiche/${fascicolo.cliente_anagrafica_id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(`/anagrafiche/${fascicolo.cliente_anagrafica_id}`);
+                  }}
+                  style={{ color: '#2563eb', textDecoration: 'none' }}
+                >
+                  {fascicolo.cliente_display}
+                </a>
+              ) : (
+                fascicolo.cliente_display || '-'
+              )}
+            </span>
           </div>
           <div className="detail-row">
             <span className="detail-label">Stato:</span>
@@ -729,7 +744,17 @@ export default function FascicoloDetailPage() {
                   <tr key={`${doc.id}-${doc.fonte}`} style={{ borderBottom: '1px solid #dee2e6' }}>
                     <td style={{ padding: '0.75rem' }}>{doc.codice}</td>
                     <td style={{ padding: '0.75rem' }}>{doc.descrizione}</td>
-                    <td style={{ padding: '0.75rem' }}>{doc.tipo_detail?.nome || doc.tipo}</td>
+                    <td style={{ padding: '0.75rem' }}>
+                      {doc.tipo_detail ? (
+                        <a
+                          href={`/documenti/tipi/${doc.tipo_detail.codice}`}
+                          onClick={(e) => { e.preventDefault(); navigate(`/documenti/tipi/${doc.tipo_detail!.codice}`); }}
+                          style={{ color: '#2563eb', textDecoration: 'none' }}
+                        >
+                          {doc.tipo_detail.nome}
+                        </a>
+                      ) : doc.tipo}
+                    </td>
                     <td style={{ padding: '0.75rem' }}>
                       {new Date(doc.data_documento).toLocaleDateString('it-IT')}
                     </td>

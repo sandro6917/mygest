@@ -10,6 +10,7 @@ export interface DocumentiTipo {
   pattern_codice: string;
   nome_file_pattern: string;
   attivo: boolean;
+  attributi?: AttributoDefinizione[];
   help_data?: DocumentoTipoHelpData;
   help_ordine?: number;
   help_status?: 'completo' | 'parziale' | 'da_completare' | 'vuoto' | 'non_disponibile';
@@ -48,7 +49,7 @@ export interface AttributoValore {
   documento: number;
   definizione: number;
   definizione_detail?: AttributoDefinizione;
-  valore: string;
+  valore: string | number | boolean | null;
 }
 
 export interface Fascicolo {
@@ -177,6 +178,7 @@ export interface DocumentoFilters {
   tracciabile?: boolean;
   ubicazione?: number;
   ordering?: string;
+  attributi?: Record<string, string | number | boolean>; // filtri dinamici attr_<codice>
 }
 
 export interface ProtocollazioneData {
