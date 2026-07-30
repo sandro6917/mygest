@@ -14,6 +14,7 @@ Restart=on-failure
 RestartSec=10
 KillMode=mixed
 TimeoutStopSec=60
+UMask=0002
 
 StandardOutput=append:/srv/mygest/logs/celery-worker.log
 StandardError=append:/srv/mygest/logs/celery-worker.log

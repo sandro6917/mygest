@@ -94,10 +94,14 @@ fi
 # Create required directories
 mkdir -p "$BACKUP_DIR" "$LOG_DIR"
 
-# Ensure app logs dir exists and is writable by the service user
+# Ensure app logs dir and existing log files are writable by the service user
+# (chmod deve essere ricorsivo: i file di log ruotati da TimedRotatingFileHandler
+# a mezzanotte ereditano owner/permessi di chi li ricrea per primo tra
+# gunicorn/celery e possono finire senza bit di scrittura per il gruppo)
 mkdir -p "$REPO_DIR/logs"
 chown -R "${SUDO_USER:-mygest}:www-data" "$REPO_DIR/logs" 2>/dev/null || true
 chmod 775 "$REPO_DIR/logs"
+find "$REPO_DIR/logs" -type f -exec chmod 664 {} + 2>/dev/null || true
 
 # =============================================================================
 # FUNCTIONS
