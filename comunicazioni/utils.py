@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import socket
 from email.utils import make_msgid
 from smtplib import SMTPException, SMTPServerDisconnected
@@ -10,6 +11,10 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.utils import timezone
 from django.utils.html import strip_tags
+
+from comunicazioni.email_archiver import EmailAppendError, append_to_sent_folder
+
+logger = logging.getLogger(__name__)
 
 
 class EmailSendError(Exception):
@@ -57,6 +62,14 @@ def invia_comunicazione_programmatica(comunicazione) -> None:
         message_id_header = email_message.get("Message-ID")
         if message_id_header:
             message_id = message_id_header
+        try:
+            append_to_sent_folder(email_message)
+        except EmailAppendError as archive_exc:
+            logger.warning(
+                "Email inviata ma non archiviata nella posta inviata dell'account (comunicazione id=%s): %s",
+                comunicazione.pk,
+                archive_exc,
+            )
         comunicazione.stato = "inviata"
         comunicazione.data_invio = timezone.now()
         comunicazione.email_message_id = message_id
