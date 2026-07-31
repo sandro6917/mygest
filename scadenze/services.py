@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import importlib
 import json
 from dataclasses import dataclass
@@ -120,6 +121,14 @@ class OccurrenceGenerator:
             start_naive = start
 
         rule_kwargs: dict[str, Any] = {"dtstart": start_naive, "interval": interval}
+        if freq == rrule.MONTHLY and start_naive.day == calendar.monthrange(
+            start_naive.year, start_naive.month
+        )[1]:
+            # dtstart è l'ultimo giorno del mese (es. 31): senza bymonthday=-1,
+            # rrule usa il giorno fisso 31 e salta silenziosamente i mesi più
+            # corti (es. aprile) invece di ricadere sull'ultimo giorno del mese,
+            # causando occorrenze mancanti nella sequenza generata.
+            rule_kwargs["bymonthday"] = -1
         end_aware: datetime | None = None
         if end:
             end_aware = timezone.make_aware(end) if timezone.is_naive(end) else end

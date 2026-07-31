@@ -77,6 +77,25 @@ class TestOccurrenceGenerationPostponement:
         occorrenze = scadenza.genera_occorrenze(start=start, count=1, posticipa_festivi=False)
         assert occorrenze[0].inizio.date() == date(2026, 1, 1)
 
+    def test_generate_monthly_last_day_does_not_skip_short_months(self):
+        # Periodicità trimestrale con dtstart l'ultimo giorno del mese (31/01):
+        # senza bymonthday=-1, rrule salta silenziosamente aprile (30 giorni)
+        # perché il "giorno 31" non esiste in quel mese.
+        scadenza = baker.make(
+            Scadenza,
+            periodicita=Scadenza.Periodicita.MENSILE,
+            periodicita_intervallo=3,
+            posticipa_festivi=False,
+        )
+        start = timezone.make_aware(datetime(2026, 1, 31, 9, 0))
+        occorrenze = scadenza.genera_occorrenze(start=start, count=4)
+        assert [occ.inizio.date() for occ in occorrenze] == [
+            date(2026, 1, 31),
+            date(2026, 4, 30),
+            date(2026, 7, 31),
+            date(2026, 10, 31),
+        ]
+
 
 @pytest.mark.django_db
 class TestBatchAlertTemplates:
