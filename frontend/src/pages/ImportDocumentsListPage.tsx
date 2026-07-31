@@ -18,6 +18,8 @@ import {
   IconButton,
   Tooltip,
   Divider,
+  Autocomplete,
+  TextField,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
@@ -41,6 +43,8 @@ import {
   type DuplicateCheckResult,
 } from '@/api/import';
 import { documentiApi } from '@/api/documenti';
+import { fascicoliApi } from '@/api/fascicoli';
+import type { FascicoloListItem } from '@/types/fascicolo';
 
 const STATO_COLORS: Record<StatoDocumento, 'default' | 'success' | 'error' | 'warning'> = {
   pending: 'warning',
@@ -73,6 +77,28 @@ export const ImportDocumentsListPage: React.FC = () => {
   const [duplicatesCheck, setDuplicatesCheck] = useState<Record<string, DuplicateCheckResult>>({});
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
   const [processingBatch, setProcessingBatch] = useState(false);
+
+  // Fascicolo comune da assegnare a tutti i documenti importati in questa sessione
+  const [fascicoloBatch, setFascicoloBatch] = useState<FascicoloListItem | null>(null);
+  const [fascicoloBatchOptions, setFascicoloBatchOptions] = useState<FascicoloListItem[]>([]);
+  const [loadingFascicoloBatch, setLoadingFascicoloBatch] = useState(false);
+
+  const searchFascicoliBatch = async (query: string) => {
+    if (!query || query.length < 2) {
+      setFascicoloBatchOptions([]);
+      return;
+    }
+
+    try {
+      setLoadingFascicoloBatch(true);
+      const response = await fascicoliApi.list({ search: query });
+      setFascicoloBatchOptions(response.results);
+    } catch (error) {
+      console.error('Errore ricerca fascicoli:', error);
+    } finally {
+      setLoadingFascicoloBatch(false);
+    }
+  };
 
   const loadSession = async () => {
     if (!sessionUuid) return;
@@ -128,7 +154,10 @@ export const ImportDocumentsListPage: React.FC = () => {
       return;
     }
 
-    if (!window.confirm(`Importare ${nuovi.length} documenti nuovi?`)) {
+    const messaggioConferma = fascicoloBatch
+      ? `Importare ${nuovi.length} documenti nuovi nel fascicolo "${fascicoloBatch.codice} - ${fascicoloBatch.titolo}"?`
+      : `Importare ${nuovi.length} documenti nuovi?`;
+    if (!window.confirm(messaggioConferma)) {
       return;
     }
 
@@ -138,7 +167,11 @@ export const ImportDocumentsListPage: React.FC = () => {
 
     for (const doc of nuovi) {
       try {
-        await importApi.createDocument(sessionUuid, doc.uuid);
+        await importApi.createDocument(
+          sessionUuid,
+          doc.uuid,
+          fascicoloBatch ? { fascicolo_id: fascicoloBatch.id } : undefined
+        );
         importati++;
       } catch (error) {
         errori++;
@@ -363,6 +396,36 @@ export const ImportDocumentsListPage: React.FC = () => {
               </Typography>
             </Box>
           </Box>
+        </CardContent>
+      </Card>
+
+      {/* Fascicolo comune per l'importazione batch */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Fascicolo per l'importazione
+          </Typography>
+          <Autocomplete
+            options={fascicoloBatchOptions}
+            value={fascicoloBatch}
+            onChange={(_, newValue) => setFascicoloBatch(newValue)}
+            onInputChange={(_, newInputValue) => {
+              if (newInputValue) {
+                searchFascicoliBatch(newInputValue);
+              }
+            }}
+            isOptionEqualToValue={(option, val) => option.id === val.id}
+            getOptionLabel={(option) => `${option.codice} - ${option.titolo}`}
+            loading={loadingFascicoloBatch}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Fascicolo (Opzionale)"
+                helperText="Se selezionato, verrà assegnato a tutti i documenti importati con 'Importa Nuovi' in questa sessione"
+              />
+            )}
+            sx={{ maxWidth: 500 }}
+          />
         </CardContent>
       </Card>
 

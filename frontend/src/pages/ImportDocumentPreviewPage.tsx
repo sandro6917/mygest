@@ -51,7 +51,6 @@ import {
   type ImportSessionDocument,
   type AnagraficaReperita,
 } from '@/api/import';
-import type { AnagraficaDetail } from '@/types/anagrafiche';
 import type { Cliente } from '@/types/anagrafiche';
 import type { FascicoloListItem } from '@/types/fascicolo';
 import { anagraficheApi } from '@/api/anagrafiche';
@@ -79,11 +78,11 @@ export const ImportDocumentPreviewPage: React.FC = () => {
   const [valoriEditabili, setValoriEditabili] = useState<Record<string, any>>({});
 
   // Stati per selezioni
-  const [clienteSelezionato, setClienteSelezionato] = useState<AnagraficaDetail | null>(null);
+  const [clienteSelezionato, setClienteSelezionato] = useState<Cliente | null>(null);
   const [fascicoloSelezionato, setFascicoloSelezionato] = useState<FascicoloListItem | null>(null);
 
   // Autocomplete options
-  const [clientiOptions, setClientiOptions] = useState<AnagraficaDetail[]>([]);
+  const [clientiOptions, setClientiOptions] = useState<Cliente[]>([]);
   const [fascicoliOptions, setFascicoliOptions] = useState<FascicoloListItem[]>([]);
   const [loadingClienti, setLoadingClienti] = useState(false);
   const [loadingFascicoli, setLoadingFascicoli] = useState(false);
@@ -146,17 +145,14 @@ export const ImportDocumentPreviewPage: React.FC = () => {
       });
       const risultati = await Promise.all(promises);
       const clienti = risultati.filter((c: Cliente | null): c is Cliente => c !== null);
-      
-      // TODO: getCliente restituisce solo Cliente, non l'anagrafica completa
-      // Per ora impostiamo opzioni vuote e lasciamo che l'utente cerchi manualmente
+
       if (clienti.length === 0) {
         console.warn('Nessun cliente trovato per gli ID:', ids);
         return;
       }
-      
-      // Convertiamo i clienti in AnagraficaDetail (mapping temporaneo)
-      // Idealmente dovremmo chiamare /api/v1/anagrafiche/anagrafiche/{cliente.anagrafica}/
-      setClientiOptions(clienti as any[]);
+
+      setClientiOptions(clienti);
+      setClienteSelezionato(clienti[0]);
     } catch (error) {
       console.error('Errore caricamento clienti:', error);
     } finally {
@@ -172,10 +168,8 @@ export const ImportDocumentPreviewPage: React.FC = () => {
 
     try {
       setLoadingClienti(true);
-      const response = await anagraficheApi.listClienti({ search: query });
-      // Convertiamo Cliente[] in AnagraficaDetail[]
-      // TODO: correggere API per restituire AnagraficaDetail
-      setClientiOptions(response.results as any);
+      const clienti = await anagraficheApi.listClienti({ search: query });
+      setClientiOptions(clienti);
     } catch (error) {
       console.error('Errore ricerca clienti:', error);
     } finally {
@@ -737,8 +731,9 @@ export const ImportDocumentPreviewPage: React.FC = () => {
                     searchClienti(newInputValue);
                   }
                 }}
+                isOptionEqualToValue={(option, val) => option.id === val.id}
                 getOptionLabel={(option) =>
-                  `${option.display_name} - ${option.codice_fiscale}`
+                  `${option.anagrafica.display_name} - ${option.anagrafica.codice_fiscale}`
                 }
                 loading={loadingClienti}
                 renderInput={(params) => (

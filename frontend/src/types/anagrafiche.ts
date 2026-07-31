@@ -37,11 +37,13 @@ export interface EmailContatto {
 
 export interface Cliente {
   id: number;
+  anagrafica: AnagraficaDetail;
   cliente_dal: string | null;
   cliente_al: string | null;
   codice_destinatario: string;
   tipo_cliente: number | null; // FK to ClientiTipo
   tipo_cliente_display?: string; // Nome leggibile
+  email?: string | null;
 }
 
 export interface AnagraficaList {

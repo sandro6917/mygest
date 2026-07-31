@@ -21,9 +21,12 @@ export interface ClientiFilters {
 
 export const anagraficheApi = {
   /**
-   * Lista clienti con paginazione e filtri
+   * Lista clienti con filtri.
+   * ClienteViewSet ha pagination_class = None (per avere tutti i clienti
+   * nelle select), quindi l'endpoint risponde con un array semplice, non
+   * con un oggetto paginato {count, next, previous, results}.
    */
-  async listClienti(filters?: ClientiFilters): Promise<PaginatedResponse<Cliente>> {
+  async listClienti(filters?: ClientiFilters): Promise<Cliente[]> {
     const params = new URLSearchParams();
 
     if (filters) {
@@ -37,8 +40,8 @@ export const anagraficheApi = {
     const queryString = params.toString();
     const url = queryString ? `/clienti/?${queryString}` : '/clienti/';
 
-    const { data } = await apiClient.get<PaginatedResponse<Cliente>>(url);
-    return data;
+    const { data } = await apiClient.get<Cliente[]>(url);
+    return Array.isArray(data) ? data : [];
   },
 
   /**
