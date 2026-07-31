@@ -170,11 +170,23 @@ jobs:
           ssh-keyscan -p ${{ secrets.SSH_PORT || 22 }} -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
           
           echo "✅ SSH key setup completed"
-      
+
+      - name: 🔎 Preflight SSH connectivity
+        run: |
+          echo "Checking DNS..."
+          getent hosts "${{ secrets.SSH_HOST }}" || { echo "❌ Host non risolvibile: ${{ secrets.SSH_HOST }}"; exit 1; }
+
+          echo "Checking TCP connectivity to ${{ secrets.SSH_HOST }}:${{ secrets.SSH_PORT || 22 }}..."
+          timeout 10 bash -c "</dev/tcp/${{ secrets.SSH_HOST }}/${{ secrets.SSH_PORT || 22 }}" \
+            && echo "✅ Porta SSH raggiungibile" \
+            || { echo "❌ Impossibile raggiungere host/porta SSH dal runner GitHub Actions. Verifica il firewall/cloud firewall del VPS (potrebbe filtrare per IP sorgente, bloccando gli IP dinamici dei runner)."; exit 1; }
+
       - name: 🚀 Deploy to VPS via SSH
         run: |
           ssh -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=15 \
+              -o ConnectionAttempts=2 \
               -p ${{ secrets.SSH_PORT || 22 }} \
               ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
             set -ex  # Enable debugging and exit on error
@@ -205,6 +217,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key \
               -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=15 \
+              -o ConnectionAttempts=2 \
               -p ${{ secrets.SSH_PORT || 22 }} \
               ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'ENDSSH'
             
