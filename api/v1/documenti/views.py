@@ -2243,18 +2243,32 @@ class ImportSessionViewSet(viewsets.ModelViewSet):
                 print(f"📦 EXTRACT: Avvio estrazione documenti da {file.name}...")
                 logger.info(f"📦 Avvio estrazione documenti da {file.name}...")
 
-                # Scarica dal storage (locale o R2) in un temp file per il processing locale
+                # Scarica dal storage (locale o R2) in un temp file per il processing locale.
+                # Il file va in una directory dedicata (non un NamedTemporaryFile isolato):
+                # per import a singolo documento (es. F24, UNILAV) extract_documents()
+                # restituisce questo stesso path, che serve ancora al parsing successivo,
+                # quindi non può essere cancellato subito dopo l'estrazione.
                 ext = os.path.splitext(session.file_originale_nome)[1].lower() or '.bin'
-                with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as _tmp:
-                    _tmp_path = _tmp.name
+                _tmp_dir = tempfile.mkdtemp(prefix='import_dl_')
+                _tmp_path = os.path.join(_tmp_dir, f"originale{ext}")
                 try:
                     with session.file_originale.open('rb') as _src:
                         with open(_tmp_path, 'wb') as _dst:
                             shutil.copyfileobj(_src, _dst)
                     extracted_docs = importer.extract_documents(_tmp_path)
-                finally:
-                    if os.path.exists(_tmp_path):
-                        os.unlink(_tmp_path)
+                except Exception:
+                    shutil.rmtree(_tmp_dir, ignore_errors=True)
+                    raise
+                else:
+                    if session.temp_dir and session.temp_dir != _tmp_dir:
+                        # L'importer ha estratto altrove (es. ZIP) e già tracciato la
+                        # propria temp_dir: il download originale non serve più.
+                        shutil.rmtree(_tmp_dir, ignore_errors=True)
+                    else:
+                        # Import a singolo file: va conservato fino alla chiusura/scadenza
+                        # della sessione (stesso meccanismo di pulizia usato per gli ZIP).
+                        session.temp_dir = _tmp_dir
+                        session.save(update_fields=['temp_dir'])
 
                 print(f"✅ EXTRACT: Estratti {len(extracted_docs)} documenti")
                 logger.info(f"✅ Estratti {len(extracted_docs)} documenti da {file.name}")

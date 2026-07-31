@@ -10,6 +10,7 @@ from .base import BaseImporter, ParseResult, ImporterRegistry
 from .cedolini import CedoliniImporter
 from .certificazioni_uniche import CertificazioniUnicheImporter
 from .unilav import UNILAVImporter
+from .f24 import F24Importer
 
 __all__ = [
     'BaseImporter',
@@ -18,6 +19,7 @@ __all__ = [
     'CedoliniImporter',
     'CertificazioniUnicheImporter',
     'UNILAVImporter',
+    'F24Importer',
 ]
 
 # Verifica importatori registrati
