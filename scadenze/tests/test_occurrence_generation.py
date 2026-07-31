@@ -96,6 +96,29 @@ class TestOccurrenceGenerationPostponement:
             date(2026, 10, 31),
         ]
 
+    def test_generate_monthly_day_30_keeps_fixed_day_unchanged(self):
+        # dtstart al giorno 30 (es. 30/09, ultimo giorno di settembre) NON deve
+        # attivare il clamp a fine mese: il giorno 30 può essere stato scelto
+        # deliberatamente (non necessariamente "fine mese"), e nel ciclo
+        # bimestrale set/nov/gen/mar/mag/lug il giorno 30 esiste sempre
+        # (nessuno di questi mesi ha meno di 30 giorni). Forzare bymonthday=-1
+        # qui trasformerebbe marzo/maggio/luglio da giorno 30 a giorno 31,
+        # un cambiamento non voluto rispetto allo schema originale.
+        scadenza = baker.make(
+            Scadenza,
+            periodicita=Scadenza.Periodicita.MENSILE,
+            periodicita_intervallo=2,
+            posticipa_festivi=False,
+        )
+        start = timezone.make_aware(datetime(2026, 9, 30, 9, 0))
+        occorrenze = scadenza.genera_occorrenze(start=start, count=4)
+        assert [occ.inizio.date() for occ in occorrenze] == [
+            date(2026, 9, 30),
+            date(2026, 11, 30),
+            date(2027, 1, 30),
+            date(2027, 3, 30),
+        ]
+
 
 @pytest.mark.django_db
 class TestBatchAlertTemplates:

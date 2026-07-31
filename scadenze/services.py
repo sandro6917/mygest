@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import calendar
 import importlib
 import json
 from dataclasses import dataclass
@@ -121,13 +120,17 @@ class OccurrenceGenerator:
             start_naive = start
 
         rule_kwargs: dict[str, Any] = {"dtstart": start_naive, "interval": interval}
-        if freq == rrule.MONTHLY and start_naive.day == calendar.monthrange(
-            start_naive.year, start_naive.month
-        )[1]:
-            # dtstart è l'ultimo giorno del mese (es. 31): senza bymonthday=-1,
-            # rrule usa il giorno fisso 31 e salta silenziosamente i mesi più
-            # corti (es. aprile) invece di ricadere sull'ultimo giorno del mese,
-            # causando occorrenze mancanti nella sequenza generata.
+        if freq == rrule.MONTHLY and start_naive.day == 31:
+            # dtstart è il giorno 31: essendo il massimo possibile, non può
+            # rappresentare altro che "fine mese" (nessun mese ha più di 31
+            # giorni). Senza bymonthday=-1, rrule usa il giorno fisso 31 e
+            # salta silenziosamente i mesi più corti (es. aprile) invece di
+            # ricadere sull'ultimo giorno del mese, causando occorrenze
+            # mancanti. Non estendiamo questa correzione ai giorni 28/29/30:
+            # per quelli il giorno può essere stato scelto deliberatamente
+            # (non necessariamente "fine mese") e forzare bymonthday=-1
+            # cambierebbe schedulazioni già corrette (es. giorno 30 in mesi
+            # da 31 giorni diventerebbe 31, uno scostamento non voluto).
             rule_kwargs["bymonthday"] = -1
         end_aware: datetime | None = None
         if end:
