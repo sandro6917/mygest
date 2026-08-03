@@ -31,17 +31,23 @@ def parse_filename_cedolino(filename: str) -> Optional[Dict[str, str]]:
     """
     Estrae informazioni dal nome file del cedolino.
     
-    Pattern atteso: 
+    Pattern atteso:
     {CF} - {ANNO} - {COGNOME} {NOME} ({CF}-{MATRICOLA}).pdf
     Esempio: BNCLNR99C46G088Y - 2025 - BIANCHI ELEONORA (BNCLNR99C46G088Y-0000001).pdf
-    
+
+    Tollera varianti riscontrate in export reali: anno assente (es. "CF - - COGNOME NOME (...)")
+    e suffissi dopo la parentesi prima dell'estensione (es. "(...) Libro unico.pdf").
+
     Returns:
-        Dict con chiavi: codice_fiscale, anno, cognome, nome, matricola
+        Dict con chiavi: codice_fiscale, anno (può essere None), cognome, nome, matricola
         None se il parsing fallisce
     """
-    # Pattern regex per il nome file
-    pattern = r'^([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\s*-\s*(\d{4})\s*-\s*([A-Z\s]+)\s+([A-Z]+)\s*\(([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])-(\d+)\)\.pdf$'
-    
+    # Pattern regex per il nome file (anno opzionale, suffisso finale tollerato)
+    pattern = (
+        r'^([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\s*-\s*(\d{4})?\s*-\s*'
+        r'([A-Z\s]+)\s+([A-Z]+)\s*\(([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])-(\d+)\)(?:\s+.*)?\.pdf$'
+    )
+
     match = re.match(pattern, filename, re.IGNORECASE)
     if not match:
         logger.warning(f"Nome file non valido: {filename}")

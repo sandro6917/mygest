@@ -109,8 +109,8 @@ def parse_cedolino_pdf(pdf_path: str) -> CedolinoParseResult:
         
         lines = pdf_data.get('raw_text', '').split('\n')
         for line in lines:
-            # Pattern: numero + COGNOME NOME + CF
-            match = re.match(r'^(\d+)\s+([A-Z]+)\s+([A-Z]+)\s+([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])', line)
+            # Pattern: numero + COGNOME NOME (anche multi-parola) + CF
+            match = re.match(r'^(\d+)\s+([A-Z]+(?:\s+[A-Z]+)*)\s+([A-Z]+)\s+([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])', line)
             if match:
                 lavoratore_matricola = match.group(1)
                 lavoratore_cognome = match.group(2).title()
@@ -129,7 +129,7 @@ def parse_cedolino_pdf(pdf_path: str) -> CedolinoParseResult:
     mensilita = identifica_mensilita(pdf_data.get('periodo'), pdf_data.get('raw_text', ''))
     
     # 6. Calcolo anno e mese
-    anno = pdf_data.get('anno') or (int(file_data['anno']) if file_data else None)
+    anno = pdf_data.get('anno') or (int(file_data['anno']) if file_data and file_data.get('anno') else None)
     if not anno:
         raise ValueError(f"Anno non trovato nel cedolino: {filename}")
     
@@ -180,29 +180,35 @@ def parse_filename_cedolino(filename: str) -> Optional[Dict[str, str]]:
     """
     Estrae informazioni dal nome file del cedolino.
     
-    Pattern atteso: 
+    Pattern atteso:
     {CF} - {ANNO} - {COGNOME} {NOME} ({CF}-{MATRICOLA}).pdf
     Esempio: BNCLNR99C46G088Y - 2025 - BIANCHI ELEONORA (BNCLNR99C46G088Y-0000001).pdf
-    
+
+    Tollera varianti riscontrate in export reali: anno assente (es. "CF - - COGNOME NOME (...)")
+    e suffissi dopo la parentesi prima dell'estensione (es. "(...) Libro unico.pdf").
+
     Returns:
-        Dict con chiavi: codice_fiscale, anno, cognome, nome, matricola
+        Dict con chiavi: codice_fiscale, anno (può essere None), cognome, nome, matricola
         None se il parsing fallisce
     """
-    # Pattern regex per il nome file
-    pattern = r'^([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\s*-\s*(\d{4})\s*-\s*([A-Z\s]+)\s+([A-Z]+)\s*\(([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])-(\d+)\)\.pdf$'
-    
+    # Pattern regex per il nome file (anno opzionale, suffisso finale tollerato)
+    pattern = (
+        r'^([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\s*-\s*(\d{4})?\s*-\s*'
+        r'([A-Z\s]+)\s+([A-Z]+)\s*\(([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])-(\d+)\)(?:\s+.*)?\.pdf$'
+    )
+
     match = re.match(pattern, filename, re.IGNORECASE)
     if not match:
         logger.debug(f"Nome file non segue il pattern standard: {filename}")
         return None
-    
+
     cf1, anno, cognome, nome, cf2, matricola = match.groups()
-    
+
     # Verifica coerenza codici fiscali
     if cf1.upper() != cf2.upper():
         logger.warning(f"Codici fiscali non coerenti nel nome file: {cf1} != {cf2}")
         return None
-    
+
     return {
         'codice_fiscale': cf1.upper(),
         'anno': anno,

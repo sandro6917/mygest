@@ -174,7 +174,15 @@ class CedolinoImporter:
         mensilita = identifica_mensilita(pdf_data.get('periodo'), pdf_data.get('raw_text', ''))
         
         # 4. Calcola data documento (ultimo giorno del mese)
-        anno = pdf_data.get('anno') or int(file_data['anno'])
+        anno = pdf_data.get('anno') or (int(file_data['anno']) if file_data.get('anno') else None)
+        if not anno:
+            error_msg = f"Anno non trovato nel cedolino: {filename}"
+            logger.warning(error_msg)
+            self.risultati['errors'].append({
+                'filename': filename,
+                'error': error_msg
+            })
+            return
         mese = pdf_data.get('mese') or mensilita
         if mese > 12:  # Tredicesima/quattordicesima -> dicembre
             mese = 12
